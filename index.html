@@ -180,6 +180,14 @@ const DATA=[
 const isPit=p=>p.pos==="SP"||p.pos==="RP";
 const isHit=p=>!isPit(p);
 function ovrClass(o){return o>=88?'elite':o>=80?'good':o>=70?'avg':'low';}
+// 80-99 ramps yellow -> bright laser green; below that stays muted
+function ovrColor(o){
+  if(o<70)return 'var(--dim)';
+  if(o<80)return '#cdd6bf';
+  const t=clamp((o-80)/19,0,1);
+  const r=Math.round(255+(166-255)*t),g=Math.round(226+(255-226)*t),b=Math.round(61+(43-61)*t);
+  return `rgb(${r},${g},${b})`;
+}
 // Realized ceiling: scouted potential is NOT a guarantee.
 // 25% reach it exactly, 60% land within 10 below, 15% within 20 below.
 function rollRealCeil(pot){const r=Math.random();let rc;
@@ -478,6 +486,7 @@ function screenTitle(){
      <div style="margin:10px 0"><input id="tname" value="River City Rovers" style="width:60%;max-width:320px"/></div>
      <button class="btn primary" onclick="(function(){newGame(document.getElementById('tname').value.trim());goPhase(0);})()">Take the job →</button>
      ${localStorage.getItem(SAVE)?`<button class="btn ghost" onclick="(function(){if(loadGame())goPhase(G.phase||0);else toast('No save');})()">↻ Continue</button>`:""}
+     <button class="btn ghost" onclick="screenLeaderboard()">🏆 Leaderboard</button>
    </div>
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.</p>`);
 }
@@ -526,7 +535,7 @@ function screenTrade(){
    ${G.year>=3?`<div class="panel">
      <h3>✍️ Free agents</h3>
      <p class="sub">Veterans on the open market — sign with cash, no prospects required. But salaries push toward the $300M luxury-tax line, and leaning on free agency hurts your "homegrown" grade.</p>
-     <div id="falist">${renderFA()}</div>
+     <div id="falist" class="scroll">${renderFA()}</div>
    </div>`:''}
    <div class="center" style="margin-top:14px"><button class="btn primary" onclick="goPhase(1)">Done trading → Set roster</button></div>`);
 }
@@ -538,8 +547,9 @@ function assetLabel(a){
   return `<span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • ${p.ovr} OVR • ${p.years}yr • $${p.salary}M</span>${ceil}${tag}`;
 }
 /* ---- free agency ---- */
-function ficVeteran(){
-  const pos=pick(POSPOOL);const age=ri(27,39);const ovr=clamp(round(gauss(70,8)),56,88);
+function ficVeteran(elite){
+  const pos=pick(POSPOOL);const age=ri(27,39);
+  const ovr=elite?clamp(round(gauss(87,3)),83,93):clamp(round(gauss(70,8)),56,86);
   return {id:uid(),name:ficName(),pos,age,ovr,pot:ovr,realCeil:ovr,salary:0,years:0,loc:"pool",inj:0,fic:true};
 }
 function faAsk(p){
@@ -549,18 +559,20 @@ function faAsk(p){
   return {aav,years:Math.max(1,years)};
 }
 function genFAMarket(){
-  const list=[];
-  const realVets=G.pool.filter(p=>!p.prospect&&!p.fic&&p.age>=27&&p.age<=40&&p.ovr>=68).sort(()=>Math.random()-0.5).slice(0,ri(2,4));
-  realVets.forEach(p=>{p._fromPool=true;const a=faAsk(p);list.push({id:uid(),player:p,aav:a.aav,years:a.years});});
-  const nF=ri(3,5);
-  for(let i=0;i<nF;i++){const v=ficVeteran();const a=faAsk(v);list.push({id:uid(),player:v,aav:a.aav,years:a.years});}
+  const list=[];const seen=new Set();
+  const realPool=G.pool.filter(p=>!p.prospect&&!p.fic&&p.age>=27&&p.age<=40&&p.ovr>=66);
+  const realTop=realPool.filter(p=>p.ovr>=84).sort(()=>Math.random()-0.5).slice(0,ri(1,3));
+  const realRest=realPool.filter(p=>p.ovr<84).sort(()=>Math.random()-0.5).slice(0,ri(3,5));
+  [...realTop,...realRest].forEach(p=>{if(seen.has(p.id))return;seen.add(p.id);p._fromPool=true;const a=faAsk(p);list.push({id:uid(),player:p,aav:a.aav,years:a.years});});
+  for(let i=0;i<ri(2,3);i++){const v=ficVeteran(true);const a=faAsk(v);list.push({id:uid(),player:v,aav:a.aav,years:a.years});}  // elite
+  for(let i=0;i<ri(7,9);i++){const v=ficVeteran(false);const a=faAsk(v);list.push({id:uid(),player:v,aav:a.aav,years:a.years});}
   return list.sort((a,b)=>b.player.ovr-a.player.ovr);
 }
 function renderFA(){
   if(!G.faMarket||!G.faMarket.length)return `<p class="muted">No free agents left this winter.</p>`;
   return G.faMarket.map(fa=>{const p=fa.player;
     return `<div class="offer"><div class="row" style="align-items:center">
-     <div style="flex:2"><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • <b class="ovr ${ovrClass(p.ovr)}">${p.ovr}</b> OVR</span>${p.fic?'':' <span class="small" style="color:var(--blue)">real FA</span>'}</div>
+     <div style="flex:2"><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • <b class="ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</b> OVR</span>${p.fic?'':' <span class="small" style="color:var(--blue)">real FA</span>'}</div>
      <div style="flex:1;text-align:right"><span class="pill gold">${fa.years}yr • $${fa.aav}M/yr</span>
        <button class="btn primary sm" onclick="signFA('${fa.id}')">Sign</button></div></div></div>`;}).join("");
 }
@@ -584,7 +596,7 @@ function needsSurplus(){
 }
 function rosterMini(){
   const a=buildActive(G.roster);
-  const chip=(lbl,p)=>`<span class="pill" style="margin:2px;background:var(--panel2)">${lbl} ${p?`${p.name.split(' ').slice(-1)[0]} <b class="ovr ${ovrClass(p.ovr)}">${p.ovr}</b>${p.inj?' 🩹':''}`:'<span class="empty">—</span>'}</span>`;
+  const chip=(lbl,p)=>`<span class="pill" style="margin:2px;background:var(--panel2)">${lbl} ${p?`${p.name.split(' ').slice(-1)[0]} <b class="ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</b>${p.inj?' 🩹':''}`:'<span class="empty">—</span>'}</span>`;
   return `<div style="margin:4px 0"><div class="small muted">Lineup</div>${LINEUP.map(s=>chip(s,a.lineup[s])).join("")}</div>
    <div style="margin:4px 0"><div class="small muted">Rotation</div>${[0,1,2,3].map(i=>chip('SP',a.rotation[i])).join("")}</div>
    <div style="margin:4px 0"><div class="small muted">Bullpen</div>${[0,1,2].map(i=>chip('RP',a.pen[i])).join("")}</div>
@@ -808,24 +820,24 @@ function contractCell(p){return `<span class="yrs ${p.years<=1?'exp':'muted'}">$
 function slotRow(slot,p){
   if(!p)return `<tr><td><span class="pos">${slot}</span> <span class="empty">— replacement level —</span></td><td class="num"></td><td class="num"></td><td></td></tr>`;
   return `<tr><td><span class="pos">${slot}</span> ${p.name} <span class="small muted">${p.pos}, age ${p.age}${p.inj?' • 🩹inj':''}</span></td>
-    <td class="num ovr ${ovrClass(p.ovr)}">${p.ovr}</td><td class="num">${contractCell(p)}</td>
+    <td class="num ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</td><td class="num">${contractCell(p)}</td>
     <td class="num">${p.years<=2?`<button class="btn sm" onclick="extend('${p.id}');screenRoster()">Extend</button>`:''}</td></tr>`;
 }
 function pitRow(role,p){
   if(!p)return `<tr><td><span class="pos">${role}</span> <span class="empty">— replacement level —</span></td><td class="num"></td><td class="num"></td><td></td></tr>`;
   return `<tr><td><span class="pos">${role}</span> ${p.name} <span class="small muted">age ${p.age}${p.inj?' • 🩹inj':''}</span></td>
-    <td class="num ovr ${ovrClass(p.ovr)}">${p.ovr}</td><td class="num">${contractCell(p)}</td>
+    <td class="num ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</td><td class="num">${contractCell(p)}</td>
     <td class="num">${p.years<=2?`<button class="btn sm" onclick="extend('${p.id}');screenRoster()">Extend</button>`:''}</td></tr>`;
 }
 function depthRow(p){return `<tr><td><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age}</span></td>
-  <td class="num ovr ${ovrClass(p.ovr)}">${p.ovr}</td><td class="num">${contractCell(p)}</td>
+  <td class="num ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</td><td class="num">${contractCell(p)}</td>
   <td class="num"><button class="btn sm" onclick="sendDown('${p.id}')">↓Farm</button></td></tr>`;}
 function farmTable(){
   if(!G.farm.length)return `<p class="muted">Empty. Trade for prospects and draft to fill it.</p>`;
   return `<table><thead><tr><th>Prospect</th><th class="num">Age</th><th class="num">OVR</th><th class="num">Ceil</th><th></th></tr></thead><tbody>${
     G.farm.sort((a,b)=>b.pot-a.pot).map(p=>`<tr>
       <td><span class="pos">${p.pos}</span> ${p.name}${p.college?` <span class="small muted">(${p.college})</span>`:''}</td>
-      <td class="num">${p.age}</td><td class="num ovr ${ovrClass(p.ovr)}">${p.ovr}</td>
+      <td class="num">${p.age}</td><td class="num ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</td>
       <td class="num"><span class="pill ${ceilClass(p.pot)}">${p.pot}</span></td>
       <td class="num"><button class="btn sm ${p.ovr>=62?'primary':''}" onclick="promote('${p.id}')">Promote ↑</button></td></tr>`).join("")}</tbody></table>`;
 }
@@ -880,6 +892,10 @@ function screenDraft(){
   const ps=[...POSALL];for(let i=ps.length-1;i>0;i--){const j=ri(0,i);[ps[i],ps[j]]=[ps[j],ps[i]];}
   _board=[];for(let i=0;i<10;i++)_board.push(draftee(slot+ri(0,2),rd,Math.random()<advChance,ps[i%ps.length]));
   render(`${header()}${stepbar(3)}
+   ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0">
+     <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none — roster is balanced</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span></div>`;})()}
+   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster <span class="small muted">(draft to fill your needs)</span></summary>
+     <div style="margin-top:8px">${rosterMini()}</div></details>
    <div class="panel"><h3>Draft — <span class="pill gold">Round ${rd}</span> pick #${slot} <span class="small muted">(${_dq.length} selection${_dq.length>1?'s':''} left)</span></h3>
      <p class="sub">Ceiling is a <b>scouted projection, not a promise</b> — most prospects fall short of it. ${rd===1?'Round-1 talents have the highest ceilings but take years.':'Later-round picks are longer shots; "MLB-ready" types contribute sooner.'}</p>
      <div class="scroll">${_board.map((p,i)=>`<div class="offer" style="padding:9px 12px"><div class="row" style="align-items:center">
@@ -985,8 +1001,61 @@ function endGame(){
      <table><thead><tr><th>Season</th><th class="num">Record</th><th class="num">Rank</th><th>Result</th></tr></thead><tbody>${
        h.map(x=>`<tr><td>Year ${x.year}</td><td class="num">${x.wins}-${x.losses}</td><td class="num">#${x.seed}</td>
          <td>${x.champ?'<span class="pill gold">🏆 WS</span>':x.playoffs?'<span class="pill green">Playoffs</span>':'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table></div>
-   <div class="center" style="margin-top:8px"><button class="btn primary" onclick="(function(){localStorage.removeItem(SAVE);screenTitle();})()">New Franchise</button></div>
+   <div class="panel center" id="lbsubmit">
+     <h3>🏆 Post to the leaderboard</h3>
+     <div style="margin:8px 0"><input id="lbname" maxlength="12" placeholder="Name or initials" style="width:200px"/></div>
+     <button class="btn primary" onclick="submitScore()">Submit score ${score}</button>
+     <button class="btn ghost" onclick="screenLeaderboard(true)">View leaderboard</button>
+   </div>
+   <div class="center" style="margin-top:8px"><button class="btn" onclick="(function(){localStorage.removeItem(SAVE);screenTitle();})()">New Franchise</button></div>
    <p class="disclaimer">Unofficial fan-made prototype • not affiliated with MLB/MLBPA • all data fictional.</p>`);
+}
+
+/* ============================================================
+   LEADERBOARD — local by default; set LEADERBOARD_API for a shared board
+   ============================================================ */
+const LEADERBOARD_API=""; // paste your Cloudflare Worker URL here to go global (see README)
+const LB_KEY="tankCommander_lb_v1";
+function lbLoadLocal(){try{return JSON.parse(localStorage.getItem(LB_KEY)||"[]");}catch(e){return [];}}
+function lbSaveLocal(a){try{localStorage.setItem(LB_KEY,JSON.stringify(a.slice(0,600)));}catch(e){}}
+function lbRank(arr){return arr.slice().sort((a,b)=>(b.score-a.score)||((b.champs||0)-(a.champs||0))||((b.peak||0)-(a.peak||0)));}
+function todayStr(d){d=d||new Date();return d.toISOString().slice(0,10);}
+async function lbSubmit(entry){
+  const local=lbLoadLocal();local.push(entry);lbSaveLocal(lbRank(local));
+  if(LEADERBOARD_API){try{await fetch(LEADERBOARD_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(entry)});}catch(e){}}
+}
+async function lbFetch(){
+  if(LEADERBOARD_API){try{const r=await fetch(LEADERBOARD_API,{cache:"no-store"});if(r.ok){const a=await r.json();if(Array.isArray(a))return a;}}catch(e){}}
+  return lbLoadLocal();
+}
+function lbRows(arr){
+  if(!arr.length)return `<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">No entries yet — be the first.</td></tr>`;
+  return arr.map((e,i)=>`<tr>
+    <td class="num">${i+1}</td>
+    <td><b>${(e.name||'---').slice(0,12)}</b><br><span class="small muted">${e.team?e.team.slice(0,18):''}</span></td>
+    <td class="num"><b style="color:var(--gold)">${e.score}</b> <span class="small">${e.grade||''}</span></td>
+    <td class="num">${e.peak||''}W</td>
+    <td class="num">${e.champs||0}🏆</td></tr>`).join("");
+}
+async function screenLeaderboard(fromEnd){
+  render(`<div class="row" style="align-items:center;margin-bottom:6px"><h2 style="flex:1">🏆 Leaderboard</h2>
+     <button class="btn ghost" onclick="screenTitle()">← Home</button></div>
+   <p class="sub">${LEADERBOARD_API?'Global rankings across all players.':'Saved on this device only. To make it shared, see the README — it takes one free backend URL.'}</p>
+   <div id="lbbody"><p class="muted">Loading…</p></div>`);
+  const all=await lbFetch();const ranked=lbRank(all);
+  const today=ranked.filter(e=>(e.date||todayStr(new Date(e.ts||Date.now())))===todayStr());
+  const el=document.getElementById('lbbody'); if(!el)return;
+  el.innerHTML=`<div class="grid2">
+     <div class="panel"><h3>🔆 Top 10 Today</h3><table><thead><tr><th class="num">#</th><th>GM / Club</th><th class="num">Score</th><th class="num">Peak</th><th class="num">WS</th></tr></thead><tbody>${lbRows(today.slice(0,10))}</tbody></table></div>
+     <div class="panel"><h3>👑 Top 10 All-Time</h3><table><thead><tr><th class="num">#</th><th>GM / Club</th><th class="num">Score</th><th class="num">Peak</th><th class="num">WS</th></tr></thead><tbody>${lbRows(ranked.slice(0,10))}</tbody></table></div>
+   </div>`;
+}
+function submitScore(){
+  const inp=document.getElementById('lbname');const name=((inp&&inp.value.trim())||'Anon').slice(0,12);
+  const R=computeGrade();
+  const entry={name,team:G.teamName,score:R.score,grade:R.grade,peak:G.bestWins,champs:G.champions,window:R.windowYears,ts:Date.now(),date:todayStr()};
+  lbSubmit(entry);toast(`Submitted: ${name} — ${R.score} (${R.grade})`);
+  screenLeaderboard(true);
 }
 
 /* boot */
