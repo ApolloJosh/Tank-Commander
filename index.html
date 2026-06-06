@@ -44,6 +44,14 @@
   .pill.green{background:rgba(118,232,63,.14);border-color:var(--green);color:var(--green)}
   .pill.red{background:rgba(239,106,106,.13);border-color:var(--red);color:var(--red)}
   .pill.blue{background:rgba(163,196,110,.15);border-color:var(--blue);color:var(--blue)}
+  .pill.bdiamond{background:linear-gradient(135deg,#dff6ff,#7fd0ff,#bfe9ff,#eaffff);background-size:200% 200%;
+    color:#06212e;border-color:#bfeaff;font-weight:800;text-shadow:0 0 3px rgba(255,255,255,.6);animation:shimmer 3s linear infinite}
+  .pill.irid{background:linear-gradient(90deg,#ff7ab8,#ffd36b,#7bf0a0,#6bd5ff,#c79bff,#ff7ab8);background-size:300% 100%;
+    color:#1a1030;border-color:#fff;font-weight:800;text-shadow:0 0 3px rgba(255,255,255,.5);animation:irid 4s linear infinite}
+  .ovr.bdiamond{background:linear-gradient(135deg,#dff6ff,#7fd0ff,#bfe9ff);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+  .ovr.irid{background:linear-gradient(90deg,#ff7ab8,#ffd36b,#7bf0a0,#6bd5ff,#c79bff,#ff7ab8);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800;animation:irid 4s linear infinite}
+  @keyframes shimmer{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+  @keyframes irid{0%{background-position:0% 50%}100%{background-position:300% 50%}}
   table{width:100%;border-collapse:collapse;font-size:13.5px}
   th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
   th{color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px}
@@ -193,8 +201,37 @@ function ovrColor(o){
 function rollRealCeil(pot){const r=Math.random();let rc;
   if(r<0.25)rc=pot; else if(r<0.85)rc=pot-rnd(3,10); else rc=pot-rnd(11,20);
   return Math.round(rc);}
+function rollDura(age){return clamp(round(gauss(72,15)-Math.max(0,(age-31))*0.9),26,99);}
+// ---- granular hidden attributes (report card) ----
+const HIT_ATTRS=["contact","power","speed","eye","defense"];
+const PIT_ATTRS=["velocity","control","spin","whiff"];
+const ATTR_LABEL={contact:"Contact",power:"Power",speed:"Speed",eye:"Eye",defense:"Def",velocity:"Velo",control:"Ctrl",spin:"Spin",whiff:"Whiff"};
+function genAttrs(pos){
+  const pitcher=pos==="SP"||pos==="RP";const keys=pitcher?PIT_ATTRS:HIT_ATTRS;const bias={};
+  if(!pitcher){HIT_ATTRS.forEach(k=>bias[k]=0);
+    if(pos==="1B"||pos==="DH"){bias.power+=9;bias.speed-=9;bias.defense-=4;}
+    else if(pos==="LF"||pos==="RF"){bias.power+=5;bias.speed-=1;bias.defense-=2;}
+    else if(pos==="CF"){bias.speed+=8;bias.defense+=5;bias.power-=4;}
+    else if(pos==="SS"||pos==="2B"){bias.speed+=6;bias.defense+=7;bias.power-=6;}
+    else if(pos==="C"){bias.defense+=8;bias.speed-=10;}
+    else if(pos==="3B"){bias.power+=3;bias.defense+=3;bias.speed-=2;}}
+  const offs={};let sum=0;keys.forEach(k=>{const o=gauss(bias[k]||0,7);offs[k]=o;sum+=o;});
+  const mean=sum/keys.length;keys.forEach(k=>offs[k]=Math.round(offs[k]-mean));   // center so avg ≈ OVR
+  return offs;
+}
+function attrVal(p,k){return clamp(round((p.ovr||50)+((p.attr&&p.attr[k])||0)),20,99);}
+function genCatProfile(){const o={};[...HIT_ATTRS,...PIT_ATTRS].forEach(k=>o[k]=Math.round(gauss(0,7)));return o;}
+function aiCatScore(t,k){return clamp(72+(t.war-30)*0.7+((t.catProfile&&t.catProfile[k])||0),40,96);}
+// scouting-aware realized ceiling for DRAFT prospects (more scouting -> more accurate)
+function rollRealCeilScouted(pot){
+  const sc=(typeof G!=="undefined"&&G&&G.resources)?G.resources.scouting:0.333;
+  const exactP=clamp(0.10+sc*0.50,0.08,0.62);const r=Math.random();
+  if(r<exactP)return Math.round(pot);
+  if(r<exactP+0.50)return Math.round(pot-rnd(3,10));
+  return Math.round(pot-rnd(11,20));
+}
 function clonePlayer(d){const[n,p,a,o,t,s,y]=d;const pot=Math.max(t,o);
-  return {id:uid(),name:n,pos:p,age:a,ovr:o,pot,realCeil:Math.max(o,rollRealCeil(pot)),salary:s,years:y,loc:"mlb",inj:0};}
+  return {id:uid(),name:n,pos:p,age:a,ovr:o,pot,realCeil:Math.max(o,rollRealCeil(pot)),dura:rollDura(a),attr:genAttrs(p),salary:s,years:y,loc:"mlb",inj:0};}
 // fictional college draftee
 const C_F=["Tyler","Brody","Chase","Aiden","Mason","Cooper","Hudson","Easton","Carson","Brooks","Maddox","Holden","Bennett","Cash","Rhys","Wells","Ledger","Tate","Gunner","Jrue"];
 const C_L=["Whitfield","Carrasco","Bautch","Demaris","Holcomb","Pennington","Vasquez","Stallings","Brockman","Yount","Dellinger","Marsh","Ocampo","Steele","Hargrove","Vitelli","Brubaker","Sandoval","Kingery","Marchetti"];
@@ -202,13 +239,15 @@ const COLL=["Vanderbilt","LSU","Texas","Wake Forest","Stanford","Florida","Arkan
 const POSPOOL=["C","1B","2B","3B","SS","LF","CF","RF","SP","SP","RP"];
 function draftee(slot,rd,advanced,pos){
   rd=rd||1; pos=pos||pick(POSPOOL);
-  const ceilBase=(97-(slot-1)*1.7)-(rd-1)*11;   // later rounds = lower ceilings
+  // steep premium for the very top picks (a #1 has real shot at a 99 ceiling), then a gentle taper; floored so late rounds aren't worthless
+  const cb=slot<=1?91.3:89.2-(slot-2)*0.95;
+  const ceilBase=Math.max(72, cb-(rd-1)*6);
   let o,pot;
-  if(advanced){o=clamp(Math.round(rnd(63,71)-slot*0.2-(rd-1)*3),52,73);pot=clamp(o+ri(4,10),o,84);}
-  else{o=clamp(Math.round(rnd(42,52)-slot*0.3-(rd-1)*4),30,57);pot=clamp(Math.round(gauss(ceilBase,6)),50,99);}
+  if(advanced){o=clamp(Math.round(rnd(63,71)-slot*0.2-(rd-1)*3),52,73);pot=clamp(o+ri(4,10),o,85);}
+  else{o=clamp(Math.round(rnd(42,52)-slot*0.3-(rd-1)*4),30,57);pot=clamp(Math.round(gauss(ceilBase,5)),55,99);}
   pot=Math.max(pot,o);
   return {id:uid(),name:pick(C_F)+" "+pick(C_L),pos,age:advanced?ri(23,24):ri(20,22),ovr:o,pot,
-    realCeil:Math.max(o,rollRealCeil(pot)),salary:0.7,years:6,loc:"farm",inj:0,college:pick(COLL),advanced:!!advanced,fic:true,prospect:true};
+    realCeil:Math.max(o,rollRealCeilScouted(pot)),dura:rollDura(advanced?23:21),attr:genAttrs(pos),salary:0.7,years:6,loc:"farm",inj:0,college:pick(COLL),advanced:!!advanced,fic:true,prospect:true};
 }
 // broader fictional name pools for prospects / replacement players
 const F_FIRST=["Marcus","Devon","Cole","Trent","Hugo","Rafa","Diego","Kenji","Andre","Theo","Mateo","Luca","Owen","Silas","Jonah","Reed","Kai","Emmett","Dax","Ronan","Caleb","Nico","Tariq","Sawyer","Felix","Ezra","Otto","Cruz","Beau","Wyatt","Jalen","Quentin","Roman","Dane","Pierce","Knox","Levi","Drew","Gage","Hayes","Iker","Joaquin","Lennox","Nash","Onyx","Bo","Tobias","Remy","Zane","Dexter"];
@@ -217,20 +256,49 @@ const ficName=()=>pick(F_FIRST)+" "+pick(F_LAST);
 function ficProspect(){
   const pos=pick(POSPOOL);
   const pot=clamp(round(gauss(79,11)),60,99);
-  const ovr=clamp(round(pot-rnd(12,34)),32,60);
-  return {id:uid(),name:ficName(),pos,age:ri(18,23),ovr,pot:Math.max(pot,ovr),realCeil:Math.max(ovr,rollRealCeil(Math.max(pot,ovr))),salary:0.7,years:6,loc:"pool",inj:0,fic:true,prospect:true};
+  const ovr=clamp(round(pot-rnd(12,34)),32,60);const age=ri(18,23);
+  return {id:uid(),name:ficName(),pos,age,ovr,pot:Math.max(pot,ovr),realCeil:Math.max(ovr,rollRealCeil(Math.max(pot,ovr))),dura:rollDura(age),attr:genAttrs(pos),salary:0.7,years:6,loc:"pool",inj:0,fic:true,prospect:true};
 }
 function ficReplacement(){
   const pos=pick(POSPOOL);const ovr=ri(56,68);
   return {id:uid(),name:ficName(),pos,age:ri(25,33),ovr,pot:ovr+ri(0,3),salary:round(rnd(0.8,4)*10)/10,years:ri(1,3),loc:"pool",inj:0,fic:true};
 }
 // color-code ceilings
-function ceilClass(pot){return pot>=90?'gold':pot>=82?'green':pot>=74?'blue':'';}
+function ceilClass(pot){return pot>=99?'irid':pot>=96?'bdiamond':pot>=90?'gold':pot>=82?'green':pot>=74?'blue':'';}
+function ovrHTML(o){
+  if(o>=99)return `<b class="ovr irid">${o}</b>`;
+  if(o>=96)return `<b class="ovr bdiamond">${o}</b>`;
+  return `<b class="ovr" style="color:${ovrColor(o)}">${o}</b>`;
+}
 /* ---------- draft pick objects ---------- */
 function projSlotEstimate(){
   const myw=warToWins(teamWAR(G.roster));let ahead=0;
   G.ai.forEach(t=>{if(warToWins(t.war)>myw)ahead++;});
   return clamp(16-ahead,1,16);
+}
+// assign every team a UNIQUE draft slot from projected wins (worst record = pick #1)
+function computeDraftOrder(){
+  const teams=[{me:true,w:warToWins(teamWAR(G.roster))},...G.ai.map(t=>({t,w:warToWins(t.war)}))];
+  teams.sort((a,b)=>a.w-b.w);
+  teams.forEach((e,i)=>{const slot=i+1;if(e.me)G.myDraftSlot=slot;else{e.t.pickSlot=slot;e.t._pickTraded=false;}});
+  assignTradeBlocks();
+  G.draftOrderYear=G.year;
+}
+// Give each AI team a STABLE set of tradeable players (so the market doesn't reshuffle
+// every time you switch partners). No player appears on two teams. Refreshes yearly.
+function assignTradeBlocks(){
+  const sh=a=>{for(let i=a.length-1;i>0;i--){const j=ri(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+  const isProspect=p=>p.prospect||(p.age<=24&&p.pot>=80);
+  const pSet=new Set(G.pool.filter(isProspect).map(p=>p.id));   // disjoint buckets — no player on two teams
+  const prospects=sh([...pSet]);
+  const players=sh(G.pool.filter(p=>!pSet.has(p.id)&&!p.fic).map(p=>p.id));
+  const depth=sh(G.pool.filter(p=>!pSet.has(p.id)&&p.fic).map(p=>p.id));
+  let pi=0,pl=0,di=0;
+  G.ai.forEach(t=>{const block=[];
+    for(let k=0;k<3&&pi<prospects.length;k++)block.push(prospects[pi++]);
+    for(let k=0;k<3&&pl<players.length;k++)block.push(players[pl++]);
+    for(let k=0;k<2&&di<depth.length;k++)block.push(depth[di++]);
+    t.block=block;});
 }
 const ROUND_F={1:1,2:0.5,3:0.28};
 function pickResolvedSlot(pk){return (pk.future&&pk.fromMe)?projSlotEstimate():pk.slot;}
@@ -247,24 +315,38 @@ function warOf(p){
   if(p.pos==="RP")return Math.max(0,(p.ovr-53)/13.5);
   return Math.max(0,(p.ovr-49)/10.5);
 }
-const injFactor=p=>p.inj>0?clamp(1-p.inj/162,0.3,1):1;
-const eff=p=>warOf(p)*injFactor(p);
+const injFactor=p=>p.inj>0?clamp(1-p.inj/162,0.05,1):1;
+// coaching raises the floor: bigger lift for weaker players, little for stars
+function coachBonus(p){const c=(typeof G!=="undefined"&&G&&G.resources)?G.resources.coaching:0.333;return c*clamp((68-p.ovr)/4,0,3);}
+function warOfC(p){const o=p.ovr+coachBonus(p);
+  if(p.pos==="SP")return Math.max(0,(o-48)/10.5);
+  if(p.pos==="RP")return Math.max(0,(o-53)/13.5);
+  return Math.max(0,(o-49)/10.5);}
+const eff=p=>warOfC(p)*injFactor(p);
 function warToWins(w){return clamp(round(81+(w-31)*1.40),47,116);}
 const REP_BAT=0.86, REP_SP=0.95, REP_RP=0.37;   // replacement-level fill for empty slots
 function tradeValue(p){
-  const prod=Math.max(0,(p.ovr-44));
-  const ageF=clamp((30-p.age)/9,-0.4,1.7);
-  const upside=Math.max(0,(p.pot-p.ovr))*ageF*1.1;
-  const youth=p.age<=24?(p.ovr-40)*0.25:0;
-  let v=prod+upside+Math.max(0,youth);
-  // elite premium — superstars and high-ceiling talents cost a lot more (and are hard to pry loose)
-  if(p.ovr>=85)v+=Math.pow(p.ovr-85,1.45)*2.0;     // superstar tax
-  if(p.pot>=88)v+=Math.pow(p.pot-88,1.3)*1.4;      // elite-ceiling premium
-  v-=Math.max(0,(p.salary-12))*(p.age>31?0.6:0.25);
-  if(p.years<=1)v*=0.78;                  // rental discount
-  return Math.max(1,round(v));
+  const ovr=p.ovr, pot=Math.max(p.pot||ovr,ovr), age=p.age;
+  const youthF=clamp((31-age)/9,0,1.7);
+  // current ability
+  let cur = ovr<=52 ? Math.max(0,(ovr-40))*0.5 : 4+(ovr-52)*1.1;
+  // ceiling premium — only genuinely useful ceilings (>72) carry future value, scaled by youth
+  const ceilPrem = Math.max(0, pot-72)*(0.5+youthF*0.95);
+  let v = cur + ceilPrem;
+  // prime-age desirable regulars (the 75-85 OVR, still-young guys real teams covet)
+  if(ovr>=75 && ovr<=88 && age<=33) v += (ovr-73)*(age<=31?1.0:0.7);
+  // superstar tax
+  if(ovr>=88) v += Math.pow(ovr-88,1.4)*2.4;
+  // salary drag on pricey, aging players
+  v -= Math.max(0,(p.salary-14))*(age>31?0.5:0.2);
+  if(p.years<=1) v*=0.8;                    // rental discount
+  // unplayable ceiling => little trade value
+  if(pot<70) v=Math.min(v, 3+Math.max(0,(ovr-55))*0.7);
+  return Math.max(1, Math.round(v));
 }
-const pickValue=slot=>round(clamp(60*Math.pow(0.93,slot-1),5,60));
+// top-heavy pick scale: a #1 is a premium asset you can't assemble from scraps
+const PICK_VALUES=[0,90,72,60,50,43,37,32,28,24,21,18,16,14,12,11,10];
+function pickValue(slot){return PICK_VALUES[clamp(round(slot),1,16)]||9;}
 
 /* ---------- position eligibility ---------- */
 const ELIG={C:["C"],"1B":["1B","3B","DH"],"2B":["2B","SS"],"3B":["3B","1B","SS"],
@@ -350,10 +432,11 @@ function newGame(teamName){
   G={year:1,phase:0,teamName:teamName||"River City Rovers",
     roster,farm,pool:poolAll,
     ai:Array.from({length:15},(_,i)=>({id:uid(),name:aiTeamName(i),war:gauss(30,7),
-      mode:Math.random()<0.3?"rebuild":Math.random()<0.5?"contend":"steady"})),
+      mode:Math.random()<0.3?"rebuild":Math.random()<0.5?"contend":"steady",catProfile:genCatProfile()})),
     ownedPicks:freshDraftPicks(), standings:[], lastWins:null, history:[],
     champions:0, playoffApps:0, bestWins:0, worstWins:200,
-    tradeTries:3, leftAsFA:[], faMarket:[], faYear:0, maxPayroll:0, taxYears:0, taxWinsLost:0};
+    tradeTries:3, leftAsFA:[], faMarket:[], faYear:0, maxPayroll:0, taxYears:0, taxWinsLost:0,
+    resources:{scouting:1/3,development:1/3,coaching:1/3}};
   saveGame();
 }
 let _aiNames=null;
@@ -372,13 +455,24 @@ function aiTeamName(i){
    ============================================================ */
 function simulateSeason(){
   const mlb=G.roster.filter(p=>p.loc==="mlb");
-  mlb.forEach(p=>p.inj=0);
-  const injured=[];const n=ri(2,5);
-  for(let i=0;i<n;i++){const p=pick(mlb);if(p&&!p.inj){p.inj=ri(15,110);injured.push(p);}}
+  mlb.forEach(p=>{p.inj=0;p.injType=null;});
+  const healthyWAR=teamWAR(G.roster);
+  const injured=[];
+  mlb.forEach(p=>{
+    const dura=p.dura==null?70:p.dura;
+    const chance=clamp((100-dura)/205+Math.max(0,(p.age-30))*0.005,0.03,0.55);
+    if(Math.random()<chance){
+      const longChance=clamp(0.18+Math.max(0,(p.age-30))*0.012+(100-dura)/420,0.1,0.55);
+      let games,type;
+      if(Math.random()<longChance){games=ri(60,150);type="long";if(Math.random()<0.12)games=162;}
+      else{games=ri(12,52);type="short";}
+      p.inj=games;p.injType=type;injured.push(p);
+    }
+  });
   G.ai.forEach(t=>{let d=t.mode==="rebuild"?gauss(1.4,2):t.mode==="contend"?gauss(0.3,2):gauss(0,1.7);
     t.war=clamp(t.war+d,10,55);});
-  // also age/develop the trade pool a touch so available talent stays current
   const myWAR=teamWAR(G.roster);
+  const injWinsLost=clamp(round((healthyWAR-myWAR)*1.4),0,99);
   const entries=[{name:G.teamName,war:myWAR,me:true},...G.ai.map(t=>({name:t.name,war:t.war}))];
   entries.forEach(e=>{e.wins=clamp(round(warToWins(e.war)+gauss(0,4.6)),47,116);e.losses=162-e.wins;});
   // luxury tax: every $10M of payroll over $300M costs the user 1 win
@@ -396,12 +490,14 @@ function simulateSeason(){
   const mySlot=17-me.seed;
   G.ownedPicks.forEach(pk=>{if(pk.future&&pk.fromMe){pk.slot=mySlot;pk.future=false;}});
   G.history.push({year:G.year,wins:me.wins,losses:me.losses,seed:me.seed,playoffs:me.seed<=8,champ:wonWS});
-  return {me,entries,injured,champ,wonWS,mySlot,tax};
+  return {me,entries,injured,champ,wonWS,mySlot,tax,injWinsLost,healthyProj:warToWins(healthyWAR)};
 }
 function runPlayoffs(teams){
+  const cb=1+(((G.resources?G.resources.coaching:0.333)-0.333)*0.45);   // coaching edge in October
   let r=teams.slice();
   while(r.length>1){const nx=[];for(let i=0;i<r.length;i+=2){const a=r[i],b=r[i+1];
-    let pa=clamp((a.war+8)/((a.war+8)+(b.war+8)),0.2,0.8);nx.push(Math.random()<pa?a:b);}r=nx;}
+    const sa=(a.war+8)*(a.me?cb:1),sb=(b.war+8)*(b.me?cb:1);
+    let pa=clamp(sa/(sa+sb),0.18,0.85);nx.push(Math.random()<pa?a:b);}r=nx;}
   return r[0];
 }
 
@@ -410,18 +506,23 @@ function runPlayoffs(teams){
    ============================================================ */
 function developAll(){
   const notes=[];
+  const dev=(G.resources?G.resources.development:0.333);
+  G.roster.forEach(p=>{p.inj=0;p.injType=null;});   // injuries heal over the offseason
   const all=G.roster.concat(G.farm).concat(G.pool);
   all.forEach(p=>{
     const b=p.ovr;
     if(p.realCeil==null)p.realCeil=Math.max(p.ovr,p.pot);
     const tgt=Math.min(p.realCeil,p.pot);   // they grow toward realized ceiling, not the dream
     if(p.age<=25){
+      const onFarm=p.loc==="farm";
+      const devMult=onFarm?(0.55+dev*1.7):0.8;   // big lift in the minors; little once promoted
+      if(onFarm&&Math.random()<dev*0.26){p.pot=clamp(p.pot+ri(1,5),p.pot,99);p.realCeil=clamp(p.realCeil+ri(2,4),p.ovr,p.pot);} // strong development can push a prospect past their scouted ceiling
       if(Math.random()<0.04){p.pot=clamp(p.pot-ri(1,5),p.ovr,99);}                       // scouts sour
       else if(Math.random()<0.05){p.pot=clamp(p.pot+ri(2,6),p.pot,99);p.realCeil=clamp(p.realCeil+ri(2,5),p.ovr,p.pot);} // rare late breakout
       const t=Math.min(p.realCeil,p.pot);
-      const g=Math.max(0,(t-p.ovr))*rnd(0.30,0.55);
+      const g=Math.max(0,(t-p.ovr))*rnd(0.30,0.55)*devMult;
       p.ovr=clamp(round(p.ovr+(t>p.ovr?Math.max(1,g):0)),28,99);}
-    else if(p.age<=27){p.ovr=clamp(round(p.ovr+(tgt>p.ovr?rnd(1,3.5):rnd(-1,1))),28,99);}
+    else if(p.age<=27){const dm=p.loc==="farm"?(0.7+dev*1.0):0.9;p.ovr=clamp(round(p.ovr+(tgt>p.ovr?rnd(1,3.5)*dm:rnd(-1,1))),28,99);}
     else if(p.age<=30){p.ovr=clamp(round(p.ovr+(tgt>p.ovr?rnd(-0.5,1.5):rnd(-1.5,.5))),28,99);}
     else if(p.age<=32){p.ovr=clamp(round(p.ovr+rnd(-2.5,0)),28,99);}
     else{p.ovr=clamp(round(p.ovr-rnd(1.5,4.5)),22,99);}
@@ -499,6 +600,7 @@ function screenTrade(){
   if(G.phase!==0){G.phase=0;}
   if(_offers===null)_offers=genOffers();
   if(!_custom)_custom={giveIds:new Set(),getIds:new Set(),partner:null,opts:null};
+  if(G.draftOrderYear!==G.year)computeDraftOrder();
   if(G.year>=3&&G.faYear!==G.year){G.faMarket=genFAMarket();G.faYear=G.year;}
   const proj=warToWins(teamWAR(G.roster));
   const expiring=G.roster.filter(p=>p.loc==="mlb"&&p.years<=1).sort((a,b)=>b.ovr-a.ovr);
@@ -514,6 +616,8 @@ function screenTrade(){
      ${luxuryTax()>0?`<div class="small" style="color:var(--red);margin-top:4px">⚠ Payroll over $300M — luxury tax will cost ~${luxuryTax()} win${luxuryTax()>1?'s':''} this season.</div>`:''}</div>`;})()}
    <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster <span class="small muted">(updates after each trade)</span></summary>
      <div style="margin-top:8px">${rosterMini()}</div></details>
+   <div class="panel"><h3>🎖️ Front Office Resources <span class="small muted">(set your allocation for the year ahead)</span></h3>
+     <div id="resbox">${renderResources()}</div></div>
    ${expiring.length?`<div class="panel" style="border-color:var(--red)">
      <h3>⏳ Expiring contracts — extend or trade before they walk</h3>
      <table><tbody>${expiring.map(p=>`<tr>
@@ -544,13 +648,13 @@ function assetLabel(a){
   const p=a.player;
   const ceil=p.pot>p.ovr?` <span class="pill ${ceilClass(p.pot)}" style="padding:1px 6px">ceil ${p.pot}</span>`:'';
   const tag=(p.prospect||p.college)?' <span class="small" style="color:var(--blue)">prospect</span>':(p.fic?' <span class="small muted">depth</span>':'');
-  return `<span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • ${p.ovr} OVR • ${p.years}yr • $${p.salary}M</span>${ceil}${tag}`;
+  return `<span class="pos">${p.pos}</span> ${p.name}${duraEmoji(p)} <span class="small muted">age ${p.age} • ${ovrHTML(p.ovr)} OVR • ${p.years}yr • $${p.salary}M</span>${ceil}${tag}`;
 }
 /* ---- free agency ---- */
 function ficVeteran(elite){
   const pos=pick(POSPOOL);const age=ri(27,39);
   const ovr=elite?clamp(round(gauss(87,3)),83,93):clamp(round(gauss(70,8)),56,86);
-  return {id:uid(),name:ficName(),pos,age,ovr,pot:ovr,realCeil:ovr,salary:0,years:0,loc:"pool",inj:0,fic:true};
+  return {id:uid(),name:ficName(),pos,age,ovr,pot:ovr,realCeil:ovr,dura:rollDura(age),attr:genAttrs(pos),salary:0,years:0,loc:"pool",inj:0,fic:true};
 }
 function faAsk(p){
   const ageF=clamp((42-p.age)/14,0.5,1.45);
@@ -572,7 +676,7 @@ function renderFA(){
   if(!G.faMarket||!G.faMarket.length)return `<p class="muted">No free agents left this winter.</p>`;
   return G.faMarket.map(fa=>{const p=fa.player;
     return `<div class="offer"><div class="row" style="align-items:center">
-     <div style="flex:2"><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • <b class="ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</b> OVR</span>${p.fic?'':' <span class="small" style="color:var(--blue)">real FA</span>'}</div>
+     <div style="flex:2"><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • ${ovrHTML(p.ovr)} OVR</span>${p.fic?'':' <span class="small" style="color:var(--blue)">real FA</span>'}</div>
      <div style="flex:1;text-align:right"><span class="pill gold">${fa.years}yr • $${fa.aav}M/yr</span>
        <button class="btn primary sm" onclick="signFA('${fa.id}')">Sign</button></div></div></div>`;}).join("");
 }
@@ -586,21 +690,73 @@ function signFA(fid){
 }
 function needsSurplus(){
   const mlb=G.roster.filter(p=>p.loc==="mlb");const a=buildActive(G.roster);
+  // positions already covered by a high-ceiling prospect in your minors
+  const farmCover=G.farm.filter(p=>p.pot>=80).map(p=>p.pos);
+  const covered=s=>farmCover.some(fp=>ELIG[s].includes(fp));
   const needs=[],surplus=[];
-  LINEUP.forEach(s=>{const p=a.lineup[s];if(!p||p.ovr<66)needs.push(s);});
-  if(mlb.filter(p=>p.pos==="SP"&&p.ovr>=66).length<4)needs.push("SP");
-  if(mlb.filter(p=>p.pos==="RP"&&p.ovr>=66).length<3)needs.push("RP");
+  LINEUP.forEach(s=>{const p=a.lineup[s];if((!p||p.ovr<66)&&!covered(s))needs.push(s);});
+  if(mlb.filter(p=>p.pos==="SP"&&p.ovr>=66).length<4&&!farmCover.includes("SP"))needs.push("SP");
+  if(mlb.filter(p=>p.pos==="RP"&&p.ovr>=66).length<3&&!farmCover.includes("RP"))needs.push("RP");
+  // surplus counts MLB-quality bodies plus high-ceiling prospects at a position
   const cnt={};mlb.forEach(p=>{if(p.ovr>=74)cnt[p.pos]=(cnt[p.pos]||0)+1;});
+  G.farm.filter(p=>p.pot>=82).forEach(p=>{cnt[p.pos]=(cnt[p.pos]||0)+1;});
   Object.keys(cnt).forEach(pos=>{const need=pos==="SP"?4:pos==="RP"?3:1;if(cnt[pos]>need)surplus.push(cnt[pos]>need+1?`${pos} (${cnt[pos]})`:pos);});
   return {needs:[...new Set(needs)],surplus};
 }
+function duraEmoji(p){if(!p||p.dura==null)return '';if(p.dura<50)return ' 🩹';if(p.dura>85)return ' 💪';return '';}
 function rosterMini(){
   const a=buildActive(G.roster);
-  const chip=(lbl,p)=>`<span class="pill" style="margin:2px;background:var(--panel2)">${lbl} ${p?`${p.name.split(' ').slice(-1)[0]} <b class="ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</b>${p.inj?' 🩹':''}`:'<span class="empty">—</span>'}</span>`;
+  const chip=(lbl,p)=>`<span class="pill" style="margin:2px;background:var(--panel2)">${lbl} ${p?`${p.name.split(' ').slice(-1)[0]} ${ovrHTML(p.ovr)}${p.inj?' 🩹':''}${duraEmoji(p)}`:'<span class="empty">—</span>'}</span>`;
+  const bench=G.roster.filter(p=>p.loc==="mlb"&&!a.used.has(p.id)&&!a.rotation.includes(p)&&!a.pen.includes(p)).sort((x,y)=>y.ovr-x.ovr);
+  const farmSorted=G.farm.slice().sort((x,y)=>y.pot-x.pot);
+  const depthChip=p=>`<span class="pill" style="margin:2px;background:var(--panel2)"><span class="pos">${p.pos}</span> ${p.name.split(' ').slice(-1)[0]} ${ovrHTML(p.ovr)}<span class="small muted">/${p.pot}</span>${duraEmoji(p)}</span>`;
   return `<div style="margin:4px 0"><div class="small muted">Lineup</div>${LINEUP.map(s=>chip(s,a.lineup[s])).join("")}</div>
    <div style="margin:4px 0"><div class="small muted">Rotation</div>${[0,1,2,3].map(i=>chip('SP',a.rotation[i])).join("")}</div>
    <div style="margin:4px 0"><div class="small muted">Bullpen</div>${[0,1,2].map(i=>chip('RP',a.pen[i])).join("")}</div>
+   <div style="margin:4px 0"><div class="small muted">Depth — bench & minors (OVR/ceiling)</div>${(bench.concat(farmSorted)).length?bench.concat(farmSorted).map(depthChip).join(""):'<span class="small empty">none</span>'}</div>
    <div class="small muted" style="margin-top:6px">Projected wins <b style="color:var(--ink)">${warToWins(teamWAR(G.roster))}</b> • payroll $${payroll(G.roster)}M${luxuryTax()>0?` • <span style="color:var(--red)">luxury tax −${luxuryTax()} W</span>`:''}</div>`;
+}
+/* ---- resources triangle (scouting / development / coaching) ---- */
+const RES_A=[120,20],RES_B=[26,184],RES_C=[214,184];   // scouting / development / coaching vertices
+function bary(px,py,A,B,C){
+  const v0=[B[0]-A[0],B[1]-A[1]],v1=[C[0]-A[0],C[1]-A[1]],v2=[px-A[0],py-A[1]];
+  const d00=v0[0]*v0[0]+v0[1]*v0[1],d01=v0[0]*v1[0]+v0[1]*v1[1],d11=v1[0]*v1[0]+v1[1]*v1[1],d20=v2[0]*v0[0]+v2[1]*v0[1],d21=v2[0]*v1[0]+v2[1]*v1[1];
+  const den=d00*d11-d01*d01||1;
+  const wB=(d11*d20-d01*d21)/den,wC=(d00*d21-d01*d20)/den,wA=1-wB-wC;
+  return [wA,wB,wC];
+}
+function renderResources(){
+  const r=G.resources||{scouting:1/3,development:1/3,coaching:1/3};
+  const px=r.scouting*RES_A[0]+r.development*RES_B[0]+r.coaching*RES_C[0];
+  const py=r.scouting*RES_A[1]+r.development*RES_B[1]+r.coaching*RES_C[1];
+  const pc=x=>Math.round(x*100);
+  return `<div class="row" style="align-items:center">
+    <div style="flex:0 0 235px;text-align:center">
+      <svg viewBox="0 0 240 210" width="230" height="200" style="cursor:crosshair" onclick="setResourcesFromClick(event)">
+        <polygon points="${RES_A} ${RES_B} ${RES_C}" fill="rgba(120,200,40,.06)" stroke="var(--line)" stroke-width="1.5"/>
+        <line x1="${RES_A[0]}" y1="${RES_A[1]}" x2="${(RES_B[0]+RES_C[0])/2}" y2="${(RES_B[1]+RES_C[1])/2}" stroke="var(--line)" stroke-dasharray="3 3"/>
+        <line x1="${RES_B[0]}" y1="${RES_B[1]}" x2="${(RES_A[0]+RES_C[0])/2}" y2="${(RES_A[1]+RES_C[1])/2}" stroke="var(--line)" stroke-dasharray="3 3"/>
+        <line x1="${RES_C[0]}" y1="${RES_C[1]}" x2="${(RES_A[0]+RES_B[0])/2}" y2="${(RES_A[1]+RES_B[1])/2}" stroke="var(--line)" stroke-dasharray="3 3"/>
+        <circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="9" fill="var(--gold)" stroke="#0c1a00" stroke-width="2"/>
+        <text x="${RES_A[0]}" y="${RES_A[1]-6}" fill="var(--gold)" font-size="11" text-anchor="middle">Scouting</text>
+        <text x="${RES_B[0]+6}" y="${RES_B[1]+15}" fill="var(--gold)" font-size="11" text-anchor="middle">Development</text>
+        <text x="${RES_C[0]-6}" y="${RES_C[1]+15}" fill="var(--gold)" font-size="11" text-anchor="middle">Coaching</text>
+      </svg>
+      <div class="small muted">Click inside to allocate</div></div>
+    <div style="flex:1;min-width:210px">
+      <div class="small"><b style="color:var(--gold)">Scouting ${pc(r.scouting)}%</b> — your read on draft ceilings; more = prospects hit their ceiling more often, less = you get fooled by busts.</div>
+      <div class="small" style="margin-top:7px"><b style="color:var(--gold)">Development ${pc(r.development)}%</b> — speeds up prospects <i>in your minors</i> and can raise their ceiling. No effect once you call them up.</div>
+      <div class="small" style="margin-top:7px"><b style="color:var(--gold)">Coaching ${pc(r.coaching)}%</b> — raises your roster's floor, boosts defense & control, and improves your odds in a playoff series.</div>
+      <div style="margin-top:8px">${[['Balanced',34,33,33],['Scout',60,25,15],['Develop',20,60,20],['Win-now',18,22,60]].map(a=>`<button class="btn sm" onclick="setResources(${a[1]},${a[2]},${a[3]})">${a[0]}</button>`).join(' ')}</div>
+    </div></div>`;
+}
+function setResources(s,d,c){const t=s+d+c||1;G.resources={scouting:s/t,development:d/t,coaching:c/t};saveGame();const el=document.getElementById('resbox');if(el)el.innerHTML=renderResources();}
+function setResourcesFromClick(ev){
+  const svg=ev.currentTarget,rect=svg.getBoundingClientRect();
+  const sx=(ev.clientX-rect.left)*(240/rect.width),sy=(ev.clientY-rect.top)*(210/rect.height);
+  let w=bary(sx,sy,RES_A,RES_B,RES_C).map(x=>Math.max(0,x));const sum=w[0]+w[1]+w[2]||1;
+  G.resources={scouting:w[0]/sum,development:w[1]/sum,coaching:w[2]/sum};saveGame();
+  const el=document.getElementById('resbox');if(el)el.innerHTML=renderResources();
 }
 function myTradeableAssets(){
   const a=[];
@@ -616,7 +772,7 @@ function giveAsset(a){
 }
 function getAsset(a){
   if(a.kind==="player"){G.pool=G.pool.filter(p=>p.id!==a.player.id);placeAcquired(a.player);}
-  else{G.ownedPicks.push(a.pick);}
+  else{if(a.pick.fromTeam){const t=G.ai.find(x=>x.id===a.pick.fromTeam);if(t)t._pickTraded=true;}G.ownedPicks.push(a.pick);}
 }
 function placeAcquired(p){
   p.loc=(p.ovr>=68&&p.age>22&&!p.prospect)?"mlb":"farm";
@@ -626,7 +782,11 @@ function placeAcquired(p){
 }
 /* ---- generated offers ---- */
 function genOffers(){const offers=[];let guard=0;
-  while(offers.length<5&&guard++<70){const o=genOneOffer();if(o)offers.push(o);}return offers;}
+  while(offers.length<5&&guard++<70){const o=genOneOffer();if(o)offers.push(o);}
+  // never show the same draft pick (slot) in two different offers
+  const seen=new Set();
+  offers.forEach(o=>{o.get=o.get.filter(a=>{if(a.kind!=="pick")return true;if(seen.has(a.pick.slot))return false;seen.add(a.pick.slot);return true;});});
+  return offers;}
 function poolStars(min){return G.pool.filter(p=>!p.prospect&&p.ovr>=(min||80)&&p.age<=33);}
 function poolYoung(){return G.pool.filter(p=>p.prospect||(p.age<=25&&p.pot>=80));}
 function PA(p){return {kind:"player",aid:p.id,player:p,val:tradeValue(p)};}
@@ -639,7 +799,7 @@ function genOneOffer(){
     if(!vets.length)return null;
     const give=[vets[0]];if(vets[1]&&Math.random()<0.3)give.push(vets[1]);
     const target=give.reduce((s,p)=>s+tradeValue(p),0)*rnd(0.85,1.04);
-    const get=assembleFromPool(target,"young");if(!get.length)return null;
+    const get=assembleFromPool(target,"young",team);if(!get.length)return null;
     return mkOffer(team,give.map(PA),get);
   }
   if(mode==="buy"){
@@ -653,14 +813,18 @@ function genOneOffer(){
   const cand=G.pool.filter(p=>Math.abs(tradeValue(p)-want)<=7&&p.id!==mine.id);if(!cand.length)return null;
   return mkOffer(team,[PA(mine)],[PA(pick(cand))]);
 }
-function assembleFromPool(target,kind){
+function assembleFromPool(target,kind,team){
   let cands=(kind==="young"?poolYoung():G.pool).slice();if(!cands.length)cands=G.pool.slice();
   cands.sort(()=>Math.random()-0.5);
   const get=[];let v=0,guard=0;
   while(v<target*0.9&&get.length<3&&guard++<30&&cands.length){
     const p=cands.shift();const pv=tradeValue(p);
     if(v+pv<=target+8){get.push(PA(p));v+=pv;}}
-  if(v<target*0.85&&G.year<=3){const sp=synthPick(ri(3,16));get.push(sp);}
+  if(v<target*0.85&&G.year<=3&&team&&team.pickSlot&&!team._pickTraded){
+    const pk={id:uid(),slot:team.pickSlot,round:1,future:false,fromMe:false,fromTeam:team.id};
+    const pv=pickVal(pk);
+    if(pv<=(target-v)+12){get.push({kind:"pick",aid:pk.id,pick:pk,val:pv});}   // only add a pick that fits the value
+  }
   return get;
 }
 function assembleFromMine(target){
@@ -679,7 +843,7 @@ function renderOffers(){
   if(!_offers.length)return `<p class="muted">No deals on the table — try refreshing.</p>`;
   return _offers.map(o=>`<div class="offer">
      <div class="row" style="align-items:center">
-       <div style="flex:2"><b>${o.team.name}</b>
+       <div style="flex:2"><b>${o.team.name}</b> <span class="small muted">proj ${warToWins(o.team.war)}W</span>
          <span class="pill ${o.fair>=1?'green':o.fair>=0.88?'gold':'red'}">${o.fair>=1?'You win':o.fair>=0.88?'Fair':'Lean against you'}</span></div>
        <div style="flex:1;text-align:right"><button class="btn primary sm" onclick="acceptOffer('${o.id}')">Accept</button></div></div>
      <div class="grid2" style="margin-top:8px">
@@ -697,15 +861,12 @@ function acceptOffer(oid){const o=_offers.find(x=>x.id===oid);if(!o)return;
 let _builderMine=[];
 function buildPartnerAssets(team){
   const arr=[];
-  const prospects=G.pool.filter(p=>p.prospect||(p.age<=24&&p.pot>=80)).sort(()=>Math.random()-0.5).slice(0,5);
-  const used=new Set(prospects.map(p=>p.id));
-  const players=G.pool.filter(p=>!used.has(p.id)&&!p.fic).sort(()=>Math.random()-0.5).slice(0,5);
-  players.forEach(p=>used.add(p.id));
-  const depth=G.pool.filter(p=>p.fic&&!p.prospect&&!used.has(p.id)).sort(()=>Math.random()-0.5).slice(0,2);
-  [...prospects,...players,...depth].forEach(p=>arr.push(PA(p)));
-  const slot=clamp(round((warToWins(team.war)-58)/3.3),1,16);
-  const pk={id:uid(),slot,future:false,fromMe:false};
-  arr.push({kind:"pick",aid:pk.id,pick:pk,val:pickVal(pk)});
+  if(!team.block||G.draftOrderYear!==G.year)computeDraftOrder();
+  (team.block||[]).forEach(id=>{const p=G.pool.find(x=>x.id===id);if(p)arr.push(PA(p));});
+  if(team.pickSlot&&!team._pickTraded){
+    const pk={id:uid(),slot:team.pickSlot,round:1,future:false,fromMe:false,fromTeam:team.id};
+    arr.push({kind:"pick",aid:pk.id,pick:pk,val:pickVal(pk)});
+  }
   return arr;
 }
 function sortAssets(arr,key){
@@ -751,7 +912,7 @@ function renderBuilder(){
      </div>
      <div style="text-align:center;margin-top:8px"><span class="pill ${ok?'green':'red'}">${ok?'✓ They accept this':'✗ They reject — your package is light'}</span></div></div>`;
   return `<div class="row" style="align-items:center;margin-bottom:6px">
-     <div style="flex:1">Partner: <select onchange="setPartner(this.value)">${G.ai.map(t=>`<option ${t.id===_custom.partner.id?'selected':''} value="${t.id}">${t.name}</option>`).join("")}</select></div>
+     <div style="flex:1">Partner: <select onchange="setPartner(this.value)">${G.ai.slice().sort((a,b)=>(a.pickSlot||9)-(b.pickSlot||9)).map(t=>`<option ${t.id===_custom.partner.id?'selected':''} value="${t.id}">${t.name} — proj ${warToWins(t.war)}W${t.pickSlot?`, holds pick #${t.pickSlot}`:''}</option>`).join("")}</select></div>
    </div>
    ${box}
    <div class="grid2">
@@ -817,27 +978,40 @@ function screenRoster(){
    <div class="center" style="margin-top:14px"><button class="btn primary" onclick="goPhase(2)">Lock roster → Play ⚾</button></div>`);
 }
 function contractCell(p){return `<span class="yrs ${p.years<=1?'exp':'muted'}">$${p.salary}M • ${p.years}yr${p.years<=1?' ⚠':''}</span>`;}
+function duraTag(p){if(p.dura==null)return '';
+  if(p.dura<50)return ` <span class="pill red" style="padding:0 6px">🩹 Fragile ${p.dura}</span>`;
+  if(p.dura>85)return ` <span class="pill green" style="padding:0 6px">💪 Iron ${p.dura}</span>`;return '';}
+function injTag(p){return p.inj?` <span class="pill ${p.injType==='long'?'red':''}" style="padding:0 6px">🩹 ${p.injType==='long'?'long':'short'} ~${p.inj}g</span>`:'';}
+function strengthWeakTags(p){
+  if(!p.attr)return '';
+  const keys=isPit(p)?PIT_ATTRS:HIT_ATTRS;const out=[];
+  keys.forEach(k=>{const v=attrVal(p,k);
+    if(v>=85)out.push(`<span class="pill green" style="padding:0 5px;font-size:10px">${ATTR_LABEL[k]} ${v}</span>`);
+    else if(v<=50)out.push(`<span class="pill red" style="padding:0 5px;font-size:10px">${ATTR_LABEL[k]} ${v}</span>`);});
+  return out.length?' '+out.join(''):'';
+}
+function attrTags(p){return strengthWeakTags(p);}
 function slotRow(slot,p){
   if(!p)return `<tr><td><span class="pos">${slot}</span> <span class="empty">— replacement level —</span></td><td class="num"></td><td class="num"></td><td></td></tr>`;
-  return `<tr><td><span class="pos">${slot}</span> ${p.name} <span class="small muted">${p.pos}, age ${p.age}${p.inj?' • 🩹inj':''}</span></td>
-    <td class="num ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</td><td class="num">${contractCell(p)}</td>
+  return `<tr><td><span class="pos">${slot}</span> ${p.name} <span class="small muted">${p.pos}, age ${p.age}</span>${duraTag(p)}${injTag(p)}${attrTags(p)}</td>
+    <td class="num">${ovrHTML(p.ovr)}</td><td class="num">${contractCell(p)}</td>
     <td class="num">${p.years<=2?`<button class="btn sm" onclick="extend('${p.id}');screenRoster()">Extend</button>`:''}</td></tr>`;
 }
 function pitRow(role,p){
   if(!p)return `<tr><td><span class="pos">${role}</span> <span class="empty">— replacement level —</span></td><td class="num"></td><td class="num"></td><td></td></tr>`;
-  return `<tr><td><span class="pos">${role}</span> ${p.name} <span class="small muted">age ${p.age}${p.inj?' • 🩹inj':''}</span></td>
-    <td class="num ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</td><td class="num">${contractCell(p)}</td>
+  return `<tr><td><span class="pos">${role}</span> ${p.name} <span class="small muted">age ${p.age}</span>${duraTag(p)}${injTag(p)}${attrTags(p)}</td>
+    <td class="num">${ovrHTML(p.ovr)}</td><td class="num">${contractCell(p)}</td>
     <td class="num">${p.years<=2?`<button class="btn sm" onclick="extend('${p.id}');screenRoster()">Extend</button>`:''}</td></tr>`;
 }
-function depthRow(p){return `<tr><td><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age}</span></td>
-  <td class="num ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</td><td class="num">${contractCell(p)}</td>
+function depthRow(p){return `<tr><td><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age}</span>${duraTag(p)}${attrTags(p)}</td>
+  <td class="num">${ovrHTML(p.ovr)}</td><td class="num">${contractCell(p)}</td>
   <td class="num"><button class="btn sm" onclick="sendDown('${p.id}')">↓Farm</button></td></tr>`;}
 function farmTable(){
   if(!G.farm.length)return `<p class="muted">Empty. Trade for prospects and draft to fill it.</p>`;
   return `<table><thead><tr><th>Prospect</th><th class="num">Age</th><th class="num">OVR</th><th class="num">Ceil</th><th></th></tr></thead><tbody>${
     G.farm.sort((a,b)=>b.pot-a.pot).map(p=>`<tr>
       <td><span class="pos">${p.pos}</span> ${p.name}${p.college?` <span class="small muted">(${p.college})</span>`:''}</td>
-      <td class="num">${p.age}</td><td class="num ovr" style="color:${ovrColor(p.ovr)}">${p.ovr}</td>
+      <td class="num">${p.age}</td><td class="num">${ovrHTML(p.ovr)}</td>
       <td class="num"><span class="pill ${ceilClass(p.pot)}">${p.pot}</span></td>
       <td class="num"><button class="btn sm ${p.ovr>=62?'primary':''}" onclick="promote('${p.id}')">Promote ↑</button></td></tr>`).join("")}</tbody></table>`;
 }
@@ -857,6 +1031,36 @@ function screenSeason(){
      <button class="btn primary" style="font-size:16px;padding:14px 26px" onclick="doSeason()">▶ Simulate Season</button></div>`);
 }
 function doSeason(){_res=simulateSeason();saveGame();showResult();}
+function teamReportCard(){
+  const mlb=G.roster.filter(p=>p.loc==="mlb");
+  const hitters=mlb.filter(isHit).sort((a,b)=>b.ovr-a.ovr).slice(0,9);
+  const arms=mlb.filter(p=>p.pos==="SP").sort((a,b)=>b.ovr-a.ovr).slice(0,4)
+    .concat(mlb.filter(p=>p.pos==="RP").sort((a,b)=>b.ovr-a.ovr).slice(0,3));
+  const coach=(G.resources?G.resources.coaching:0.333);
+  const avg=(arr,f)=>arr.length?arr.reduce((s,p)=>s+f(p),0)/arr.length:50;
+  const cats={};
+  HIT_ATTRS.forEach(k=>{let v=avg(hitters,p=>attrVal(p,k));if(k==="defense")v+=coach*8;cats[k]=v;});
+  PIT_ATTRS.forEach(k=>{let v=avg(arms,p=>attrVal(p,k));if(k==="control")v+=coach*8;cats[k]=v;});
+  const ranks={};
+  Object.keys(cats).forEach(k=>{const my=cats[k];let better=0;G.ai.forEach(t=>{if(aiCatScore(t,k)>my)better++;});ranks[k]={score:Math.round(my),rank:better+1};});
+  return ranks;
+}
+function ordinal(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+function rankColor(rank){return rank<=4?'var(--green)':rank<=8?'var(--gold)':rank<=11?'var(--ink)':'var(--red)';}
+function reportCardPanel(){
+  const rc=teamReportCard();
+  const row=k=>{const r=rc[k];const w=(17-r.rank)/16*100;
+    return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0">
+      <span style="flex:0 0 64px" class="small">${ATTR_LABEL[k]}</span>
+      <div class="bar" style="flex:1;margin:0"><i style="width:${w}%;background:${rankColor(r.rank)}"></i></div>
+      <span class="small" style="flex:0 0 84px;text-align:right;color:${rankColor(r.rank)}">${ordinal(r.rank)} of 16</span></div>`;};
+  return `<div class="panel"><h3>📋 Season Report Card</h3>
+    <p class="sub">Where your club ranked across the league this year. Green = top tier, red = bottom tier.</p>
+    <div class="grid2">
+      <div><div class="sectlbl" style="margin-top:0">Hitting</div>${HIT_ATTRS.map(row).join("")}</div>
+      <div><div class="sectlbl" style="margin-top:0">Pitching</div>${PIT_ATTRS.map(row).join("")}</div>
+    </div></div>`;
+}
 function showResult(){
   const r=_res,me=r.me,last=G.year>=6;
   const verdict=r.wonWS?'🏆 WORLD SERIES CHAMPIONS!!!':r.me.seed<=8?'🎉 Made the playoffs!':
@@ -872,7 +1076,10 @@ function showResult(){
        <div class="kpi"><div class="big">#${me.seed}</div><div class="lbl">League Rank /16</div></div>
        <div class="kpi"><div class="big">#${r.mySlot}</div><div class="lbl">Next Draft Pick</div></div></div>
      ${r.tax>0?`<p class="small" style="color:var(--red);margin-top:8px">💸 Luxury tax: payroll over $300M cost you ${r.tax} win${r.tax>1?'s':''} this season.</p>`:''}
-     ${r.injured.length?`<p class="small muted" style="margin-top:4px">Injuries: ${r.injured.map(p=>p.name).join(", ")}</p>`:''}</div>
+     ${r.injured.length?`<div class="small" style="margin-top:8px;text-align:left;max-width:560px;margin-left:auto;margin-right:auto">
+        🩹 <b>Injuries</b>${r.injWinsLost>0?` — cost you about <b style="color:var(--red)">${r.injWinsLost} win${r.injWinsLost>1?'s':''}</b> (healthy projection was ${r.healthyProj})`:' (your depth absorbed them)'}:
+        <div style="margin-top:3px">${r.injured.sort((a,b)=>b.inj-a.inj).map(p=>`<span class="pill ${p.injType==='long'?'red':''}" style="margin:2px">${p.pos} ${p.name} — ${p.injType==='long'?'long-term':'short-term'} (~${p.inj} g)</span>`).join("")}</div></div>`:''}</div>
+   ${reportCardPanel()}
    <div class="panel"><h3>Final Standings</h3>
      <div class="scroll"><table><thead><tr><th class="num">#</th><th>Team</th><th class="num">W</th><th class="num">L</th><th></th></tr></thead><tbody>${stand}</tbody></table></div></div>
    <div class="center">${last?`<button class="btn primary" onclick="endGame()">See your 6-year legacy →</button>`
@@ -890,7 +1097,7 @@ function screenDraft(){
   const pk=_dq[0],slot=pickResolvedSlot(pk),rd=pk.round||1;
   const advChance=rd>=3?(G.year>=4?0.75:0.5):rd===2?(G.year>=4?0.6:0.3):(G.year>=4?0.5:G.year===3?0.25:0.08);
   const ps=[...POSALL];for(let i=ps.length-1;i>0;i--){const j=ri(0,i);[ps[i],ps[j]]=[ps[j],ps[i]];}
-  _board=[];for(let i=0;i<10;i++)_board.push(draftee(slot+ri(0,2),rd,Math.random()<advChance,ps[i%ps.length]));
+  _board=[];for(let i=0;i<10;i++)_board.push(draftee(slot,rd,Math.random()<advChance,ps[i%ps.length]));
   render(`${header()}${stepbar(3)}
    ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0">
      <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none — roster is balanced</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span></div>`;})()}
@@ -1014,8 +1221,8 @@ function endGame(){
 /* ============================================================
    LEADERBOARD — local by default; set LEADERBOARD_API for a shared board
    ============================================================ */
-const LEADERBOARD_API="https://tank-leaderboard.josh-c2f.workers.dev/"; // paste your Cloudflare Worker URL here to go global (see README)
-const LB_KEY="tankCommander_lb_v1";
+const LEADERBOARD_API=""; // paste your Cloudflare Worker URL here to go global (see README)
+const LB_KEY="tankCommander_lb_v2";
 function lbLoadLocal(){try{return JSON.parse(localStorage.getItem(LB_KEY)||"[]");}catch(e){return [];}}
 function lbSaveLocal(a){try{localStorage.setItem(LB_KEY,JSON.stringify(a.slice(0,600)));}catch(e){}}
 function lbRank(arr){return arr.slice().sort((a,b)=>(b.score-a.score)||((b.champs||0)-(a.champs||0))||((b.peak||0)-(a.peak||0)));}
