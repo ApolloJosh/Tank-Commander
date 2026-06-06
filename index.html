@@ -614,10 +614,10 @@ function screenTrade(){
    ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0">
      <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none — roster is balanced</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span>
      ${luxuryTax()>0?`<div class="small" style="color:var(--red);margin-top:4px">⚠ Payroll over $300M — luxury tax will cost ~${luxuryTax()} win${luxuryTax()>1?'s':''} this season.</div>`:''}</div>`;})()}
-   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster <span class="small muted">(updates after each trade)</span></summary>
-     <div style="margin-top:8px">${rosterMini()}</div></details>
    <div class="panel"><h3>🎖️ Front Office Resources <span class="small muted">(set your allocation for the year ahead)</span></h3>
      <div id="resbox">${renderResources()}</div></div>
+   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster <span class="small muted">(updates after each trade)</span></summary>
+     <div style="margin-top:8px">${rosterMini()}</div></details>
    ${expiring.length?`<div class="panel" style="border-color:var(--red)">
      <h3>⏳ Expiring contracts — extend or trade before they walk</h3>
      <table><tbody>${expiring.map(p=>`<tr>
@@ -628,13 +628,6 @@ function screenTrade(){
      <h3>🛠️ Build your own trade</h3>
      <p class="sub">Click ＋ to add your assets and a partner's assets. Draft picks are tradeable. Ceiling colors: <span class="pill gold" style="padding:0 6px">elite</span> <span class="pill green" style="padding:0 6px">high</span> <span class="pill blue" style="padding:0 6px">solid</span>.</p>
      <div id="builder">${renderBuilder()}</div>
-   </div>
-   <div class="panel">
-     <div class="row" style="align-items:center"><h3 style="flex:2">📋 Trade offers</h3>
-       <div style="flex:1;text-align:right">
-         <button class="btn sm" ${G.tradeTries<=0?'disabled':''} onclick="refreshOffers()">↻ New offers (${G.tradeTries} left)</button></div></div>
-     <p class="sub">Partners scout your situation: ${G.year<=2?'sellers want your veterans':G.year>=4?'contenders dangle stars for your young assets':'a mix of buy and sell'}.</p>
-     <div id="offerlist">${renderOffers()}</div>
    </div>
    ${G.year>=3?`<div class="panel">
      <h3>✍️ Free agents</h3>
