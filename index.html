@@ -1061,7 +1061,11 @@ function renderBuilder(){
    <div style="margin-bottom:6px">${tbPosChips()}</div>
    <div class="scroll" id="tblist">${tbList()}</div>
    ${tbKey()}`;}
-function rerenderBuilder(){const el=document.getElementById('builder');if(el)el.innerHTML=renderBuilder();}
+function rerenderBuilder(){const el=document.getElementById('builder');if(!el)return;
+  const old=document.getElementById('tblist');const st=old?old.scrollTop:0;const wy=window.scrollY;   // keep your place
+  el.innerHTML=renderBuilder();
+  const neu=document.getElementById('tblist');if(neu)neu.scrollTop=st;
+  window.scrollTo(0,wy);}
 function tbSeg(k){_custom.seg=k;rerenderBuilder();}
 function tbSetSort(v){_custom.sort=v;rerenderBuilder();}
 function tbSetPos(p){_custom.posF=p;rerenderBuilder();}
