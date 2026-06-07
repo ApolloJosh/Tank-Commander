@@ -1,5 +1,27 @@
 # Changelog
 
+## v5
+
+A trade, roster, and economy overhaul.
+
+### Trades
+- **Rebuilt trade builder** — a segmented Your team / Partner / Whole league browser. "Whole league" searches every club's available players (plus their picks) with search, position filters, and sort by value / overall / ceiling / age / control. Pick a player and your trade partner is set automatically.
+- **Player cards** — each row shows a gradient overall badge (with a prospect's ↑ceiling), durability, attribute strengths/weaknesses as emojis, and position flexibility, with a key explaining the icons.
+- **Suggested-trade panel** — one need-based suggestion at a time with unlimited respins; it auto-respins after you accept. Built around both clubs' needs and surplus, mostly value-fair with the occasional surplus-driven imbalance.
+
+### Roster & positions
+- **Position flexibility** — high-OVR players can flex to nearby spots (e.g., an 85+ SS covers 2B/3B; a 99 SS adds CF; SP→RP at 90, etc.), shown with a ↔ tag and used when filling the lineup and covering injuries.
+- Ceiling now shows next to overall on the roster; the diamond (96–98) and iridescent (99) colors apply to overalls and ceilings everywhere.
+- Note added that calling a prospect up too early slows their development.
+- Needs/surplus panel moved below the current roster in the trade hub.
+
+### Economy
+- **Salaries scale with ability and MLB service** — roughly $3M at year 1, $8M by year 3, up to a $25M cap at year 6 for a 99 OVR (lower overalls scale down). Salaries re-price each offseason, so a homegrown core gets expensive to keep.
+- 2nd- and 3rd-round draft picks are worth a bit less in trades.
+
+### Flavor
+- Random war-movie-pun team names (with a reroll), and all fictional players are now named after war/military movie characters.
+
 ## v4
 
 A big gameplay-depth update.
