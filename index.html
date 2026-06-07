@@ -356,7 +356,7 @@ function warOfC(p){const o=p.ovr+coachBonus(p);
   if(p.pos==="RP")return Math.max(0,(o-53)/13.5);
   return Math.max(0,(o-49)/10.5);}
 const eff=p=>warOfC(p)*injFactor(p);
-function warToWins(w){return clamp(round(81+(w-31)*1.40),47,116);}
+function warToWins(w){return clamp(round(81+(w-33)*1.25),47,114);}
 const REP_BAT=0.86, REP_SP=0.95, REP_RP=0.37;   // replacement-level fill for empty slots
 function tradeValue(p){
   const ovr=p.ovr, pot=Math.max(p.pot||ovr,ovr), age=p.age;
@@ -518,8 +518,9 @@ function simulateSeason(){
       p.inj=games;p.injType=type;injured.push(p);
     }
   });
-  G.ai.forEach(t=>{let d=t.mode==="rebuild"?gauss(1.4,2):t.mode==="contend"?gauss(0.3,2):gauss(0,1.7);
-    t.war=clamp(t.war+d,10,55);});
+  // rival clubs improve over time as their own farms develop — the league bar rises each year
+  G.ai.forEach(t=>{let d=(t.mode==="rebuild"?gauss(1.6,2):t.mode==="contend"?gauss(0.5,2):gauss(0.2,1.7))+gauss(0.7,0.5);
+    t.war=clamp(t.war+d,10,60);});
   const myWAR=teamWAR(G.roster);
   const injWinsLost=clamp(round((healthyWAR-myWAR)*1.4),0,99);
   const entries=[{name:G.teamName,war:myWAR,me:true},...G.ai.map(t=>({name:t.name,war:t.war}))];
@@ -542,11 +543,12 @@ function simulateSeason(){
   return {me,entries,injured,champ,wonWS,mySlot,tax,injWinsLost,healthyProj:warToWins(healthyWAR)};
 }
 function runPlayoffs(teams){
-  const cb=1+(((G.resources?G.resources.coaching:0.333)-0.333)*0.45);   // coaching edge in October
+  const cb=1+(((G.resources?G.resources.coaching:0.333)-0.333)*0.32);   // coaching edge in October
   let r=teams.slice();
+  // October is a coin-flip dressed up — even the best club isn't a lock to win a series
   while(r.length>1){const nx=[];for(let i=0;i<r.length;i+=2){const a=r[i],b=r[i+1];
-    const sa=(a.war+8)*(a.me?cb:1),sb=(b.war+8)*(b.me?cb:1);
-    let pa=clamp(sa/(sa+sb),0.18,0.85);nx.push(Math.random()<pa?a:b);}r=nx;}
+    const sa=(a.war+22)*(a.me?cb:1),sb=(b.war+22)*(b.me?cb:1);
+    let pa=clamp(sa/(sa+sb),0.30,0.68);nx.push(Math.random()<pa?a:b);}r=nx;}
   return r[0];
 }
 
@@ -594,6 +596,10 @@ function developAll(){
   G.roster=G.roster.filter(p=>{if(p.age>=40||(p.ovr<=30&&p.age>35)){ret.push(p);return false;}return true;});
   G.farm=G.farm.filter(p=>p.ovr>24);
   G.pool=G.pool.filter(p=>p.age<40&&p.ovr>30);
+  // rival farm systems: a fresh draft/international class enters the league each year,
+  // so new high-ceiling prospects keep appearing around the league to scout and trade for
+  const classN=ri(13,19);
+  for(let i=0;i<classN;i++)G.pool.push(ficProspect());
   return {notes,retired:ret,fa:G.leftAsFA};
 }
 function extend(pid){
@@ -1304,7 +1310,7 @@ function computeGrade(){
   if(faCount>=3)add(`Leaned on free-agent signings (${faCount})`,Math.max(-6,-(faCount-2)*2));
   if(holes>0)add(`${holes} hole${holes>1?'s':''} left in the everyday roster`,Math.max(-8,-holes*2));
   score=clamp(round(score),0,100);
-  const grade=score>=90?'A+':score>=80?'A':score>=72?'A-':score>=63?'B':score>=53?'C':score>=42?'D':'F';
+  const grade=score>=92?'A+':score>=83?'A':score>=74?'A-':score>=64?'B':score>=53?'C':score>=42?'D':'F';
   let blurb;
   if(G.champions>=1&&peakLate>=100&&hgRatio>=0.5)blurb="The blueprint, executed to perfection — you tanked, drafted a homegrown core, and raised a banner. Front-office legend.";
   else if(G.champions>=1)blurb="You brought home a title. However you got there, the ring is the ring.";
@@ -1348,6 +1354,7 @@ function endGame(){
    ============================================================ */
 const LEADERBOARD_API="https://tank-leaderboard.josh-c2f.workers.dev"; // shared leaderboard backend
 const LB_KEY="tankCommander_lb_v2";
+function deviceId(){try{let d=localStorage.getItem("tankCommander_did");if(!d){d="d_"+Math.random().toString(36).slice(2,12)+Date.now().toString(36);localStorage.setItem("tankCommander_did",d);}return d;}catch(e){return "anon";}}
 function lbLoadLocal(){try{return JSON.parse(localStorage.getItem(LB_KEY)||"[]");}catch(e){return [];}}
 function lbSaveLocal(a){try{localStorage.setItem(LB_KEY,JSON.stringify(a.slice(0,600)));}catch(e){}}
 function lbRank(arr){return arr.slice().sort((a,b)=>(b.score-a.score)||((b.champs||0)-(a.champs||0))||((b.peak||0)-(a.peak||0)));}
@@ -1385,7 +1392,7 @@ async function screenLeaderboard(fromEnd){
 function submitScore(){
   const inp=document.getElementById('lbname');const name=((inp&&inp.value.trim())||'Anon').slice(0,12);
   const R=computeGrade();
-  const entry={name,team:G.teamName,score:R.score,grade:R.grade,peak:G.bestWins,champs:G.champions,window:R.windowYears,ts:Date.now(),date:todayStr()};
+  const entry={name,team:G.teamName,score:R.score,grade:R.grade,peak:G.bestWins,champs:G.champions,window:R.windowYears,ts:Date.now(),date:todayStr(),did:deviceId()};
   lbSubmit(entry);toast(`Submitted: ${name} — ${R.score} (${R.grade})`);
   screenLeaderboard(true);
 }

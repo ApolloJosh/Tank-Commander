@@ -1,5 +1,21 @@
 # Changelog
 
+## v5.1
+
+A difficulty + living-league patch.
+
+### Harder to dominate
+- **Tighter win curve.** A 100-win season now requires a genuinely elite roster — wins convert more conservatively from team strength, so 100+ is an achievement, not a default. The declining starting club still opens around 70 wins.
+- **October is a coin flip.** Playoff series are far more upset-prone: even the best, best-coached club is no lock to win a round, so World Series titles are earned, not assumed. (Coaching still helps, just less decisively.)
+- **Slightly stricter grading.** The letter-grade cutoffs nudged up a couple points, so top marks take a bit more.
+
+### Living AI league
+- **Rival farm systems are alive.** A fresh draft/international class enters the league every offseason, so new high-ceiling prospects keep appearing on other clubs over the years — there's always young talent to scout and trade for, even deep into a rebuild.
+- **Rivals improve over time.** The league bar rises each season as every club develops, so staying on top gets harder the longer you contend.
+
+### Backend
+- Anonymous per-browser device ID so the stats page can count unique players (no personal data; only applies to submissions made after this update).
+
 ## v5
 
 A trade, roster, and economy overhaul.
