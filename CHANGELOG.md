@@ -1,5 +1,28 @@
 # Changelog
 
+## v6
+
+A big in-season-depth and grading update.
+
+### Roster
+- **Drag-and-drop lineups.** Drag any player onto an eligible slot to set your lineup, rotation, and bullpen yourself; a filled slot won't take a drop, so drag its player to the bench first to free it. Leave it alone and the front office auto-fills the best arrangement. Flex-eligible players can be slotted at their secondary positions.
+
+### Two in-season decision points
+- **Service Time Manipulation (game 20).** An early call-up window — promote a prospect now and it won't count as a contract year, so you keep them controllable longer.
+- **Trade Deadline (game 110).** A full trade hub stop with shifted valuations: current production is king, ceilings cool off, and contract control matters more (rentals cheap, cost-controlled stars pricey). Clubs are tagged **buyers** (contending, overpay for win-now help) or **sellers** (out of it, deal rentals for youth), shown on a live standings dropdown, and the accept/reject bar swings to match. An even-value swap is always accepted, and a desperate buyer will eat an overpay to land your big-league talent. Set your roster again afterward to slot in what you acquired. The Front Office resources triangle is available here too.
+
+### Awards
+- **Rookie of the Year, Cy Young, and MVP.** Win one and you get bonus grade points plus a compensatory draft pick (between rounds 1 and 2 next year). The comp pick requires a homegrown winner for Cy Young and MVP; ROY always grants it.
+
+### Grading overhaul (harder)
+- A full **+/− letter scale** (A+ down to F) and a tougher curve — a perfect 100 now requires a near-flawless run.
+- Rebalanced points: World Series (15 for the first, +10 each after), peak wins (up to 30), a 100-win-timing bonus, awards, tanking, homegrown core, and future window. Steeper penalties for luxury tax, bloated payroll, free-agent reliance, and — new — fielding replacement-level/sub-70 OVR starters during your contention years.
+- The full scoring rubric is now visible on the home screen, in the Trade Hub, and on the end-of-run review.
+
+### Development & leaderboard
+- Development resources now help young big-leaguers too, at a smaller scale than the minors.
+- "River City Rovers" (an old build's default name) is banned from the leaderboard — dropped on submit and hidden on read.
+
 ## v5.1
 
 A difficulty + living-league patch.
