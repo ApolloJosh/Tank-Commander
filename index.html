@@ -428,7 +428,7 @@ function luxuryTax(){return Math.max(0,Math.floor((payroll(G.roster)-300)/10));}
    GAME STATE / SETUP
    ============================================================ */
 let G=null;
-const SAVE="tankCommander_v2";
+const SAVE="tankCommander_v3";   // bumped for v5.1 — retires pre-rename ("River City Rovers") saves so everyone starts fresh on the new build
 function saveGame(){try{localStorage.setItem(SAVE,JSON.stringify(G));}catch(e){}}
 function loadGame(){try{const s=localStorage.getItem(SAVE);if(s){G=JSON.parse(s);return true;}}catch(e){}return false;}
 
@@ -478,7 +478,7 @@ function newGame(teamName){
   for(let i=0;i<2;i++){const p=take(x=>x.prospect&&x.pot>=78&&x.pot<=90&&x.ovr<=58);if(p){p.loc="farm";farm.push(p);}}
 
   roster.forEach(p=>p.src=p.src||"original");farm.forEach(p=>p.src=p.src||"original");
-  G={year:1,phase:0,teamName:teamName||"River City Rovers",
+  G={year:1,phase:0,teamName:teamName||warPun(),
     roster,farm,pool:poolAll,
     ai:Array.from({length:15},(_,i)=>({id:uid(),name:aiTeamName(i),war:gauss(30,7),
       mode:Math.random()<0.3?"rebuild":Math.random()<0.5?"contend":"steady",catProfile:genCatProfile()})),
@@ -635,7 +635,7 @@ const WAR_PUNS=["Saving Private Ryans","Apocalypse Mounders","Full Metal Jackets
 const warPun=()=>pick(WAR_PUNS);
 function screenTitle(){
   render(`<div class="hero">
-     <div class="pill gold" style="margin-bottom:10px">⚾ REBUILD SIMULATOR</div>
+     <div class="pill gold" style="margin-bottom:10px">⚾ REBUILD SIMULATOR · v5.1</div>
      <h1>TANK COMMANDER</h1>
      <p class="sub" style="max-width:600px;margin:6px auto 0">You take over a club that won it all four years ago — but the
        stars have aged, the farm's gone bare, and the team's stuck at a crossroads. <b>Tear it down, stockpile
