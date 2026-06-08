@@ -1,5 +1,29 @@
 # Changelog
 
+## v7
+
+The big one: a whole second way to play, plus deeper player and roster systems.
+
+### 🪑 Survivor Mode (BETA)
+- A new endless mode alongside the 6-Year Sprint. You inherit the same declining club, but instead of a six-year grade you try to **stay in the owner's favor as long as you can** — riding the cycle of contention, aging cores, and rebuilds until you're fired (or retire as a legend).
+- **Owner Happiness bar** — a colored meter (red → yellow → green → diamond → iridescent) with the owner's mood and messages. Hit zero and you're done.
+- **Preseason negotiation** — each year the owner sets a win target (anchored to your roster, payroll, and reputation so you can't sandbag), and you pick **Go for it / Compete / Retool**. Earned favor lets you buy a rebuild year.
+- **The first two seasons are rebuild years** — you were hired to tear it down, so losing is expected and forgiven.
+- **A full favor ledger** — titles, deep playoff runs, awards, homegrown breakouts and loyalty all bank favor; missed expectations, bloated payrolls, replacement-level rosters, and playoff droughts bleed it. The bar bleeds faster the higher you sit, so the top is hard to hold.
+- **Cumulative scoring + its own leaderboard** (separate from the 6-Year board), plus a **5-round draft**, a living league with real contenders and tankers, and decades-long stability.
+
+### New player systems (both modes)
+- **🐶 DAWG** — a clutch / championship-mindset attribute on hitters and pitchers, independent of overall. The more DAWG across your roster, the better your October odds.
+- **⭐ Fan Favorites** — homegrown, tenured stars become beloved; extending them pleases the owner, dealing them stings.
+- **Offseason developmental storylines** — prospects can bust ("spent the offseason at the strip club," "showed up out of shape") or break out ("spent all winter in the gym and came in locked in"). High-ceiling prospects are now genuinely volatile — a 99 ceiling is no longer a lock.
+- **📉 Decline** flags for aging players past their peak, and a clearer **service / contract-years-left** readout on cards.
+
+### Roster & trade quality-of-life
+- **Demote to the minors** to develop a young player faster.
+- **Extension and free-agent term dropdowns** (1/3/5/10 years).
+- Every rival club is now fully stocked, so trades have real variety and every position has plenty of options.
+- ~45 more real players added across all tiers (Ketel Marte, Chris Sale, Aaron Nola, Bo Bichette, Brendan Donovan, and many more), and a wider inherited starting core so you don't see the same faces every game.
+
 ## v6
 
 A big in-season-depth and grading update.

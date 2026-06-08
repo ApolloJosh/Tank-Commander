@@ -112,6 +112,11 @@
   .pcard.dragging{opacity:.4}
   .benchzone{display:flex;flex-wrap:wrap;gap:6px;min-height:46px;padding:8px;border:1px dashed #3a4d22;border-radius:9px;background:rgba(255,255,255,.015)}
   .benchzone.drop-ok{border-color:var(--gold);border-style:solid;background:rgba(245,196,81,.08)}
+  .favtrack{height:16px;border-radius:8px;background:#22301a;border:1px solid var(--line);overflow:hidden}
+  .favbar{height:100%;border-radius:7px;transition:width .4s ease}
+  .favbar.bdiamond{background:linear-gradient(90deg,#7fd8ff,#b8eaff,#8ad0ff,#cfeeff);background-size:200% 100%;animation:favshine 2.2s linear infinite}
+  .favbar.irid{background:linear-gradient(90deg,#a6ff2b,#37e0c8,#7b9bff,#ff7bd5,#a6ff2b);background-size:300% 100%;animation:favshine 2.6s linear infinite}
+  @keyframes favshine{0%{background-position:0% 0}100%{background-position:200% 0}}
 </style>
 </head>
 <body>
@@ -204,6 +209,23 @@ const DATA=[
 ["Orion Kerkering","RP",25,78,84,2,4],["Hunter Harvey","RP",31,73,73,4,1],["Trevor Megill","RP",32,78,78,4,2],
 ["Porter Hodge","RP",25,73,80,1,4],["Abner Uribe","RP",26,73,80,1,4],["Yennier Cano","RP",32,76,76,3,2],
 ["Griffin Jax","RP",31,80,80,5,2],["Jose Leclerc","RP",32,71,71,5,1],["Jordan Romano","RP",33,74,74,8,1],
+// --- additional players (more variety in the star, mid, and depth tiers) ---
+["Ketel Marte","2B",31,87,87,16,4],["Chris Sale","SP",37,89,89,22,1],["Aaron Nola","SP",33,83,83,25,6],
+["Kodai Senga","SP",33,84,87,15,3],["Shane McClanahan","SP",29,84,88,7,2],["Luis Robert Jr.","CF",28,82,87,15,2],
+["Oneil Cruz","SS",27,82,89,6,3],["Bo Bichette","SS",28,82,84,20,1],["Cody Bellinger","CF",30,81,81,25,2],
+["Jazz Chisholm Jr.","3B",28,81,84,8,2],["Seiya Suzuki","DH",31,81,81,18,3],["Brent Rooker","DH",31,81,81,15,4],
+["Byron Buxton","CF",32,81,83,15,3],["Carlos Rodon","SP",33,82,82,27,3],["Jack Flaherty","SP",30,82,83,18,2],
+["Joe Ryan","SP",30,82,85,6,2],["Camilo Doval","RP",28,82,85,6,3],["Bryan Reynolds","LF",31,80,80,18,5],
+["Anthony Santander","RF",31,80,80,18,3],["Teoscar Hernandez","RF",33,80,80,20,2],["Randy Arozarena","LF",31,79,79,12,2],
+["Aroldis Chapman","RP",38,80,80,6,1],["Cristopher Sanchez","SP",29,81,85,5,3],["Eury Perez","SP",23,80,93,2,5],
+["Josh Naylor","1B",28,79,79,12,1],["Brendan Donovan","2B",29,79,81,6,3],["Willson Contreras","1B",34,79,79,18,2],
+["Gleyber Torres","2B",29,78,78,14,1],["Isaac Paredes","3B",27,78,81,7,3],["Mark Vientos","3B",26,78,85,3,4],
+["Sean Manaea","SP",34,79,79,14,2],["Robbie Ray","SP",34,80,80,24,2],["Walker Buehler","SP",31,79,82,20,1],
+["J.T. Realmuto","C",35,77,77,20,1],["Sean Murphy","C",31,76,79,12,4],["Yandy Diaz","1B",34,77,77,10,2],
+["Ian Happ","LF",31,77,77,18,2],["Nico Hoerner","2B",29,76,78,11,3],["Eugenio Suarez","3B",34,77,77,15,1],
+["Nolan Arenado","3B",35,76,76,22,2],["Tyler O'Neill","RF",31,74,74,12,2],["Jorge Polanco","2B",32,72,72,8,1],
+["Tyler Soderstrom","1B",24,73,85,2,5],["Heston Kjerstad","RF",27,71,82,2,4],["Jonah Heim","C",30,73,76,6,3],
+["Kenley Jansen","RP",38,77,77,8,1],["Carlos Estevez","RP",33,78,78,6,2],["Paul Goldschmidt","1B",38,74,74,9,1],
 ];
 
 /* ---------- helpers on players ---------- */
@@ -242,6 +264,13 @@ function genAttrs(pos){
   return offs;
 }
 function attrVal(p,k){return clamp(round((p.ovr||50)+((p.attr&&p.attr[k])||0)),20,99);}
+// DAWG — championship mindset / clutch. Independent of OVR; most players ~50, a few elite, a few soft.
+// The more DAWG across your playoff roster, the slightly better your October odds. (Hitters AND pitchers.)
+function dawgOf(p){if(p.dawg==null)p.dawg=clamp(round(gauss(50,18)),5,99);return p.dawg;}
+function teamDawg(){const a=buildActive(G.roster);const ps=[...LINEUP.map(s=>a.lineup[s]),...a.rotation,...a.pen].filter(Boolean);
+  return ps.length?ps.reduce((s,p)=>s+dawgOf(p),0)/ps.length:50;}
+function dawgTag(p){const d=dawgOf(p);if(d>=82)return ` <span class="pill gold" style="padding:0 5px;font-size:10px">🐶 DAWG ${d}</span>`;if(d<=28)return ` <span class="pill red" style="padding:0 5px;font-size:10px">🐑 soft ${d}</span>`;return '';}
+function dawgEmoji(p){const d=dawgOf(p);return d>=82?' 🐶':'';}
 function genCatProfile(){const o={};[...HIT_ATTRS,...PIT_ATTRS].forEach(k=>o[k]=Math.round(gauss(0,7)));return o;}
 function aiCatScore(t,k){return clamp(72+(t.war-30)*0.7+((t.catProfile&&t.catProfile[k])||0),40,96);}
 // scouting-aware realized ceiling for DRAFT prospects (more scouting -> more accurate)
@@ -266,12 +295,21 @@ const COLL=["Vanderbilt","LSU","Texas","Wake Forest","Stanford","Florida","Arkan
 const POSPOOL=["C","1B","2B","3B","SS","LF","CF","RF","SP","SP","RP"];
 function draftee(slot,rd,advanced,pos){
   rd=rd||1; pos=pos||pick(POSPOOL);
-  // steep premium for the very top picks (a #1 has real shot at a 99 ceiling), then a gentle taper; floored so late rounds aren't worthless
-  const cb=slot<=1?91.3:89.2-(slot-2)*0.95;
-  const ceilBase=Math.max(72, cb-(rd-1)*6);
   let o,pot;
-  if(advanced){o=clamp(Math.round(rnd(63,71)-slot*0.2-(rd-1)*3),52,73);pot=clamp(o+ri(4,10),o,85);}
-  else{o=clamp(Math.round(rnd(42,52)-slot*0.3-(rd-1)*4),30,57);pot=clamp(Math.round(gauss(ceilBase,5)),55,99);}
+  if(G.mode==="survivor"){
+    // Survivor draft: smooth gaussian around a per-round base, slightly adjusted by your pick slot.
+    // Each round is meaningfully better than the next, but 3-5 keep real value and a shot at a good prospect.
+    const RB={1:90,2:84,3:81,4:78,5:76};
+    const base=(RB[rd]||74)-(slot-1)*0.38;
+    if(advanced){o=clamp(Math.round(rnd(63,71)-slot*0.2),52,73);pot=clamp(o+ri(4,11),o,90);}
+    else{o=clamp(Math.round(rnd(42,52)-slot*0.3),30,57);pot=clamp(Math.round(gauss(base,5.5)),60,99);}
+  } else {
+    // 6-year mode: steeper top-pick premium, gentle taper, floored so late rounds aren't worthless
+    const cb=slot<=1?91.3:89.2-(slot-2)*0.95;
+    const ceilBase=Math.max(72, cb-(rd-1)*6);
+    if(advanced){o=clamp(Math.round(rnd(63,71)-slot*0.2-(rd-1)*3),52,73);pot=clamp(o+ri(4,10),o,85);}
+    else{o=clamp(Math.round(rnd(42,52)-slot*0.3-(rd-1)*4),30,57);pot=clamp(Math.round(gauss(ceilBase,5)),55,99);}
+  }
   pot=Math.max(pot,o);
   return {id:uid(),name:ficName(),pos,age:advanced?ri(23,24):ri(20,22),ovr:o,pot,
     realCeil:Math.max(o,rollRealCeilScouted(pot)),dura:rollDura(advanced?23:21),attr:genAttrs(pos),mlbYears:0,salary:0.7,years:6,loc:"farm",inj:0,college:pick(COLL),advanced:!!advanced,fic:true,prospect:true};
@@ -330,24 +368,25 @@ function computeDraftOrder(){
 // every time you switch partners). No player appears on two teams. Refreshes yearly.
 function assignTradeBlocks(){
   const sh=a=>{for(let i=a.length-1;i>0;i--){const j=ri(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
-  const isProspect=p=>p.prospect||(p.age<=24&&p.pot>=80);
-  const pSet=new Set(G.pool.filter(isProspect).map(p=>p.id));   // disjoint buckets — no player on two teams
-  const prospects=sh([...pSet]);
-  const players=sh(G.pool.filter(p=>!pSet.has(p.id)&&!p.fic).map(p=>p.id));
-  const depth=sh(G.pool.filter(p=>!pSet.has(p.id)&&p.fic).map(p=>p.id));
-  let pi=0,pl=0,di=0;
-  G.ai.forEach(t=>{const block=[];
-    for(let k=0;k<3&&pi<prospects.length;k++)block.push(prospects[pi++]);
-    for(let k=0;k<3&&pl<players.length;k++)block.push(players[pl++]);
-    for(let k=0;k<2&&di<depth.length;k++)block.push(depth[di++]);
-    t.block=block;});
+  // Every reasonably-useful pool player is tradeable, dealt out across the league so each club is well-stocked
+  // (≥13 player cards) and every position has plenty of options. No player lands on two teams.
+  const tradeable=G.pool.filter(p=>!p._fromPool&&(p.ovr>=58||p.prospect||(p.pot||0)>=78));
+  G.ai.forEach(t=>t.block=[]);
+  // interleave by position so each team gets a varied mix rather than, say, five outfielders
+  const byPos={}; tradeable.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p.id);});
+  const order=[]; const keys=Object.keys(byPos).map(k=>sh(byPos[k]));
+  let any=true; while(any){any=false; keys.forEach(arr=>{if(arr.length){order.push(arr.shift());any=true;}});}
+  order.forEach((id,i)=>{G.ai[i%G.ai.length].block.push(id);});
+  G.ai.forEach(t=>{if(t.block.length>24)t.block=t.block.slice(0,24);});
 }
-const ROUND_F={1:1,1.5:0.7,2:0.42,3:0.22};
+const ROUND_F={1:1,1.5:0.7,2:0.42,3:0.22,4:0.12,5:0.06};
 function pickResolvedSlot(pk){return (pk.future&&pk.fromMe)?projSlotEstimate():pk.slot;}
 function pickVal(pk){return Math.max(1,round(pickValue(pickResolvedSlot(pk))*(ROUND_F[pk.round||1]||0.5)));}
 function pickLabel(pk){if(pk.comp)return '🎟️ Comp Pick (R1.5)';const s=pickResolvedSlot(pk);return `${pk.future&&pk.fromMe?'~':''}R${pk.round||1} Pick #${s}${pk.future&&pk.fromMe?' (proj)':''}`;}
 function mkFuturePick(rd){return {id:uid(),round:rd||1,slot:9,future:true,fromMe:true};}
-function freshDraftPicks(){return [mkFuturePick(1),mkFuturePick(2),mkFuturePick(3)];}
+function freshDraftPicks(){return (typeof G!=="undefined"&&G&&G.mode==="survivor")
+  ?[mkFuturePick(1),mkFuturePick(2),mkFuturePick(3),mkFuturePick(4),mkFuturePick(5)]
+  :[mkFuturePick(1),mkFuturePick(2),mkFuturePick(3)];}
 
 /* ============================================================
    WAR / WINS
@@ -484,7 +523,7 @@ const SAVE="tankCommander_v3";   // bumped for v5.1 — retires pre-rename ("Riv
 function saveGame(){try{localStorage.setItem(SAVE,JSON.stringify(G));}catch(e){}}
 function loadGame(){try{const s=localStorage.getItem(SAVE);if(s){G=JSON.parse(s);return true;}}catch(e){}return false;}
 
-function newGame(teamName){
+function newGame(teamName,mode){
   const poolAll=DATA.map(clonePlayer);
   // add fictional prospects + replacement-level players to the league
   for(let i=0;i<46;i++)poolAll.push(ficProspect());
@@ -494,11 +533,11 @@ function newGame(teamName){
   const roster=[],farm=[];
   const add=(p,keep)=>{if(p){p.loc="mlb";if(keep)p._keeper=true;roster.push(p);}return p;};
   // --- a crossroads team: won it ~4 years ago, stars now aging & declining ---
-  // 2 aging stars with real trade value (older, will fade)
-  add(take(p=>p.age>=33&&p.ovr>=82&&p.ovr<=88&&isHit(p))||take(p=>p.age>=32&&p.ovr>=82&&isHit(p)),true);
-  add(take(p=>p.age>=33&&p.ovr>=82&&p.ovr<=88&&p.pos==="SP")||take(p=>p.age>=32&&p.ovr>=82&&p.pos==="SP"),true);
+  // 2 aging stars with real trade value (older, will fade) — wide bands so the inherited core varies a lot game-to-game
+  add(take(p=>p.age>=31&&p.ovr>=81&&p.ovr<=91&&isHit(p))||take(p=>p.age>=30&&p.ovr>=80&&isHit(p)),true);
+  add(take(p=>p.age>=31&&p.ovr>=82&&p.ovr<=91&&p.pos==="SP")||take(p=>p.age>=30&&p.ovr>=81&&p.pos==="SP"),true);
   // 1 useful mid-career vet (decent, tradeable)
-  add(take(p=>p.age>=28&&p.age<=33&&p.ovr>=74&&p.ovr<=82&&isHit(p))||take(p=>p.ovr>=74&&p.ovr<=82&&isHit(p)),true);
+  add(take(p=>p.age>=27&&p.age<=34&&p.ovr>=73&&p.ovr<=83&&isHit(p))||take(p=>p.ovr>=73&&p.ovr<=83&&isHit(p)),true);
   // 1 younger building block (not a star yet)
   add(take(p=>p.age<=28&&p.ovr>=72&&p.ovr<=80&&p.pot>=82&&isHit(p))||take(p=>p.age<=29&&p.ovr>=72&&p.ovr<=80),true);
   // an aging back-end closer (trade value)
@@ -530,16 +569,22 @@ function newGame(teamName){
   for(let i=0;i<2;i++){const p=take(x=>x.prospect&&x.pot>=78&&x.pot<=90&&x.ovr<=58);if(p){p.loc="farm";farm.push(p);}}
 
   roster.forEach(p=>p.src=p.src||"original");farm.forEach(p=>p.src=p.src||"original");
-  G={year:1,phase:0,teamName:teamName||warPun(),
+  G={year:1,phase:0,teamName:teamName||warPun(),mode:mode||"career",
     roster,farm,pool:poolAll,
-    ai:Array.from({length:15},(_,i)=>({id:uid(),name:aiTeamName(i),war:gauss(30,7),
+    ai:Array.from({length:15},(_,i)=>({id:uid(),name:aiTeamName(i),war:(mode==="survivor"?clamp(Math.round(gauss(33,12)),14,55):gauss(30,7)),
       mode:Math.random()<0.3?"rebuild":Math.random()<0.5?"contend":"steady",catProfile:genCatProfile()})),
     ownedPicks:freshDraftPicks(), standings:[], lastWins:null, history:[],
     champions:0, playoffApps:0, bestWins:0, worstWins:200,
     tradeTries:3, leftAsFA:[], faMarket:[], faYear:0, maxPayroll:0, taxYears:0, taxWinsLost:0,
     lineupSet:{}, seasonStage:0, pendingComp:[], awardPoints:0, awardsLog:[], awardsYear:0,
     weakSpotsTotal:0, weakSpotsYear:0,
-    resources:{scouting:1/3,development:1/3,coaching:1/3}};
+    resources:{scouting:1/3,development:1/3,coaching:1/3},
+    // --- Survivor Mode state ---
+    favor:62, reputation:88, survStage:0, survTitles:0,
+    lastTitleYear:null, lastWSYear:null, lastPlayoffYear:null,
+    missStreak:0, taxNoRunStreak:0, cumScore:0, fired:false,
+    stance:null, ownerBar:null, agreedBar:null, favorLog:[]};
+  G.ownedPicks=freshDraftPicks();   // re-roll now that G.mode is set (survivor = 5 rounds, career = 3)
   saveGame();
 }
 let _aiNames=null;
@@ -572,9 +617,18 @@ function simulateSeason(){
       p.inj=games;p.injType=type;injured.push(p);
     }
   });
-  // rival clubs improve over time as their own farms develop — the league bar rises each year
-  G.ai.forEach(t=>{let d=(t.mode==="rebuild"?gauss(1.6,2):t.mode==="contend"?gauss(0.5,2):gauss(0.2,1.7))+gauss(0.7,0.5);
-    t.war=clamp(t.war+d,10,60);});
+  if(G.mode==="survivor"){
+    // endless mode: every club chases its OWN goal — some go all-in (contenders), some tear it down (tankers),
+    // and they re-roll their aim over time. That keeps a wide, living spread (true contenders AND tankers), not a middling blob.
+    G.ai.forEach(t=>{
+      if(t.tgt==null||Math.random()<0.11)t.tgt=clamp(Math.round(gauss(33,14)),14,56);   // commit to a multi-year plan, re-roll occasionally
+      t.war=clamp(t.war+(t.tgt-t.war)*0.45+gauss(0,2.2),12,58);                          // push toward it harder so contenders/tankers reach the extremes
+    });
+  } else {
+    // 6-year arc: rival clubs improve over time as their own farms develop — the league bar rises each year
+    G.ai.forEach(t=>{let d=(t.mode==="rebuild"?gauss(1.6,2):t.mode==="contend"?gauss(0.5,2):gauss(0.2,1.7))+gauss(0.7,0.5);
+      t.war=clamp(t.war+d,10,60);});
+  }
   const myWAR=teamWAR(G.roster);
   const injWinsLost=clamp(round((healthyWAR-myWAR)*1.4),0,99);
   const entries=[{name:G.teamName,war:myWAR,me:true},...G.ai.map(t=>({name:t.name,war:t.war}))];
@@ -594,21 +648,31 @@ function simulateSeason(){
   const mySlot=17-me.seed;
   G.ownedPicks.forEach(pk=>{if(pk.future&&pk.fromMe){pk.slot=mySlot;pk.future=false;}});
   G.history.push({year:G.year,wins:me.wins,losses:me.losses,seed:me.seed,playoffs:me.seed<=8,champ:wonWS});
-  return {me,entries,injured,champ,wonWS,mySlot,tax,injWinsLost,healthyProj:warToWins(healthyWAR)};
+  return {me,entries,injured,champ,wonWS,reachedWS:_poInfo.reachedWS,poRounds:_poInfo.rounds,mySlot,tax,injWinsLost,healthyProj:warToWins(healthyWAR)};
 }
+let _poInfo={reachedWS:false,rounds:0};   // how far the user advanced in October (for Survivor favor)
 function runPlayoffs(teams){
   const cb=1+(((G.resources?G.resources.coaching:0.333)-0.333)*0.32);   // coaching edge in October
+  const dm=1+(teamDawg()-50)/50*0.10;   // a DAWG-heavy roster gets a small clutch edge in October
   let r=teams.slice();
+  _poInfo={reachedWS:false,rounds:0};
   // October is a coin-flip dressed up — even the best club isn't a lock to win a series
-  while(r.length>1){const nx=[];for(let i=0;i<r.length;i+=2){const a=r[i],b=r[i+1];
-    const sa=(a.war+22)*(a.me?cb:1),sb=(b.war+22)*(b.me?cb:1);
-    let pa=clamp(sa/(sa+sb),0.30,0.68);nx.push(Math.random()<pa?a:b);}r=nx;}
+  while(r.length>1){
+    if(r.length===2&&r.some(t=>t.me))_poInfo.reachedWS=true;   // user made the final
+    const meBefore=r.some(t=>t.me);
+    const nx=[];for(let i=0;i<r.length;i+=2){const a=r[i],b=r[i+1];
+      const sa=(a.war+22)*(a.me?cb*dm:1),sb=(b.war+22)*(b.me?cb*dm:1);
+      let pa=clamp(sa/(sa+sb),0.30,0.68);nx.push(Math.random()<pa?a:b);}
+    if(meBefore&&nx.some(t=>t.me))_poInfo.rounds++;   // user won this series
+    r=nx;}
   return r[0];
 }
 
 /* ============================================================
    DEVELOP / AGE / CONTRACTS
    ============================================================ */
+const DEV_BAD=["spent too much of the offseason at the strip club","showed up to camp out of shape","got too comfortable after the big payday","lost his swing tinkering with his mechanics","battled nagging injuries all winter","let the pressure get in his head","fell in with the wrong crowd","never adjusted once the league figured him out"];
+const DEV_GOOD=["spent all offseason in the gym and came in locked in","reworked his swing and it finally clicked","added a nasty new pitch over the winter","credits a new mental-skills coach","showed up in the best shape of his life","put it all together — the light came on","hired a private hitting guru and it paid off","is finally healthy, and it shows"];
 function developAll(){
   const notes=[];
   const dev=(G.resources?G.resources.development:0.333);
@@ -633,6 +697,24 @@ function developAll(){
     else if(p.age<=30){p.ovr=clamp(round(p.ovr+(tgt>p.ovr?rnd(-0.5,1.5):rnd(-1.5,.5))),28,99);}
     else if(p.age<=32){p.ovr=clamp(round(p.ovr+rnd(-2.5,0)),28,99);}
     else{p.ovr=clamp(round(p.ovr-rnd(1.5,4.5)),22,99);}
+    // offseason developmental storylines — volatility that can sink a "sure thing" or lift a long shot.
+    // The bigger the hype, the further there is to fall; lower-ceiling guys occasionally pop.
+    if((p.loc==="mlb"||p.loc==="farm")&&p.age<=27&&p.pot>p.ovr-1){
+      const bustCh=0.05+Math.max(0,(p.pot-88))*0.014;      // a 99-ceiling has ~20%/yr to take a step back
+      const breakCh=0.06+Math.max(0,(82-p.pot))*0.004;
+      if(Math.random()<bustCh){
+        p.realCeil=clamp((p.realCeil||p.pot)-ri(4,12),Math.max(28,p.ovr-2),99);
+        p.pot=clamp(p.pot-ri(0,6),Math.max(p.ovr,p.realCeil),99);
+        if(p.ovr>40&&Math.random()<0.5)p.ovr=clamp(p.ovr-ri(1,3),28,99);
+        notes.push(`📉 ${p.name} ${pick(DEV_BAD)} — his stock slips`);
+      } else if(Math.random()<breakCh){
+        p.pot=clamp(p.pot+ri(4,11),p.pot,99);
+        p.realCeil=clamp((p.realCeil||p.pot)+ri(5,13),p.ovr,99);
+        p.ovr=clamp(p.ovr+ri(1,3),28,99);
+        notes.push(`🚀 ${p.name} ${pick(DEV_GOOD)} — and broke out`);
+      }
+    }
+    p._peak=Math.max(p._peak||p.ovr,p.ovr);   // remember a player's best so we can flag decline
     p.age++;
     if(b>0&&(p.loc==="mlb"||p.loc==="farm")){
       if(p.ovr-b>=6)notes.push(`📈 ${p.name} broke out (${b}→${p.ovr})`);
@@ -648,7 +730,9 @@ function developAll(){
   // contracts tick (mlb only); expirations walk as FA
   G.leftAsFA=[];
   G.roster=G.roster.filter(p=>{
-    if(p.loc==="mlb"){if(p._skipYr){p._skipYr=false;}else{p.years--;}if(p.years<=0){G.leftAsFA.push(p);return false;}}
+    if(p.loc==="mlb"){if(p._skipYr){p._skipYr=false;}else{p.years--;}if(p.years<=0){
+      if(G.mode==="survivor"&&(isFanFav(p)||(p.src==="draft"&&p.ovr>=82)))favorChange(-5,`Let homegrown star ${p.name} walk for nothing`);
+      G.leftAsFA.push(p);return false;}}
     return true;
   });
   // retirements
@@ -660,17 +744,27 @@ function developAll(){
   // so new high-ceiling prospects keep appearing around the league to scout and trade for
   const classN=ri(13,19);
   for(let i=0;i<classN;i++)G.pool.push(ficProspect());
+  // Survivor mode runs for decades — keep the pool from bloating by cutting the league's least-useful, non-prospect fringe
+  if(G.mode==="survivor"&&G.pool.length>300){
+    const keep=p=>p.prospect||(p.pot>=80)||p.ovr>=72;
+    const core=G.pool.filter(keep), fringe=G.pool.filter(p=>!keep(p)).sort((a,b)=>tradeValue(b)-tradeValue(a));
+    G.pool=core.concat(fringe.slice(0,Math.max(0,300-core.length)));
+  }
   return {notes,retired:ret,fa:G.leftAsFA};
 }
-function extend(pid){
+// pick-your-term extension control (1/3/5/10 yrs)
+function extendSelect(pid){return `<select class="exsel" onchange="extendDo('${pid}',this.value)" style="font-size:11px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 3px">
+  <option value="">Extend…</option><option value="1">+1 yr</option><option value="3">+3 yr</option><option value="5">+5 yr</option><option value="10">+10 yr</option></select>`;}
+function extendDo(pid,years){years=parseInt(years);if(!years)return;
   const p=G.roster.find(x=>x.id===pid)||G.farm.find(x=>x.id===pid);if(!p)return;
-  const add=p.age>=33?2:p.age>=29?3:5;
-  p.years+=add;
+  p.years+=years;
   p.mlbYears=Math.max(p.mlbYears||6,6);          // extensions pay full freight for their ability
   p.salary=salaryFor(p.ovr,6);
-  toast(`${p.name} extended ${add} yrs ($${p.salary}M/yr)`);
-  saveGame();
+  if(G.mode==="survivor"){const ff=isFanFav(p);favorChange(ff?4:(p.src==="draft"?2:0.5),`Extended ${p.name}${ff?' (fan favorite)':''}`);}
+  toast(`${p.name} extended ${years} yr ($${p.salary}M/yr, now ${p.years}yr)`);saveGame();
+  if(G.phase===0)screenTrade();else screenRoster();
 }
+function extend(pid){extendDo(pid,5);}   // legacy default
 
 /* ============================================================
    UI ROUTER
@@ -678,11 +772,11 @@ function extend(pid){
 const app=()=>document.getElementById('app');
 function render(h){app().innerHTML="";app().appendChild($(`<div>${h}</div>`));}
 const PHASES=["Trade Hub","Set Roster","Play Season","Draft","Develop"];
-function stepbar(a){const ph=G.year>=6?PHASES.slice(0,3):PHASES;
+function stepbar(a){const ph=(G.mode!=="survivor"&&G.year>=6)?PHASES.slice(0,3):PHASES;
   return `<div class="stepbar">${ph.map((s,i)=>`<div class="step ${i<a?'done':''} ${i===a?'on':''}">${i+1}. ${s}</div>`).join("")}</div>`;}
 function mandate(){if(G.year<=2)return{cls:'blue',txt:'Mandate: Rebuild — losing is OK'};
   if(G.year===3)return{cls:'gold',txt:'Mandate: Turn the corner'};return{cls:'green',txt:'Mandate: CONTEND now'};}
-function header(){const m=mandate();return `<div class="row" style="align-items:center;margin-bottom:4px">
+function header(){if(G.mode==="survivor")return survivorHeader();const m=mandate();return `<div class="row" style="align-items:center;margin-bottom:4px">
    <div style="flex:2"><h2 style="margin-bottom:2px">${G.teamName}</h2>
      <span class="sub">Year ${G.year} of 6 &bull; payroll $${payroll(G.roster)}M</span></div>
    <div style="flex:1;text-align:right"><span class="pill ${m.cls}">${m.txt}</span></div></div>`;}
@@ -695,21 +789,35 @@ const WAR_PUNS=["Saving Private Ryans","Apocalypse Mounders","Full Metal Jackets
 const warPun=()=>pick(WAR_PUNS);
 function screenTitle(){
   render(`<div class="hero">
-     <div class="pill gold" style="margin-bottom:10px">⚾ REBUILD SIMULATOR · v6</div>
+     <div class="pill gold" style="margin-bottom:10px">⚾ REBUILD SIMULATOR · v7</div>
      <h1>TANK COMMANDER</h1>
      <p class="sub" style="max-width:600px;margin:6px auto 0">You take over a club that won it all four years ago — but the
        stars have aged, the farm's gone bare, and the team's stuck at a crossroads. <b>Tear it down, stockpile
        prospects and picks, then rise.</b> Six seasons to build a 100-win contender.</p></div>
    <div class="panel">
      <h3>New franchise</h3>
-     <p class="sub">Your roster is built from real MLB players (shuffled onto a fictional club).</p>
+     <p class="sub">Your roster is built from real MLB players (shuffled onto a fictional club). Pick a mode:</p>
      <div style="margin:10px 0"><input id="tname" value="${warPun()}" style="width:55%;max-width:300px"/>
        <button class="btn ghost sm" onclick="document.getElementById('tname').value=warPun()">🎲</button></div>
-     <button class="btn primary" onclick="(function(){newGame(document.getElementById('tname').value.trim());goPhase(0);})()">Take the job →</button>
-     ${localStorage.getItem(SAVE)?`<button class="btn ghost" onclick="(function(){if(loadGame())goPhase(G.phase||0);else toast('No save');})()">↻ Continue</button>`:""}
-     <button class="btn ghost" onclick="screenLeaderboard()">🏆 Leaderboard</button>
+     <div class="grid2" style="gap:10px;margin-top:6px">
+       <div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:12px">
+         <div style="font-weight:800;color:var(--gold)">⚡ 6-Year Sprint</div>
+         <p class="small muted" style="margin:4px 0 8px">The classic run. Inherit the decline, tank, and build a 100-win contender. Graded out of 100 after six seasons. ~15 min.</p>
+         <button class="btn primary" onclick="(function(){newGame(document.getElementById('tname').value.trim(),'career');goPhase(0);})()">Take the job →</button>
+       </div>
+       <div class="panel2" style="border:1px solid var(--gold);border-radius:10px;padding:12px">
+         <div style="font-weight:800;color:var(--gold)">🪑 Survivor Mode <span class="pill" style="padding:0 6px;background:#3a2a55;color:#d9b3ff;border:1px solid #6f4fa0">BETA</span></div>
+         <p class="small muted" style="margin:4px 0 8px">Endless. Stay in the owner's favor as long as you can — contend, manage the money, ride the cycle of windows and rebuilds. Score keeps climbing until you're fired.</p>
+         <button class="btn primary" onclick="(function(){newGame(document.getElementById('tname').value.trim(),'survivor');startSurvivorYear();})()">Take the job →</button>
+       </div>
+     </div>
+     <div style="margin-top:10px">
+       ${localStorage.getItem(SAVE)?`<button class="btn ghost" onclick="(function(){if(loadGame()){if(G.mode==='survivor'&&G.survStage===0){startSurvivorYear();}else goPhase(G.phase||0);}else toast('No save');})()">↻ Continue</button>`:""}
+       <button class="btn ghost" onclick="screenLeaderboard()">🏆 Leaderboard</button>
+     </div>
    </div>
-   <details open class="panel" style="padding:14px"><summary style="cursor:pointer;font-weight:700">📐 How you'll be graded <span class="small muted">(your 6-year front-office review)</span></summary><div style="margin-top:10px">${gradeRubric()}</div></details>
+   <details class="panel" style="padding:14px"><summary style="cursor:pointer;font-weight:700">📐 6-Year Sprint — how you're graded</summary><div style="margin-top:10px">${gradeRubric()}</div></details>
+   <details class="panel" style="padding:14px"><summary style="cursor:pointer;font-weight:700">🪑 Survivor Mode — how you're judged</summary><div style="margin-top:10px">${survivorRubric()}</div></details>
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.</p>`);
 }
 
@@ -735,7 +843,7 @@ function screenTrade(){
    </div>
    <div class="panel"><h3>🎖️ Front Office Resources <span class="small muted">(set your allocation for the year ahead)</span></h3>
      <div id="resbox">${renderResources()}</div></div>
-   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📐 How you'll be graded <span class="small muted">(6-year front-office review)</span></summary><div style="margin-top:10px">${gradeRubric()}</div></details>
+   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📐 ${G.mode==="survivor"?"How the owner judges you":"How you'll be graded"} <span class="small muted">${G.mode==="survivor"?"(Owner Happiness)":"(6-year review)"}</span></summary><div style="margin-top:10px">${scoringRubric()}</div></details>
    <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster <span class="small muted">(updates after each trade)</span></summary>
      <div style="margin-top:8px">${rosterMini()}</div></details>
    ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0">
@@ -745,7 +853,7 @@ function screenTrade(){
      <h3>⏳ Expiring contracts — extend or trade before they walk</h3>
      <table><tbody>${expiring.map(p=>`<tr>
        <td><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • ${p.ovr} OVR • ${p.years} yr left</span></td>
-       <td class="num"><button class="btn sm primary" onclick="extend('${p.id}');screenTrade()">Extend</button></td>
+       <td class="num">${extendSelect(p.id)}</td>
      </tr>`).join("")}</tbody></table></div>`:""}
    <div class="panel">
      <h3>🛠️ Build your own trade</h3>
@@ -796,16 +904,17 @@ function renderFA(){
   return G.faMarket.map(fa=>{const p=fa.player;
     return `<div class="offer"><div class="row" style="align-items:center">
      <div style="flex:2"><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • ${ovrHTML(p.ovr)} OVR</span>${p.fic?'':' <span class="small" style="color:var(--blue)">real FA</span>'}</div>
-     <div style="flex:1;text-align:right"><span class="pill gold">${fa.years}yr • $${fa.aav}M/yr</span>
-       <button class="btn primary sm" onclick="signFA('${fa.id}')">Sign</button></div></div></div>`;}).join("");
+     <div style="flex:1;text-align:right"><span class="pill gold">$${fa.aav}M/yr</span>
+       <select onchange="signFA('${fa.id}',this.value)" style="font-size:11px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:2px 4px"><option value="">Sign…</option><option value="1">1 yr</option><option value="3">3 yr</option><option value="5">5 yr</option></select></div></div></div>`;}).join("");
 }
-function signFA(fid){
+function signFA(fid,years){
   const fa=(G.faMarket||[]).find(x=>x.id===fid);if(!fa)return;const p=fa.player;
+  years=parseInt(years)||fa.years||3;
   if(p._fromPool){if(!G.pool.some(x=>x.id===p.id)){G.faMarket=G.faMarket.filter(x=>x.id!==fid);toast('No longer available');screenTrade();return;}
     G.pool=G.pool.filter(x=>x.id!==p.id);delete p._fromPool;}
-  p.salary=fa.aav;p.years=fa.years;p.loc="mlb";p.src="fa";p.inj=0;p.mlbYears=6;
+  p.salary=fa.aav;p.years=years;p.loc="mlb";p.src="fa";p.inj=0;p.mlbYears=6;
   G.roster.push(p);G.faMarket=G.faMarket.filter(x=>x.id!==fid);_custom=null;
-  _sugg=null;toast(`Signed ${p.name} — ${fa.years}yr / $${fa.aav}M`);screenTrade();
+  _sugg=null;toast(`Signed ${p.name} — ${years}yr / $${fa.aav}M`);screenTrade();
 }
 function needsSurplus(){
   const mlb=G.roster.filter(p=>p.loc==="mlb");const a=buildActive(G.roster);
@@ -823,11 +932,18 @@ function needsSurplus(){
   return {needs:[...new Set(needs)],surplus};
 }
 function duraEmoji(p){if(!p||p.dura==null)return '';if(p.dura<50)return ' 🩹';if(p.dura>85)return ' 💪';return '';}
-function svcTag(p){ // shows whether a player is an established big-leaguer or a not-yet-on-the-clock prospect
-  const minors=p.prospect||(p.mlbYears||0)===0;
-  return minors?` <span class="pill blue" style="padding:0 5px;font-size:10px">minors · no svc</span>`
-    :` <span class="pill" style="padding:0 5px;font-size:10px;background:var(--panel2)">MLB · ${p.mlbYears||1}yr svc</span>`;
+function svcTag(p){ // a not-yet-on-the-clock minor-leaguer vs an established big-leaguer (uses roster location so call-ups read correctly)
+  const minors = p.loc==="farm" || (p.loc==="pool" && (p.prospect||(p.mlbYears||0)===0));
+  return minors?` <span class="pill blue" style="padding:0 5px;font-size:10px">🌱 minors</span>`:'';
 }
+function declineTag(p){ // an aging player past his peak whose ceiling is now out of reach
+  if(!p||isNaN(p.ovr))return '';
+  const peak=p._peak||p.ovr;
+  if(p.age>=32&&peak-p.ovr>=2)return ` <span class="pill red" style="padding:0 5px;font-size:10px">📉 declining</span>`;
+  return '';
+}
+function fanFavTag(p){return p&&p.fanFav?` <span class="pill gold" style="padding:0 5px;font-size:10px">⭐ fan favorite</span>`:'';}
+function fanFavEmoji(p){return p&&p.fanFav?' ⭐':'';}
 function rosterMini(){
   const a=buildActive(G.roster);
   const chip=(lbl,p)=>`<span class="pill" style="margin:2px;background:var(--panel2)">${lbl} ${p?`${p.name.split(' ').slice(-1)[0]} ${ovrHTML(p.ovr)}${p.inj?' 🩹':''}${duraEmoji(p)}`:'<span class="empty">—</span>'}</span>`;
@@ -890,8 +1006,15 @@ function myTradeableAssets(){
   return a;
 }
 /* ---- asset transfer helpers ---- */
+function isFanFav(p){return !!(p&&p.fanFav);}
+function detectFanFavorites(){   // homegrown, tenured, and a real performer becomes a beloved face of the franchise
+  G._newFanFavs=[];
+  G.roster.filter(p=>p.loc==="mlb"&&!p.fanFav&&p.src==="draft"&&(p.mlbYears||0)>=4&&p.ovr>=83).forEach(p=>{p.fanFav=true;G._newFanFavs.push(p);});
+}
 function giveAsset(a){
-  if(a.kind==="player"){G.roster=G.roster.filter(p=>p.id!==a.player.id);G.farm=G.farm.filter(p=>p.id!==a.player.id);a.player.loc="pool";G.pool.push(a.player);}
+  if(a.kind==="player"){
+    if(G.mode==="survivor"&&isFanFav(a.player))favorChange(-2,`Traded away fan favorite ${a.player.name}`);
+    G.roster=G.roster.filter(p=>p.id!==a.player.id);G.farm=G.farm.filter(p=>p.id!==a.player.id);a.player.loc="pool";G.pool.push(a.player);}
   else{G.ownedPicks=G.ownedPicks.filter(pk=>pk.id!==a.pick.id);}
 }
 function getAsset(a){
@@ -899,6 +1022,7 @@ function getAsset(a){
   else{const src=a.pick;if(src.fromTeam){const t=G.ai.find(x=>x.id===src.fromTeam);if(t)t._pickTraded=true;}G.ownedPicks.push({...src,id:uid()});}
 }
 function placeAcquired(p){
+  p._acqYear=G.year;   // when you got them (Survivor: awards from same-year pickups pay less favor)
   p.loc=(p.ovr>=68&&p.age>22&&!p.prospect)?"mlb":"farm";
   if(p.years<2&&p.loc==="mlb")p.years=6;
   if(p.src!=="draft")p.src="trade";
@@ -1020,13 +1144,13 @@ function tbRow(a){const getSide=(_custom.seg||"league")!=="me";
   let title,meta;
   if(a.kind==="pick"){title=pickLabel(a.pick);meta=`round ${a.pick.round} · slot ${a.pick.slot}`+(getSide?` · ${teamShortOf(a.team)}`:'');}
   else{const p=a.player;title=`<span class="pos">${p.pos}</span> ${p.name}`;
-    meta=`${p.age}y · ${p.years}yr · $${p.salary}M${getSide?' · '+teamShortOf(a.team):''}${svcTag(p)}${duraEmoji(p)} ${tbAttrEmojis(p)}${flexTag(p)}`;}
+    meta=`${p.age}y · <b>${p.years}yr left</b> · $${p.salary}M${getSide?' · '+teamShortOf(a.team):''}${fanFavEmoji(p)}${dawgEmoji(p)}${svcTag(p)}${(declineTag(p)?' 📉':'')}${duraEmoji(p)} ${tbAttrEmojis(p)}${flexTag(p)}`;}
   return `<div class="tbrow">${tbBadge(a)}<div style="flex:1;min-width:0"><div>${title}</div><div class="small muted" style="margin-top:2px">${meta}</div></div><span class="tbval">${a.val}</span><button class="add ${sel?'in':''}" onclick="${fn}">${sel?'✓':'＋'}</button></div>`;}
 function tbCard(a){   // read-only Option D card (used by the suggestion panel)
   let title,meta;
   if(a.kind==="pick"){title=pickLabel(a.pick);meta=`round ${a.pick.round} · slot ${a.pick.slot}`;}
   else{const p=a.player;title=`<span class="pos">${p.pos}</span> ${p.name}`;
-    meta=`${p.age}y · ${p.years}yr · $${p.salary}M${svcTag(p)}${duraEmoji(p)} ${tbAttrEmojis(p)}${flexTag(p)}`;}
+    meta=`${p.age}y · <b>${p.years}yr left</b> · $${p.salary}M${fanFavEmoji(p)}${dawgEmoji(p)}${svcTag(p)}${(declineTag(p)?' 📉':'')}${duraEmoji(p)} ${tbAttrEmojis(p)}${flexTag(p)}`;}
   return `<div class="tbrow">${tbBadge(a)}<div style="flex:1;min-width:0"><div>${title}</div><div class="small muted" style="margin-top:2px">${meta}</div></div><span class="tbval">${a.val}</span></div>`;}
 function tbList(){
   if((_custom.seg||"league")==="partner"&&!_custom.partner)return `<p class="muted small" style="padding:8px">Pick a player from the league to set your trade partner.</p>`;
@@ -1038,7 +1162,7 @@ function tbPosChips(){return ["all","C","1B","2B","3B","SS","LF","CF","RF","DH",
 function tbKey(){const a=k=>`<span style="display:inline-block;margin:1px 10px 1px 0"><span class="aemo s" style="margin:0">${ATTR_EMO[k]}</span> ${ATTR_LABEL[k]}${k==="eye"?" (walks)":k==="whiff"?" (Ks)":""}</span>`;
   return `<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">
     <div class="small muted" style="font-weight:700;margin-bottom:4px">KEY</div>
-    <div class="small">${HIT_ATTRS.map(a).join("")}${PIT_ATTRS.map(a).join("")}<span style="display:inline-block;margin:1px 10px 1px 0">💪 Durable</span><span style="display:inline-block;margin:1px 10px 1px 0">🩹 Injury-prone</span><span style="display:inline-block;margin:1px 10px 1px 0">↔ Position flex</span></div>
+    <div class="small">${HIT_ATTRS.map(a).join("")}${PIT_ATTRS.map(a).join("")}<span style="display:inline-block;margin:1px 10px 1px 0">💪 Durable</span><span style="display:inline-block;margin:1px 10px 1px 0">🩹 Injury-prone</span><span style="display:inline-block;margin:1px 10px 1px 0">🐶 DAWG (clutch — boosts October)</span><span style="display:inline-block;margin:1px 10px 1px 0">↔ Position flex</span></div>
     <div class="small muted" style="margin-top:5px">Shown only for a true <span style="color:var(--gold)">strength (85+)</span> or <span style="color:#ffb4b4">weakness (&lt;50)</span>. Overall badge color ramps muted → yellow → laser-green (diamond 96+, iridescent 99); ↑ is a prospect's ceiling.</div></div>`;}
 function tbScale(){
   const give=[..._custom.giveIds].map(tbFind).filter(Boolean),get=[..._custom.getIds].map(tbFind).filter(Boolean);
@@ -1154,7 +1278,8 @@ function acceptSuggestion(){
 let _rosterMode='pre';
 function slotRole(slot){return ROT_SLOTS.includes(slot)?'SP':PEN_SLOTS.includes(slot)?'RP':slot;}
 function rCard(p){
-  return `<span class="pcard" draggable="true" ondragstart="dragStart(event,'${p.id}')">${ovrHTML(p.ovr)}${p.pot>p.ovr?' '+ceilMini(p.pot):''} <b>${p.name}</b> <span class="small muted">${p.pos} ${p.age}y</span>${flexTag(p)}${duraTag(p)}${injTag(p)} <span class="small">${contractCell(p)}</span>${p.years<=2?` <button class="btn sm" onclick="extend('${p.id}');screenRoster()">Extend</button>`:''}</span>`;
+  const decl=declineTag(p);
+  return `<span class="pcard" draggable="true" ondragstart="dragStart(event,'${p.id}')">${ovrHTML(p.ovr)}${(p.pot>p.ovr&&!decl)?' '+ceilMini(p.pot):''} <b>${p.name}</b>${fanFavEmoji(p)}${dawgEmoji(p)} <span class="small muted">${p.pos} ${p.age}y</span>${flexTag(p)}${decl}${dawgTag(p)}${duraTag(p)}${injTag(p)} <span class="small">${contractCell(p)}</span>${p.years<=4?' '+extendSelect(p.id):''}${(p.age<=26&&p.pot>p.ovr+1)?` <button class="btn sm" title="Send to the minors to develop faster" onclick="sendDown('${p.id}')">↓ Farm</button>`:''}</span>`;
 }
 function rSlot(slot,p){
   return `<div class="slot" ondragover="allowDrop(event,'${slot}')" ondragleave="dropLeave(event)" ondrop="dropOn(event,'${slot}')">
@@ -1167,10 +1292,11 @@ function screenRoster(){
   const deadline=_rosterMode==='deadline';
   render(`${header()}${deadline?'':stepbar(1)}
    ${deadline?'<div class="panel center" style="border-color:var(--gold)"><div class="pill gold">⏳ POST-DEADLINE ROSTER</div><p class="sub" style="margin-top:6px">Slot in anyone you just acquired and set your lineup before the season plays out. Traded-for players land on your MLB roster or in the minors depending on readiness — promote or send them down below as you like.</p></div>':''}
-   <div class="grid3">
+   <div class="grid4">
      <div class="kpi"><div class="big">${proj}</div><div class="lbl">Projected Wins</div></div>
      <div class="kpi"><div class="big">${G.farm.length}</div><div class="lbl">Farm Prospects</div></div>
      <div class="kpi"><div class="big">$${payroll(G.roster)}M</div><div class="lbl">Payroll</div></div>
+     <div class="kpi"><div class="big" style="color:${teamDawg()>=62?'var(--gold)':'var(--ink)'}">🐶 ${Math.round(teamDawg())}</div><div class="lbl">Team DAWG (October edge)</div></div>
    </div>
    <div class="panel">
      <div class="row" style="align-items:center;justify-content:space-between;gap:10px">
@@ -1243,7 +1369,7 @@ function farmTable(){
       <td class="num"><button class="btn sm ${p.ovr>=62?'primary':''}" onclick="promote('${p.id}')">Promote ↑</button></td></tr>`).join("")}</tbody></table>`;
 }
 function promote(pid){const p=G.farm.find(x=>x.id===pid);if(!p)return;G.farm=G.farm.filter(x=>x.id!==pid);
-  p.loc="mlb";if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;p.salary=salaryFor(p.ovr,p.mlbYears);G.roster.push(p);toast(`${p.name} called up!`);screenRoster();}
+  p.loc="mlb";p.prospect=false;if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;p.salary=salaryFor(p.ovr,p.mlbYears);G.roster.push(p);toast(`${p.name} called up!`);screenRoster();}
 function sendDown(pid){const p=G.roster.find(x=>x.id===pid);if(!p)return;G.roster=G.roster.filter(x=>x.id!==pid);
   p.loc="farm";G.farm.push(p);toast(`${p.name} sent down`);screenRoster();}
 
@@ -1382,7 +1508,8 @@ function doSeason(){
   _res.awards=computeAwards();
   if(G.awardsYear!==G.year){applyAwards(_res.awards);G.awardsYear=G.year;}
   // years 4-6: tally weak starting spots at season's end (counts toward the final grade)
-  if(G.year>=4&&G.weakSpotsYear!==G.year){G.weakSpotsTotal=(G.weakSpotsTotal||0)+weakStartSpots();G.weakSpotsYear=G.year;}
+  if(G.mode!=="survivor"&&G.year>=4&&G.weakSpotsYear!==G.year){G.weakSpotsTotal=(G.weakSpotsTotal||0)+weakStartSpots();G.weakSpotsYear=G.year;}
+  if(G.mode==="survivor"&&G.weakSpotsYear!==G.year){applySurvivorSeason();G.weakSpotsYear=G.year;}
   G.seasonStage=0;saveGame();showResult();
 }
 /* ---- awards (ROY / Cy Young / MVP) ---- */
@@ -1468,12 +1595,19 @@ function showResult(){
      ${r.injured.length?`<div class="small" style="margin-top:8px;text-align:left;max-width:560px;margin-left:auto;margin-right:auto">
         🩹 <b>Injuries</b>${r.injWinsLost>0?` — cost you about <b style="color:var(--red)">${r.injWinsLost} win${r.injWinsLost>1?'s':''}</b> (healthy projection was ${r.healthyProj})`:' (your depth absorbed them)'}:
         <div style="margin-top:3px">${r.injured.sort((a,b)=>b.inj-a.inj).map(p=>`<span class="pill ${p.injType==='long'?'red':''}" style="margin:2px">${p.pos} ${p.name} — ${p.injType==='long'?'long-term':'short-term'} (~${p.inj} g)</span>`).join("")}</div></div>`:''}</div>
+   ${G.mode==="survivor"?survivorResultPanel():""}
    ${awardsPanel(_res.awards)}
    ${reportCardPanel()}
    <div class="panel"><h3>Final Standings</h3>
      <div class="scroll"><table><thead><tr><th class="num">#</th><th>Team</th><th class="num">W</th><th class="num">L</th><th></th></tr></thead><tbody>${stand}</tbody></table></div></div>
-   <div class="center">${last?`<button class="btn primary" onclick="endGame()">See your 6-year legacy →</button>`
-     :`<button class="btn primary" onclick="goPhase(3)">To the Draft →</button>`}</div>`);
+   <div class="center">${
+     G.mode==="survivor"
+       ? (G.fired?`<button class="btn primary" onclick="screenFired()">Clean out your office →</button>`
+          : G.year>=SURV_CAP?`<button class="btn primary" onclick="screenRetire()">Ride off into the sunset →</button>`
+          : `<button class="btn primary" onclick="goPhase(3)">To the Draft →</button>`)
+       : (last?`<button class="btn primary" onclick="endGame()">See your 6-year legacy →</button>`
+          : `<button class="btn primary" onclick="goPhase(3)">To the Draft →</button>`)
+   }</div>`);
 }
 
 /* ============================================================
@@ -1523,7 +1657,187 @@ function screenDevelop(){
      ${res.retired.length?`<p class="small muted">Retired: ${res.retired.map(p=>p.name).join(", ")}</p>`:''}</div>
    <div class="center"><button class="btn primary" onclick="nextYear()">Begin Year ${G.year+1} →</button></div>`);
 }
-function nextYear(){G.year++;G.phase=0;G.tradeTries=3;G.seasonStage=0;_dlMode=false;_offers=null;_custom=null;_sugg=null;saveGame();goPhase(0);}
+function nextYear(){G.year++;G.phase=0;G.tradeTries=3;G.seasonStage=0;_dlMode=false;_offers=null;_custom=null;_sugg=null;saveGame();
+  if(G.mode==="survivor")startSurvivorYear();else goPhase(0);}
+
+/* ============================================================
+   SURVIVOR MODE — endless owner-favor run
+   ============================================================ */
+const SURV_CAP=50;
+function favorChange(amt,label){const before=G.favor;G.favor=clamp(Math.round((G.favor+amt)*10)/10,0,100);
+  const d=Math.round((G.favor-before)*10)/10; if(label&&Math.abs(d)>=0.05)(G.favorLog=G.favorLog||[]).push({year:G.year,amt:d,label}); return d;}
+function favorTier(f){return f<=10?'red':f<46?'muted':f<=60?'yellow':f<90?'green':f<96?'diamond':'irid';}
+function favorColor(f){
+  if(f<=10)return '#ef4444';
+  if(f<46){const t=clamp((f-11)/35,0,1);return `rgb(${Math.round(138+(245-138)*t)},${Math.round(154+(196-154)*t)},${Math.round(106+(81-106)*t)})`;}
+  if(f<=60)return '#f5c451';
+  if(f<90){const t=clamp((f-61)/29,0,1);return `rgb(${Math.round(220+(118-220)*t)},${Math.round(214+(232-214)*t)},${Math.round(81+(63-81)*t)})`;}
+  return '#76e83f';
+}
+const OWNER_MSGS={
+  red:["One more season like that and we're cleaning out your office.","You're on the hot seat. Win — now.","The owner can barely look at you."],
+  muted:["Ownership needs this trending up, fast.","Patience is wearing thin around here.","Show me a plan that actually works."],
+  yellow:["The owner wants real progress this year.","We're not where we need to be. Push.","Prove this is going somewhere."],
+  green:["The owner likes where this is headed.","You've built real trust — keep it rolling.","Good work. Now don't let up."],
+  diamond:["You've earned a blank check and the benefit of the doubt.","The owner trusts your vision completely.","Whatever you need — within reason."],
+  irid:["Whatever you want. They'd build you a statue.","You can do no wrong in this building.","A living legend in the front office."]
+};
+function ownerMsg(){return pick(OWNER_MSGS[favorTier(G.favor)]);}
+function favorBar(){const f=G.favor,t=favorTier(f);
+  const cls=t==='irid'?'favbar irid':t==='diamond'?'favbar bdiamond':'favbar';
+  const style=(t==='irid'||t==='diamond')?'':`background:${favorColor(f)}`;
+  return `<div class="favtrack"><div class="${cls}" style="width:${Math.max(2,f)}%;${style}"></div></div>`;}
+function survivorHeader(){
+  return `<div style="margin-bottom:8px">
+    <div class="row" style="align-items:center;margin-bottom:4px">
+      <div style="flex:2"><h2 style="margin-bottom:2px">${G.teamName}</h2>
+        <span class="sub">Survivor <span class="pill" style="padding:0 5px;background:#3a2a55;color:#d9b3ff;font-size:10px">BETA</span> · Season ${G.year} &bull; payroll $${payroll(G.roster)}M &bull; score ${Math.round(G.cumScore||0)}</span></div>
+      <div style="flex:1;text-align:right">${G.agreedBar?`<span class="pill ${G.stance==='go'?'gold':G.stance==='retool'?'blue':'green'}">Target: ${G.agreedBar} W</span>`:''}</div>
+    </div>
+    <div class="small" style="color:var(--dim);margin-bottom:3px">🪑 <i>"${G._ownerMsg||ownerMsg()}"</i></div>
+    ${favorBar()}
+  </div>`;
+}
+/* ---- expectations + negotiation ---- */
+function projWinsNow(){return warToWins(teamWAR(G.roster));}
+function payExpWins(){const p=payroll(G.roster);return clamp(Math.round(58+(p-110)/190*44),56,104);}
+function survGrace(){return G.mode==="survivor"&&G.year<=2;}   // first 2 seasons: hired to tear it down, the owner is patient
+function ownerBaseBar(){
+  if(survGrace())return clamp(Math.round(Math.min(projWinsNow(),72)),60,74);   // rebuild years — a modest "show progress" bar
+  return clamp(Math.round(Math.max(projWinsNow(),payExpWins()-4,Math.round(G.reputation)-7)),58,108);}
+function stancePreview(stance){const ob=G.ownerBar;
+  if(stance==='go')return ob+5;
+  if(stance==='compete')return ob;
+  const f=G.favor;let cut=f>=75?14:f>=61?9:f>=46?5:0;
+  if((ob-projWinsNow())<6)cut=Math.round(cut*0.4);   // only a genuinely weak roster earns the full rebuild discount
+  return Math.max(projWinsNow()-2,ob-cut);}
+function startSurvivorYear(){
+  G.survStage=0;G.stance=null;G.agreedBar=null;
+  if(G.draftOrderYear!==G.year)computeDraftOrder();
+  G.ownerBar=ownerBaseBar();G._ownerMsg=ownerMsg();saveGame();screenMandate();}
+function screenMandate(){
+  const ob=G.ownerBar,proj=projWinsNow();
+  const opt=(key,label,desc,cls)=>{const bar=stancePreview(key);
+    return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:11px;flex:1;display:flex;flex-direction:column">
+      <div style="font-weight:800;color:var(--${cls})">${label}</div>
+      <p class="small muted" style="margin:4px 0 8px;flex:1">${desc}</p>
+      <div class="small">Agreed target: <b>${bar} wins</b></div>
+      <button class="btn primary sm" style="margin-top:7px" onclick="chooseStance('${key}')">Choose</button></div>`;};
+  const grace=survGrace();
+  const intro = G.year===1
+    ? `<p class="sub">You were hired to <b>tear this thing down and rebuild it</b>. Ownership knows the next year or two won't be pretty — they want to see a plan, prospects, and a direction, not wins. Tank freely; the leash is long while you retool.</p>`
+    : grace
+    ? `<p class="sub">Still in the rebuild window — the owner is patient with the losing as long as the future's stocking up. Wins aren't the point yet.</p>`
+    : `<p class="sub">Your roster projects to ${proj}. Beating the agreed target builds favor; missing it costs you. A rebuild is only granted if you've earned the standing — and the owner only buys it if the roster genuinely needs one.</p>`;
+  render(`${survivorHeader()}
+    <div class="panel center" style="border-color:var(--gold)">
+      <div class="pill gold">🪑 OWNER MEETING · ${grace?'rebuild years':'preseason'}</div>
+      <h2 style="margin:6px 0">${grace?`The mandate: <b>retool</b> — target ~${ob} wins`:`Ownership is thinking <b>~${ob} wins</b>`}</h2>
+      ${intro}</div>
+    <div class="row" style="gap:10px;align-items:stretch">
+      ${opt('go','🔥 Go for it','Raise the bar and commit to contend. Beating it pays big; a face-plant is brutal.','gold')}
+      ${opt('compete','⚖️ Compete','Accept the owner&apos;s number. Straightforward.','green')}
+      ${opt('retool','🌱 Retool','Ask to lower the bar for a rebuild year. Costs a little favor up front, granted only if you have the standing.','blue')}
+    </div>
+    ${(G.yearsServed||0)>=10?`<div class="center" style="margin-top:12px"><button class="btn ghost" onclick="(function(){G.yearsServed=G.year-1;screenRetire();})()">🏖️ Retire as a legend (end the run here)</button></div>`:''}`);}
+function chooseStance(s){G.stance=s;G.agreedBar=stancePreview(s);
+  if(s==='retool')favorChange(-2,"Asked ownership for a rebuild year");
+  G.survStage=1;saveGame();goPhase(0);}
+/* ---- end-of-season owner review (the favor ledger) ---- */
+function weakStartSpotsSafe(){try{return weakStartSpots();}catch(e){return 0;}}
+function applySurvivorSeason(){
+  const r=_res,me=r.me,w=me.wins,madePO=me.seed<=8,grace=survGrace();
+  G._favorThisYear=[];
+  const fc=(amt,label)=>{const d=favorChange(amt,label);if(Math.abs(d)>=0.05)G._favorThisYear.push({amt:d,label});};
+  // favor-scaled decay — the higher you are, the harder it is to hold (gentle during the rebuild grace years)
+  fc(-((grace?3:6)*clamp(G.favor/60,0.4,1.7)),grace?"A rebuild season passes":"A season passes — expectations never rest");
+  // vs the agreed target — during the grace years, missing a low rebuild bar is forgiven, beating it still rewards
+  const bar=G.agreedBar||me.seed,margin=w-bar;
+  if(margin>=1)fc(Math.min(6,margin*0.5),`Beat the ${bar}-win target (${w} W)`);
+  else if(margin<=-1&&!grace)fc(Math.max(-12,margin*(G.stance==="go"?1.0:0.6)),`Missed the ${bar}-win target (${w} W)`);
+  if(G.stance==="go"&&w<81&&!grace)fc(-8,"Promised contention, finished under .500");
+  if(grace&&!madePO)fc(2,"Ownership sees the rebuild taking shape");
+  // October
+  if(madePO){fc(8,"Made the playoffs");
+    if(G.lastPlayoffYear!=null&&(G.year-G.lastPlayoffYear)>=4)fc(5,"Ended a long playoff drought");
+    G.lastPlayoffYear=G.year;G.missStreak=0;}
+  else{G.missStreak=grace?0:(G.missStreak||0)+1;   // the miss-the-playoffs clock doesn't start ticking until the grace years are over
+    if(G.missStreak>=3)fc(({3:-2,4:-4,5:-7,6:-11,7:-16,8:-22}[Math.min(8,G.missStreak)]),`Missed October ${G.missStreak} years running`);}
+  if(w>=110)fc(8,"110-win juggernaut");else if(w>=105)fc(6,"105-win season");else if(w>=100)fc(4,"100-win season");
+  if(me.seed===1)fc(3,"Best record in baseball");
+  // WS appearance / title
+  if(r.wonWS){G.survTitles=(G.survTitles||0)+1;
+    const boost=G.survTitles===1?50:Math.min(75,7.5*(G.year-(G.lastTitleYear||G.year)));
+    fc(boost,`World Series CHAMPIONS! (ring #${G.survTitles})`);
+    if(G.favor<61){favorChange(61-G.favor);G._favorThisYear.push({amt:'→ green',label:"A ring buys back the owner's faith"});}
+    G.lastTitleYear=G.year;G.lastWSYear=G.year;}
+  else if(r.reachedWS){fc(Math.min(25,2.5*(G.lastWSYear!=null?(G.year-G.lastWSYear):8)),"Reached the World Series (lost)");G.lastWSYear=G.year;}
+  // awards
+  if(_res.awards)['roy','cy','mvp'].forEach(k=>{const a=_res.awards[k];if(a&&a.won){const p=a.player,hg=p.src==="draft",acq=p._acqYear===G.year;
+    fc(hg?6:(acq?1.5:3),`${p.name} won ${a.name}${hg?' (homegrown)':''}`);}});
+  // money without a run
+  if(payroll(G.roster)>300&&!r.reachedWS){fc(Math.max(-10,-1.5*luxuryTax()),"Big payroll, no October run");
+    G.taxNoRunStreak=(G.taxNoRunStreak||0)+1;if(G.taxNoRunStreak>=2)fc(Math.max(-8,-2*(G.taxNoRunStreak-1)),"Paying the tax for a non-contender, again");}
+  else G.taxNoRunStreak=0;
+  const weak=weakStartSpotsSafe();if(weak>0)fc(Math.max(-8,-1.2*weak),`${weak} replacement-level starting spot${weak>1?'s':''}`);
+  // cumulative achievement score
+  let s=0;if(w>=110)s+=12;else if(w>=105)s+=9;else if(w>=100)s+=7;else if(w>=95)s+=5;else if(w>=90)s+=3;else if(w>=85)s+=1;
+  if(madePO)s+=6;if(r.reachedWS&&!r.wonWS)s+=10;if(r.wonWS)s+=20;
+  if(_res.awards)['roy','cy','mvp'].forEach(k=>{const a=_res.awards[k];if(a&&a.won)s+=a.player.src==="draft"?3:2;});
+  s+=G.roster.filter(p=>p.loc==="mlb"&&p.src==="draft"&&p.ovr>=74).length;
+  G.cumScore=(G.cumScore||0)+s;G._scoreThisYear=s;
+  // new fan favorites
+  detectFanFavorites();
+  // reputation, mood, firing
+  G.reputation=clamp(G.reputation*0.7+w*0.3+(r.wonWS?4:0),50,108);
+  G.yearsServed=G.year;
+  if(G.favor<=0){G.fired=true;G.firedYear=G.year;}
+  G._ownerMsg=G.fired?"That's it. We're going in a different direction.":ownerMsg();
+}
+function survivorResultPanel(){
+  const items=G._favorThisYear||[];
+  const rows=items.map(it=>{const num=typeof it.amt==='number';const pos=num?it.amt>=0:true;
+    return `<div style="display:flex;justify-content:space-between;font-size:13px;margin:2px 0"><span>${it.label}</span><span style="font-weight:700;color:${pos?'var(--green)':'var(--red)'}">${num?(it.amt>=0?'+':'')+it.amt:it.amt}</span></div>`;}).join("");
+  const ff=(G._newFanFavs||[]);
+  const ffPanel=ff.length?`<div class="panel2" style="border:1px solid var(--gold);border-radius:10px;padding:10px;margin-top:10px">
+    <div style="font-weight:800;color:var(--gold)">⭐ New Fan Favorite${ff.length>1?'s':''}!</div>
+    <p class="small muted" style="margin:3px 0 0">Homegrown, tenured, and beloved by the fanbase: ${ff.map(p=>`<b>${p.name}</b>`).join(", ")}. Keep them around (and extend them) for owner goodwill — dealing them away stings.</p></div>`:'';
+  return `<div class="panel"><h3>🪑 Owner Review</h3>
+    <div class="small" style="color:var(--dim);margin-bottom:6px"><i>"${G._ownerMsg||ownerMsg()}"</i></div>
+    ${favorBar()}
+    <div style="margin-top:10px">${rows||'<span class="muted small">No change.</span>'}</div>
+    <div class="small muted" style="margin-top:8px">Season score +${G._scoreThisYear||0} &nbsp;·&nbsp; running total <b style="color:var(--ink)">${Math.round(G.cumScore||0)}</b></div>
+    ${ffPanel}
+    ${G.fired?'<div class="pill red" style="margin-top:8px;display:inline-block">⚠ Owner Happiness hit zero — you are out.</div>':''}</div>`;
+}
+function survFinalScore(){return Math.round((G.cumScore||0)+(G.survTitles||0)*25+(G.yearsServed||0)*2);}
+function survEndStats(){const h=G.history;
+  return `<div class="grid4" style="margin-top:4px">
+     <div class="kpi"><div class="big">${survFinalScore()}</div><div class="lbl">Survivor Score</div></div>
+     <div class="kpi"><div class="big">${G.yearsServed||0}</div><div class="lbl">Seasons</div></div>
+     <div class="kpi"><div class="big">${G.survTitles||0}</div><div class="lbl">World Series</div></div>
+     <div class="kpi"><div class="big">${G.bestWins}</div><div class="lbl">Peak Wins</div></div></div>
+   <div class="panel"><h3>Your tenure</h3>
+     <div class="scroll"><table><thead><tr><th>Yr</th><th class="num">Record</th><th class="num">Rank</th><th>Result</th></tr></thead><tbody>${
+       h.map(x=>`<tr><td>${x.year}</td><td class="num">${x.wins}-${x.losses}</td><td class="num">#${x.seed}</td>
+         <td>${x.champ?'<span class="pill gold">🏆 WS</span>':x.playoffs?'<span class="pill green">Playoffs</span>':'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table></div></div>`;}
+function survSubmitPanel(){return `<div class="panel center" id="lbsubmit">
+   <h3>🏆 Post to the Survivor leaderboard</h3>
+   <div style="margin:8px 0"><input id="lbname" maxlength="12" placeholder="Name or initials" style="width:200px"/></div>
+   <button class="btn primary" onclick="submitSurvivor()">Submit score ${survFinalScore()}</button>
+   <button class="btn ghost" onclick="screenLeaderboard(true,'survivor')">View leaderboard</button></div>`;}
+function screenFired(){render(`<div class="hero"><div class="pill red">DISMISSED</div>
+     <h1 style="font-size:46px;margin:6px 0;color:var(--red)">Fired after ${G.yearsServed} season${G.yearsServed===1?'':'s'}</h1>
+     <p class="sub" style="max-width:600px;margin:0 auto">Ownership ran out of patience. The run is over — but they'll remember it.</p></div>
+   ${survEndStats()}
+   ${survSubmitPanel()}
+   <div class="center" style="margin-top:8px"><button class="btn" onclick="(function(){localStorage.removeItem(SAVE);screenTitle();})()">New Franchise</button></div>`);}
+function screenRetire(){render(`<div class="hero"><div class="pill gold">A LEGEND STEPS AWAY</div>
+     <h1 style="font-size:44px;margin:6px 0;color:var(--gold)">${G.yearsServed} seasons · ${G.survTitles||0} title${G.survTitles===1?'':'s'}</h1>
+     <p class="sub">You walked away on your own terms — a front-office immortal.</p></div>
+   ${survEndStats()}
+   ${survSubmitPanel()}
+   <div class="center" style="margin-top:8px"><button class="btn" onclick="(function(){localStorage.removeItem(SAVE);screenTitle();})()">New Franchise</button></div>`);}
 
 /* ============================================================
    END GAME
@@ -1583,6 +1897,34 @@ function computeGrade(){
   else blurb="A middling six years — never bad enough to stock elite picks, never good enough to truly contend.";
   const winTxt=windowYears>=5?"wide open":windowYears>=3?"open":windowYears>=1?"closing":"shut";
   return {score,grade,blurb,items,windowYears,winTxt,hg,maxPay};
+}
+function scoringRubric(){return (typeof G!=="undefined"&&G&&G.mode==="survivor")?survivorRubric():gradeRubric();}
+function survivorRubric(){
+  const P=[
+    ["🏆 World Series","First ring +50; each one after +7.5 per year since your last, up to +75. Always rescues you to at least green.","spike"],
+    ["🥈 Reach the World Series","+2.5 per year since your last Series appearance, up to +25.","spike"],
+    ["🎟️ Make the playoffs","+8 — your bread-and-butter. Ending a long playoff drought adds +5.","+8"],
+    ["📈 Big seasons","100 wins +4 · 105 +6 · 110 +8 · best record in baseball +3.","bonus"],
+    ["🎯 Beat your win target","Up to +6 for clearing the bar you agreed with the owner.","+6"],
+    ["🏅 Player awards","+6 homegrown · +3 acquired · +1.5 if you got them that same year.","ledger"],
+    ["⭐ Loyalty","Extend a homegrown player +2 (a fan favorite +4).","ledger"],
+  ];
+  const N=[
+    ["📉 Miss your win target","Scales with the miss, worse if you declared \"Go for it.\" (Forgiven during the first two rebuild years.)","ledger"],
+    ["🪑 Miss the playoffs repeatedly","Nothing for 1–2 years, then −2, −4, −7… escalating to unsurvivable by ~8 in a row.","escalates"],
+    ["💸 Spend without winning","Big payroll and no October run drains favor, more so year after year.","ledger"],
+    ["🕳️ Replacement-level holes","−1.2 for each sub-70 OVR starting spot you field.","ledger"],
+    ["💔 Lose your stars","Trade a fan favorite −2; let a homegrown star walk in free agency for nothing −5.","ledger"],
+    ["⌛ Time itself","The bar always bleeds — and bleeds faster the higher you sit, so the top is hard to hold.","decay"],
+  ];
+  const rP=r=>`<tr><td>${r[0]}<div class="small muted">${r[1]}</div></td><td class="num" style="color:var(--green);font-weight:700;white-space:nowrap;vertical-align:top">${r[2]==='spike'?'big':r[2]==='bonus'?'+':r[2]==='ledger'?'+':r[2]}</td></tr>`;
+  const rN=r=>`<tr><td>${r[0]}<div class="small muted">${r[1]}</div></td><td class="num" style="color:var(--red);font-weight:700;white-space:nowrap;vertical-align:top">−</td></tr>`;
+  return `<p class="sub">Survivor Mode isn't graded out of 100 — you're managing the <b>Owner Happiness</b> bar. Keep it above zero and your run continues; hit zero and you're fired. Meanwhile a <b>running score</b> climbs each year from wins, playoff runs, titles, awards, and your homegrown core. Final score also rewards seasons survived and rings.</p>
+    <p class="small" style="color:var(--gold)"><b>The first two seasons are rebuild years</b> — you were hired to tear it down, so losing is expected and the owner stays patient. Normal expectations kick in from Year 3.</p>
+    <div class="sectlbl" style="margin-top:6px">Gain favor</div>
+    <table><tbody>${P.map(rP).join("")}</tbody></table>
+    <div class="sectlbl">Lose favor</div>
+    <table><tbody>${N.map(rN).join("")}</tbody></table>`;
 }
 function gradeRubric(){
   const P=[
@@ -1664,6 +2006,7 @@ async function lbFetch(){
   if(!a)a=lbLoadLocal();
   return a.filter(x=>!lbBanned(x&&x.team));
 }
+function lbRankSurv(arr){return arr.slice().sort((a,b)=>(b.score-a.score)||((b.titles||0)-(a.titles||0))||((b.years||0)-(a.years||0)));}
 function lbRows(arr){
   if(!arr.length)return `<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">No entries yet — be the first.</td></tr>`;
   return arr.map((e,i)=>`<tr>
@@ -1673,25 +2016,56 @@ function lbRows(arr){
     <td class="num">${e.peak||''}W</td>
     <td class="num">${e.champs||0}🏆</td></tr>`).join("");
 }
-async function screenLeaderboard(fromEnd){
+function lbRowsSurv(arr){
+  if(!arr.length)return `<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">No survivors yet — be the first to take the chair.</td></tr>`;
+  return arr.map((e,i)=>`<tr>
+    <td class="num">${i+1}</td>
+    <td><b>${(e.name||'---').slice(0,12)}</b><br><span class="small muted">${e.team?e.team.slice(0,18):''}</span></td>
+    <td class="num"><b style="color:var(--gold)">${e.score}</b></td>
+    <td class="num">${e.years||0}</td>
+    <td class="num">${e.titles||0}🏆</td></tr>`).join("");
+}
+async function screenLeaderboard(fromEnd,board){
+  board=board||((typeof G!=="undefined"&&G&&G.mode==="survivor")?'survivor':'career');
+  const tab=(k,l)=>`<button class="btn sm ${board===k?'primary':'ghost'}" onclick="screenLeaderboard(${fromEnd?'true':'false'},'${k}')">${l}</button>`;
   render(`<div class="row" style="align-items:center;margin-bottom:6px"><h2 style="flex:1">🏆 Leaderboard</h2>
      <button class="btn ghost" onclick="screenTitle()">← Home</button></div>
+   <div style="margin-bottom:8px">${tab('career','⚡ 6-Year Sprint')} ${tab('survivor','🪑 Survivor (BETA)')}</div>
    <p class="sub">${LEADERBOARD_API?'Global rankings across all players.':'Saved on this device only. To make it shared, see the README — it takes one free backend URL.'}</p>
    <div id="lbbody"><p class="muted">Loading…</p></div>`);
-  const all=await lbFetch();const ranked=lbRank(all);
-  const today=ranked.filter(e=>(e.date||todayStr(new Date(e.ts||Date.now())))===todayStr());
+  const all=await lbFetch();
   const el=document.getElementById('lbbody'); if(!el)return;
-  el.innerHTML=`<div class="grid2">
-     <div class="panel"><h3>🔆 Top 10 Today</h3><table><thead><tr><th class="num">#</th><th>GM / Club</th><th class="num">Score</th><th class="num">Peak</th><th class="num">WS</th></tr></thead><tbody>${lbRows(today.slice(0,10))}</tbody></table></div>
-     <div class="panel"><h3>👑 Top 10 All-Time</h3><table><thead><tr><th class="num">#</th><th>GM / Club</th><th class="num">Score</th><th class="num">Peak</th><th class="num">WS</th></tr></thead><tbody>${lbRows(ranked.slice(0,10))}</tbody></table></div>
-   </div>`;
+  if(board==='survivor'){
+    const ranked=lbRankSurv(all.filter(e=>e.mode==='survivor'));
+    const today=ranked.filter(e=>(e.date||todayStr(new Date(e.ts||Date.now())))===todayStr());
+    const head=`<thead><tr><th class="num">#</th><th>GM / Club</th><th class="num">Score</th><th class="num">Yrs</th><th class="num">WS</th></tr></thead>`;
+    el.innerHTML=`<div class="grid2">
+       <div class="panel"><h3>🔆 Top 10 Today</h3><table>${head}<tbody>${lbRowsSurv(today.slice(0,10))}</tbody></table></div>
+       <div class="panel"><h3>👑 Top 10 All-Time</h3><table>${head}<tbody>${lbRowsSurv(ranked.slice(0,10))}</tbody></table></div>
+     </div><p class="small muted" style="margin-top:6px">Survivor score = your running total + bonuses for seasons survived and World Series titles.</p>`;
+  } else {
+    const ranked=lbRank(all.filter(e=>e.mode!=='survivor'));
+    const today=ranked.filter(e=>(e.date||todayStr(new Date(e.ts||Date.now())))===todayStr());
+    const head=`<thead><tr><th class="num">#</th><th>GM / Club</th><th class="num">Score</th><th class="num">Peak</th><th class="num">WS</th></tr></thead>`;
+    el.innerHTML=`<div class="grid2">
+       <div class="panel"><h3>🔆 Top 10 Today</h3><table>${head}<tbody>${lbRows(today.slice(0,10))}</tbody></table></div>
+       <div class="panel"><h3>👑 Top 10 All-Time</h3><table>${head}<tbody>${lbRows(ranked.slice(0,10))}</tbody></table></div>
+     </div>`;
+  }
 }
 function submitScore(){
   const inp=document.getElementById('lbname');const name=((inp&&inp.value.trim())||'Anon').slice(0,12);
   const R=computeGrade();
-  const entry={name,team:G.teamName,score:R.score,grade:R.grade,peak:G.bestWins,champs:G.champions,window:R.windowYears,ts:Date.now(),date:todayStr(),did:deviceId()};
+  const entry={name,team:G.teamName,score:R.score,grade:R.grade,mode:"career",peak:G.bestWins,champs:G.champions,window:R.windowYears,ts:Date.now(),date:todayStr(),did:deviceId()};
   lbSubmit(entry);toast(`Submitted: ${name} — ${R.score} (${R.grade})`);
-  screenLeaderboard(true);
+  screenLeaderboard(true,'career');
+}
+function submitSurvivor(){
+  const inp=document.getElementById('lbname');const name=((inp&&inp.value.trim())||'Anon').slice(0,12);
+  const sc=survFinalScore();
+  const entry={name,team:G.teamName,score:sc,mode:"survivor",years:G.yearsServed||0,titles:G.survTitles||0,peak:G.bestWins,ts:Date.now(),date:todayStr(),did:deviceId()};
+  lbSubmit(entry);toast(`Submitted: ${name} — ${sc}`);
+  screenLeaderboard(true,'survivor');
 }
 
 /* boot */
