@@ -1,5 +1,14 @@
 # Changelog
 
+## v7.1
+
+Balance and polish patch.
+
+- **Realistic salaries (both modes).** The pay scale now matches recent MLB free-agent and extension levels (a 99 OVR ≈ $53M, 90 ≈ $34M, 80 ≈ $18M, with proper pre-arb → arbitration → free-agency progression). Keeping a homegrown core is now genuinely expensive — the central squeeze of Survivor Mode.
+- **Lock up prospects.** You can now extend a player at any point, even in the minors. The deal is priced between his current ability and his ceiling — a bargain if he develops, dead money if he busts — and the salary **stays locked** for the term instead of re-pricing each year.
+- **DAWG** shows up a little more often.
+- **Fixes:** the suggested-trade card no longer overflows its box; dragging a player to an "empty" slot no longer wrongly says it's taken; and the Survivor draft now uses the same odds every year (no 6-Year-mode "draft MLB-ready late" carryover).
+
 ## v7
 
 The big one: a whole second way to play, plus deeper player and roster systems.

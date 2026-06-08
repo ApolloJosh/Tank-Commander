@@ -117,6 +117,10 @@
   .favbar.bdiamond{background:linear-gradient(90deg,#7fd8ff,#b8eaff,#8ad0ff,#cfeeff);background-size:200% 100%;animation:favshine 2.2s linear infinite}
   .favbar.irid{background:linear-gradient(90deg,#a6ff2b,#37e0c8,#7b9bff,#ff7bd5,#a6ff2b);background-size:300% 100%;animation:favshine 2.6s linear infinite}
   @keyframes favshine{0%{background-position:0% 0}100%{background-position:200% 0}}
+  .grid2>*{min-width:0}                 /* let grid columns shrink so cards never overflow the panel */
+  .tbrow{flex-wrap:wrap;max-width:100%;overflow:hidden}
+  .tbrow .tbval{margin-left:auto}
+  .tbrow .small{white-space:normal;word-break:break-word}
 </style>
 </head>
 <body>
@@ -269,8 +273,8 @@ function attrVal(p,k){return clamp(round((p.ovr||50)+((p.attr&&p.attr[k])||0)),2
 function dawgOf(p){if(p.dawg==null)p.dawg=clamp(round(gauss(50,18)),5,99);return p.dawg;}
 function teamDawg(){const a=buildActive(G.roster);const ps=[...LINEUP.map(s=>a.lineup[s]),...a.rotation,...a.pen].filter(Boolean);
   return ps.length?ps.reduce((s,p)=>s+dawgOf(p),0)/ps.length:50;}
-function dawgTag(p){const d=dawgOf(p);if(d>=82)return ` <span class="pill gold" style="padding:0 5px;font-size:10px">🐶 DAWG ${d}</span>`;if(d<=28)return ` <span class="pill red" style="padding:0 5px;font-size:10px">🐑 soft ${d}</span>`;return '';}
-function dawgEmoji(p){const d=dawgOf(p);return d>=82?' 🐶':'';}
+function dawgTag(p){const d=dawgOf(p);if(d>=78)return ` <span class="pill gold" style="padding:0 5px;font-size:10px">🐶 DAWG ${d}</span>`;if(d<=28)return ` <span class="pill red" style="padding:0 5px;font-size:10px">🐑 soft ${d}</span>`;return '';}
+function dawgEmoji(p){const d=dawgOf(p);return d>=78?' 🐶':'';}
 function genCatProfile(){const o={};[...HIT_ATTRS,...PIT_ATTRS].forEach(k=>o[k]=Math.round(gauss(0,7)));return o;}
 function aiCatScore(t,k){return clamp(72+(t.war-30)*0.7+((t.catProfile&&t.catProfile[k])||0),40,96);}
 // scouting-aware realized ceiling for DRAFT prospects (more scouting -> more accurate)
@@ -282,9 +286,11 @@ function rollRealCeilScouted(pot){
   return Math.round(pot-rnd(11,20));
 }
 // ---- salary scales with ability + MLB service: ~$8M max at yr3, up to $25M at yr6 for a 99 OVR ----
-const SERVICE_MULT=[0,0.12,0.22,0.32,0.55,0.78,1.0];   // index = MLB years (1..6), 6+ = full
-function fullSalary(ovr){return clamp(0.7+Math.pow(Math.max(0,ovr-55)/44,1.3)*24.3,0.7,25);}
-function salaryFor(ovr,mlbYears){const m=SERVICE_MULT[clamp(mlbYears,1,6)];return Math.max(0.7,Math.round(fullSalary(ovr)*m*10)/10);}
+const SERVICE_MULT=[0,0.10,0.18,0.30,0.52,0.76,1.0];   // index = MLB years (1..6), 6+ = full (cheap pre-arb -> arb -> full freight)
+// Realistic open-market value, modeled on recent MLB free-agent AAVs and extensions:
+// ~99 OVR ≈ $52M (Ohtani/Soto tier), 95 ≈ $43M, 90 ≈ $34M, 85 ≈ $25M, 80 ≈ $18M, 75 ≈ $12M, 70 ≈ $7M, 65 ≈ $4M.
+function fullSalary(ovr){return clamp(0.75+Math.pow(Math.max(0,ovr-54)/45,2.0)*52,0.75,55);}
+function salaryFor(ovr,mlbYears){const m=SERVICE_MULT[clamp(mlbYears,1,6)];return Math.max(0.75,Math.round(fullSalary(ovr)*m*10)/10);}
 const initService=age=>clamp(age-22,1,9);
 function clonePlayer(d){const[n,p,a,o,t,s,y]=d;const pot=Math.max(t,o);const mlb=initService(a);
   return {id:uid(),name:n,pos:p,age:a,ovr:o,pot,realCeil:Math.max(o,rollRealCeil(pot)),dura:rollDura(a),attr:genAttrs(p),mlbYears:mlb,salary:salaryFor(o,mlb),years:y,loc:"mlb",inj:0};}
@@ -725,6 +731,7 @@ function developAll(){
   // A service-time hold (mid-season call-up) skips one offseason of service/contract burn.
   G.roster.forEach(p=>{if(p.loc==="mlb"){
     if(p._svcHold){p._svcHold=false;p._skipYr=true;}
+    else if(p.locked){p.mlbYears=Math.max(p.mlbYears||6,6);}   // locked deal: salary stays fixed (good value or dead money)
     else{p.mlbYears=(p.mlbYears||initService(p.age))+1;p.salary=salaryFor(p.ovr,p.mlbYears);}
   }});
   // contracts tick (mlb only); expirations walk as FA
@@ -757,11 +764,21 @@ function extendSelect(pid){return `<select class="exsel" onchange="extendDo('${p
   <option value="">Extend…</option><option value="1">+1 yr</option><option value="3">+3 yr</option><option value="5">+5 yr</option><option value="10">+10 yr</option></select>`;}
 function extendDo(pid,years){years=parseInt(years);if(!years)return;
   const p=G.roster.find(x=>x.id===pid)||G.farm.find(x=>x.id===pid);if(!p)return;
-  p.years+=years;
-  p.mlbYears=Math.max(p.mlbYears||6,6);          // extensions pay full freight for their ability
-  p.salary=salaryFor(p.ovr,6);
+  p.years=Math.min(p.years+years,14);   // megadeals top out around 14 years
+  p.mlbYears=Math.max(p.mlbYears||6,6);
+  p.locked=true;   // an extension LOCKS the AAV for the term — it won't re-price as the player grows or fades
+  const onFarm=(p.loc==="farm")||p.prospect;
+  if(onFarm){
+    // pre-breakout deal: priced on a blend of current ability and realized ceiling — you pay for upside,
+    // at a discount because it isn't guaranteed (and if he busts, you're stuck with it).
+    const ceil=Math.min(p.realCeil||p.pot,p.pot);
+    const effOvr=Math.round(p.ovr+(ceil-p.ovr)*0.55);
+    p.salary=Math.max(0.75,Math.round(salaryFor(effOvr,6)*0.88*10)/10);
+  } else {
+    p.salary=salaryFor(p.ovr,6);   // established player: full freight for current ability, now locked in
+  }
   if(G.mode==="survivor"){const ff=isFanFav(p);favorChange(ff?4:(p.src==="draft"?2:0.5),`Extended ${p.name}${ff?' (fan favorite)':''}`);}
-  toast(`${p.name} extended ${years} yr ($${p.salary}M/yr, now ${p.years}yr)`);saveGame();
+  toast(`${p.name} locked up ${years} yr ($${p.salary}M/yr, now ${p.years}yr)`);saveGame();
   if(G.phase===0)screenTrade();else screenRoster();
 }
 function extend(pid){extendDo(pid,5);}   // legacy default
@@ -1350,7 +1367,10 @@ function dropOn(ev,slot){ev.preventDefault();const id=_dragId;const p=G.roster.f
   if(!eligibleForSlot(p,slot)){toast(`${p.name} can't play ${slotRole(slot)}`);return;}
   ensureManual();
   const occ=G.lineupSet[slot];
-  if(occ&&occ!==id){toast("That slot's taken — drag its player to the Bench first");screenRoster();return;}
+  // only a VALID, still-rostered occupant counts — clear stale ids (traded/sent-down players) so the slot is droppable
+  const occValid=occ&&occ!==id&&G.roster.some(x=>x.loc==="mlb"&&x.id===occ);
+  if(occ&&!occValid&&occ!==id)delete G.lineupSet[slot];
+  if(occValid){toast("That slot's taken — drag its player to the Bench first");screenRoster();return;}
   Object.keys(G.lineupSet).forEach(s=>{if(G.lineupSet[s]===id)delete G.lineupSet[s];});
   G.lineupSet[slot]=id;_dragId=null;saveGame();screenRoster();}
 function dropBench(ev){ev.preventDefault();const id=_dragId;if(!id)return;ensureManual();
@@ -1361,15 +1381,17 @@ function depthRow(p){return `<tr><td><span class="pos">${p.pos}</span> ${p.name}
   <td class="num"><button class="btn sm" onclick="sendDown('${p.id}')">↓Farm</button></td></tr>`;}
 function farmTable(){
   if(!G.farm.length)return `<p class="muted">Empty. Trade for prospects and draft to fill it.</p>`;
-  return `<table><thead><tr><th>Prospect</th><th class="num">Age</th><th class="num">OVR</th><th class="num">Ceil</th><th></th></tr></thead><tbody>${
+  return `<p class="small muted" style="margin:0 0 6px">💡 You can <b>lock up</b> a prospect now (any term) — it's priced between his current ability and ceiling, so it's a bargain if he hits and dead money if he busts. ${G.farm.some(p=>p.locked)?'<span style="color:var(--gold)">🔒 = signed long-term.</span>':''}</p>
+   <table><thead><tr><th>Prospect</th><th class="num">Age</th><th class="num">OVR</th><th class="num">Ceil</th><th></th><th></th></tr></thead><tbody>${
     G.farm.sort((a,b)=>b.pot-a.pot).map(p=>`<tr>
-      <td><span class="pos">${p.pos}</span> ${p.name}${p.college?` <span class="small muted">(${p.college})</span>`:''}</td>
+      <td><span class="pos">${p.pos}</span> ${p.name}${p.locked?' 🔒':''}${p.college?` <span class="small muted">(${p.college})</span>`:''}${p.locked?` <span class="small muted">$${p.salary}M·${p.years}yr</span>`:''}</td>
       <td class="num">${p.age}</td><td class="num">${ovrHTML(p.ovr)}</td>
       <td class="num"><span class="pill ${ceilClass(p.pot)}">${p.pot}</span></td>
+      <td class="num">${extendSelect(p.id)}</td>
       <td class="num"><button class="btn sm ${p.ovr>=62?'primary':''}" onclick="promote('${p.id}')">Promote ↑</button></td></tr>`).join("")}</tbody></table>`;
 }
 function promote(pid){const p=G.farm.find(x=>x.id===pid);if(!p)return;G.farm=G.farm.filter(x=>x.id!==pid);
-  p.loc="mlb";p.prospect=false;if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;p.salary=salaryFor(p.ovr,p.mlbYears);G.roster.push(p);toast(`${p.name} called up!`);screenRoster();}
+  p.loc="mlb";p.prospect=false;if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;if(!p.locked)p.salary=salaryFor(p.ovr,p.mlbYears);G.roster.push(p);toast(`${p.name} called up!`);screenRoster();}
 function sendDown(pid){const p=G.roster.find(x=>x.id===pid);if(!p)return;G.roster=G.roster.filter(x=>x.id!==pid);
   p.loc="farm";G.farm.push(p);toast(`${p.name} sent down`);screenRoster();}
 
@@ -1619,7 +1641,11 @@ function screenDraft(){
   if(!_dq){_dq=[...G.ownedPicks].sort((a,b)=>(a.round-b.round)||(pickResolvedSlot(a)-pickResolvedSlot(b)));_dpicks=[];}
   if(!_dq.length)return draftDone();
   const pk=_dq[0],slot=pickResolvedSlot(pk),rd=pk.round||1;
-  const advChance=rd>=3?(G.year>=4?0.75:0.5):rd===2?(G.year>=4?0.6:0.3):(G.year>=4?0.5:G.year===3?0.25:0.08);
+  // Survivor: fixed per-round odds, identical every year (no "draft MLB-ready late in a short rebuild" scaling).
+  // 6-Year mode keeps the year-aware curve (you draft for readiness as the clock runs out).
+  const advChance = G.mode==="survivor"
+    ? ({1:0.08,2:0.15,3:0.22,4:0.30,5:0.38}[rd]||0.2)
+    : (rd>=3?(G.year>=4?0.75:0.5):rd===2?(G.year>=4?0.6:0.3):(G.year>=4?0.5:G.year===3?0.25:0.08));
   const ps=[...POSALL];for(let i=ps.length-1;i>0;i--){const j=ri(0,i);[ps[i],ps[j]]=[ps[j],ps[i]];}
   _board=[];for(let i=0;i<10;i++)_board.push(draftee(slot,rd,Math.random()<advChance,ps[i%ps.length]));
   render(`${header()}${stepbar(3)}
