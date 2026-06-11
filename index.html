@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f08">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tank Commander">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>Tank Commander — Baseball Rebuild GM</title>
 <style>
   :root{
@@ -10,8 +17,10 @@
     --ink:#e9efda; --dim:#94a577; --gold:#a6ff2b; --green:#76e83f;
     --red:#ef6a6a; --blue:#a3c46e;
   }
-  *{box-sizing:border-box}
-  body{margin:0;color:var(--ink);
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;color:var(--ink);overscroll-behavior:none;touch-action:manipulation;
+    -webkit-user-select:none;user-select:none;
     background-color:#0b0f08;
     background-image:
       radial-gradient(ellipse 42% 30% at 12% 16%, rgba(74,83,32,.30), transparent 60%),
@@ -22,7 +31,11 @@
     background-attachment:fixed;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     line-height:1.45;font-size:15px}
-  #app{max-width:1060px;margin:0 auto;padding:18px 16px 70px}
+  #app{max-width:1060px;margin:0 auto;
+    padding:calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(70px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+  input,textarea,select{-webkit-user-select:text;user-select:text}
+  .pcard.tapsel{outline:2px solid var(--gold);outline-offset:1px}
+  .slot.tapok,.benchzone.tapok{border-color:var(--gold)!important;border-style:solid!important;background:rgba(245,196,81,.10)}
   h1,h2,h3{margin:0 0 8px;line-height:1.2}
   h1{font-size:30px;letter-spacing:.5px}
   .sub{color:var(--dim);font-size:13px}
@@ -117,6 +130,13 @@
   .favbar.bdiamond{background:linear-gradient(90deg,#7fd8ff,#b8eaff,#8ad0ff,#cfeeff);background-size:200% 100%;animation:favshine 2.2s linear infinite}
   .favbar.irid{background:linear-gradient(90deg,#a6ff2b,#37e0c8,#7b9bff,#ff7bd5,#a6ff2b);background-size:300% 100%;animation:favshine 2.6s linear infinite}
   @keyframes favshine{0%{background-position:0% 0}100%{background-position:200% 0}}
+  .savebtn{position:fixed;right:calc(12px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));z-index:40;
+    display:none;align-items:center;gap:4px;background:var(--panel2);color:var(--ink);border:1px solid var(--gold);
+    border-radius:20px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+  .saveov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.66);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 14px}
+  .savebox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;max-width:560px;width:100%;margin:auto}
+  .savecode{width:100%;height:70px;background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:8px;
+    font-family:monospace;font-size:11px;padding:8px;resize:vertical;word-break:break-all;-webkit-user-select:text;user-select:text}
   .grid2>*{min-width:0}                 /* let grid columns shrink so cards never overflow the panel */
   .tbrow{flex-wrap:wrap;max-width:100%;overflow:hidden}
   .tbrow .tbval{margin-left:auto}
@@ -127,6 +147,10 @@
 <div id="app"></div>
 <script>
 "use strict";
+/* ===== BUILD FLAG =====
+   FICTIONAL_NAMES: false = real MLB names (free web build) · true = generated names (App Store / commercial build).
+   For the store app, set this to true in the copy of index.html you put in www/. ===== */
+const FICTIONAL_NAMES = false;
 /* ============================================================
    TANK COMMANDER v2 — real players (shuffled) rebuild GM
    ============================================================ */
@@ -321,9 +345,11 @@ function draftee(slot,rd,advanced,pos){
     realCeil:Math.max(o,rollRealCeilScouted(pot)),dura:rollDura(advanced?23:21),attr:genAttrs(pos),mlbYears:0,salary:0.7,years:6,loc:"farm",inj:0,college:pick(COLL),advanced:!!advanced,fic:true,prospect:true};
 }
 // broader fictional name pools for prospects / replacement players
-// war/military-movie character names (first names + iconic callsigns)
-const F_FIRST=["Maverick","Iceman","Goose","Viper","Slider","Hollywood","Merlin","Sundown","Hangman","Rooster","Phoenix","Hondo","Payback","Coyote","Wolfman","Jester","John","Jack","Mike","Pete","Tom","Nick","Richard","Daniel","Stanley","Adrian","Chris","Benjamin","Walter","Bill","Lance","Matt","Norm","Danny","Hal","Joe","Ernie","William","Desmond","Don","Norman","Boyd","Grady","Marc","Ryan","Marcus","Michael","Aldo","Hugo","Vassili","Erwin","George","Omar","Wade","Edwin","Frank","Ron","Anthony","Tommy","Robert","Carwood","Donald","Eugene","Ronald","Buck","Floyd","Lewis","Nathan","Forrest","Witt","Trip"];
-const F_LAST=["Mitchell","Kazansky","Bradshaw","Metcalf","Seresin","Miller","Horvath","Reiben","Jackson","Mellish","Caparzo","Upham","Taylor","Barnes","Elias","Willard","Kurtz","Kilgore","Eversmann","Durant","McKnight","Sanderson","Nelson","Steele","Winters","Nixon","Lipton","Malarkey","Guarnere","Speirs","Webster","Compton","Talbert","Liebgott","Moore","Galloway","Plumley","Savage","Geoghegan","Sanborn","Eldridge","Doss","Glover","Collier","Swofford","Garcia","Kyle","Luttrell","Murphy","Dietz","Axelson","Raine","Donowitz","Stiglitz","Zaitsev","Hilts","Hendley","Bartlett","Patton","Bradley","Ramsey","Welsh","Staros","Schofield","Farrier","Shaw","Rawlins","Kaffee","Jessup","Winger","Hulka"];
+// fictional name pool: war/military-movie character names + colorful old-time (pre-1900s) baseball names & nicknames
+const F_FIRST=["Maverick","Iceman","Goose","Viper","Slider","Hollywood","Merlin","Sundown","Hangman","Rooster","Phoenix","Hondo","Payback","Coyote","Wolfman","Jester","John","Jack","Mike","Pete","Tom","Nick","Richard","Daniel","Stanley","Adrian","Chris","Benjamin","Walter","Bill","Lance","Matt","Norm","Danny","Hal","Joe","Ernie","William","Desmond","Don","Norman","Boyd","Grady","Marc","Ryan","Marcus","Michael","Aldo","Hugo","Vassili","Erwin","George","Omar","Wade","Edwin","Frank","Ron","Anthony","Tommy","Robert","Carwood","Donald","Eugene","Ronald","Buck","Floyd","Lewis","Nathan","Forrest","Witt","Trip",
+  "Cap","Kid","Wee","Dummy","Pud","Cannonball","Noodles","Boileryard","Klondike","Cozy","Orval","Cinders","Pickles","Pinky","Heinie","Rube","Buttercup","Icebox","Cherokee","Foghorn","Oyster","Egyptian","Cuke","Stuffy","Hippo","Ducky","Dazzy","Schoolboy","Mule","Cracker","Bris","Lave","Pretzels","Crazy","Dasher","Possum","Hardrock","Skeeter","Cuddles","Twinkles"];
+const F_LAST=["Mitchell","Kazansky","Bradshaw","Metcalf","Seresin","Miller","Horvath","Reiben","Jackson","Mellish","Caparzo","Upham","Taylor","Barnes","Elias","Willard","Kurtz","Kilgore","Eversmann","Durant","McKnight","Sanderson","Nelson","Steele","Winters","Nixon","Lipton","Malarkey","Guarnere","Speirs","Webster","Compton","Talbert","Liebgott","Moore","Galloway","Plumley","Savage","Geoghegan","Sanborn","Eldridge","Doss","Glover","Collier","Swofford","Garcia","Kyle","Luttrell","Murphy","Dietz","Axelson","Raine","Donowitz","Stiglitz","Zaitsev","Hilts","Hendley","Bartlett","Patton","Bradley","Ramsey","Welsh","Staros","Schofield","Farrier","Shaw","Rawlins","Kaffee","Jessup","Winger","Hulka",
+  "Anson","Radbourn","Ewing","Brouthers","Galvin","Clarkson","Keefe","Rusie","Delahanty","Hamilton","Burkett","Duffy","Tenney","Tebeau","Childs","McKean","Zimmer","Stivetts","Cuppy","Criger","Bresnahan","Chesbro","McGinnity","Waddell","Plank","Bender","Wagner","Lajoie","Wallace","Keeler","Jennings","Dahlen","Beckley","Cravath","Konetchy","Merkle","Sheckard","Sockalexis","Tebeau","Childs","Hoy","Bond","Galvin"];
 const ficName=()=>pick(F_FIRST)+" "+pick(F_LAST);
 function ficProspect(){
   const pos=pick(POSPOOL);
@@ -526,7 +552,8 @@ function luxuryTax(){return Math.max(0,Math.floor((payroll(G.roster)-300)/10));}
    ============================================================ */
 let G=null;
 const SAVE="tankCommander_v3";   // bumped for v5.1 — retires pre-rename ("River City Rovers") saves so everyone starts fresh on the new build
-function saveGame(){try{localStorage.setItem(SAVE,JSON.stringify(G));}catch(e){}}
+const SAVE_AT="tankCommander_saveAt";
+function saveGame(){try{localStorage.setItem(SAVE,JSON.stringify(G));localStorage.setItem(SAVE_AT,String(Date.now()));}catch(e){}if(typeof cloudSync==="function")cloudSync();}
 function loadGame(){try{const s=localStorage.getItem(SAVE);if(s){G=JSON.parse(s);return true;}}catch(e){}return false;}
 
 function newGame(teamName,mode){
@@ -534,6 +561,9 @@ function newGame(teamName,mode){
   // add fictional prospects + replacement-level players to the league
   for(let i=0;i<46;i++)poolAll.push(ficProspect());
   for(let i=0;i<30;i++)poolAll.push(ficReplacement());
+  // FICTIONAL_NAMES build (app-store version): swap every real player name for a unique generated one
+  if(FICTIONAL_NAMES){const used=new Set(poolAll.filter(p=>p.fic).map(p=>p.name));
+    poolAll.forEach(p=>{if(!p.fic){let nm,g=0;do{nm=ficName();}while(used.has(nm)&&g++<40);used.add(nm);p.name=nm;}});}
   for(let i=poolAll.length-1;i>0;i--){const j=ri(0,i);[poolAll[i],poolAll[j]]=[poolAll[j],poolAll[i]];}
   const take=(fn)=>{const i=poolAll.findIndex(fn);return i>=0?poolAll.splice(i,1)[0]:null;};
   const roster=[],farm=[];
@@ -574,6 +604,8 @@ function newGame(teamName,mode){
   // thin farm: 2 modest fictional prospects
   for(let i=0;i<2;i++){const p=take(x=>x.prospect&&x.pot>=78&&x.pot<=90&&x.ovr<=58);if(p){p.loc="farm";farm.push(p);}}
 
+  // your Created Player joins the farm as a homegrown cornerstone
+  if(typeof makeCreatedProspect==="function"){const cp=makeCreatedProspect();if(cp)farm.push(cp);}
   roster.forEach(p=>p.src=p.src||"original");farm.forEach(p=>p.src=p.src||"original");
   G={year:1,phase:0,teamName:teamName||warPun(),mode:mode||"career",
     roster,farm,pool:poolAll,
@@ -787,7 +819,10 @@ function extend(pid){extendDo(pid,5);}   // legacy default
    UI ROUTER
    ============================================================ */
 const app=()=>document.getElementById('app');
-function render(h){app().innerHTML="";app().appendChild($(`<div>${h}</div>`));}
+function render(h){app().innerHTML="";app().appendChild($(`<div>${h}</div>`));ensureSaveBtn();}
+function ensureSaveBtn(){let b=document.getElementById('savebtn');
+  if(!b){b=document.createElement('button');b.id='savebtn';b.className='savebtn';b.innerHTML='💾 Save';b.onclick=showSavePanel;document.body.appendChild(b);}
+  b.style.display=(typeof G!=="undefined"&&G)?'flex':'none';}
 const PHASES=["Trade Hub","Set Roster","Play Season","Draft","Develop"];
 function stepbar(a){const ph=(G.mode!=="survivor"&&G.year>=6)?PHASES.slice(0,3):PHASES;
   return `<div class="stepbar">${ph.map((s,i)=>`<div class="step ${i<a?'done':''} ${i===a?'on':''}">${i+1}. ${s}</div>`).join("")}</div>`;}
@@ -813,7 +848,7 @@ function screenTitle(){
        prospects and picks, then rise.</b> Six seasons to build a 100-win contender.</p></div>
    <div class="panel">
      <h3>New franchise</h3>
-     <p class="sub">Your roster is built from real MLB players (shuffled onto a fictional club). Pick a mode:</p>
+     <p class="sub">${FICTIONAL_NAMES?'Build a fictional ballclub from the ground up.':'Your roster is built from real MLB players (shuffled onto a fictional club).'} Pick a mode:</p>
      <div style="margin:10px 0"><input id="tname" value="${warPun()}" style="width:55%;max-width:300px"/>
        <button class="btn ghost sm" onclick="document.getElementById('tname').value=warPun()">🎲</button></div>
      <div class="grid2" style="gap:10px;margin-top:6px">
@@ -831,11 +866,15 @@ function screenTitle(){
      <div style="margin-top:10px">
        ${localStorage.getItem(SAVE)?`<button class="btn ghost" onclick="(function(){if(loadGame()){if(G.mode==='survivor'&&G.survStage===0){startSurvivorYear();}else goPhase(G.phase||0);}else toast('No save');})()">↻ Continue</button>`:""}
        <button class="btn ghost" onclick="screenLeaderboard()">🏆 Leaderboard</button>
+       ${capUnlocked()?`<button class="btn ghost" onclick="screenCreatePlayer()">⭐ Create-A-Player${PROFILE.createdPlayer?'':' <span class="pill gold" style="padding:0 5px">NEW</span>'}</button>`:`<button class="btn ghost" style="opacity:.55" onclick="toast('Finish one franchise to unlock Create-A-Player')">⭐ Create-A-Player 🔒</button>`}
+       ${authEnabled()?`<button class="btn ghost" onclick="screenAccount()">${authState()?'▣ '+(authState().username||'Account'):'👤 Log in / Sign up'}</button>`:''}
+       <button class="btn ghost" onclick="showRestoreOnTitle()">📂 Restore backup</button>
      </div>
    </div>
+   ${xpPanel()}
    <details class="panel" style="padding:14px"><summary style="cursor:pointer;font-weight:700">📐 6-Year Sprint — how you're graded</summary><div style="margin-top:10px">${gradeRubric()}</div></details>
    <details class="panel" style="padding:14px"><summary style="cursor:pointer;font-weight:700">🪑 Survivor Mode — how you're judged</summary><div style="margin-top:10px">${survivorRubric()}</div></details>
-   <p class="disclaimer">⚠️ <b>Disclaimer:</b> Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.</p>`);
+   <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
 }
 
 /* ============================================================
@@ -961,6 +1000,7 @@ function declineTag(p){ // an aging player past his peak whose ceiling is now ou
 }
 function fanFavTag(p){return p&&p.fanFav?` <span class="pill gold" style="padding:0 5px;font-size:10px">⭐ fan favorite</span>`:'';}
 function fanFavEmoji(p){return p&&p.fanFav?' ⭐':'';}
+function customEmoji(p){return p&&p.custom?' 🌟':'';}
 function rosterMini(){
   const a=buildActive(G.roster);
   const chip=(lbl,p)=>`<span class="pill" style="margin:2px;background:var(--panel2)">${lbl} ${p?`${p.name.split(' ').slice(-1)[0]} ${ovrHTML(p.ovr)}${p.inj?' 🩹':''}${duraEmoji(p)}`:'<span class="empty">—</span>'}</span>`;
@@ -1296,7 +1336,7 @@ let _rosterMode='pre';
 function slotRole(slot){return ROT_SLOTS.includes(slot)?'SP':PEN_SLOTS.includes(slot)?'RP':slot;}
 function rCard(p){
   const decl=declineTag(p);
-  return `<span class="pcard" draggable="true" ondragstart="dragStart(event,'${p.id}')">${ovrHTML(p.ovr)}${(p.pot>p.ovr&&!decl)?' '+ceilMini(p.pot):''} <b>${p.name}</b>${fanFavEmoji(p)}${dawgEmoji(p)} <span class="small muted">${p.pos} ${p.age}y</span>${flexTag(p)}${decl}${dawgTag(p)}${duraTag(p)}${injTag(p)} <span class="small">${contractCell(p)}</span>${p.years<=4?' '+extendSelect(p.id):''}${(p.age<=26&&p.pot>p.ovr+1)?` <button class="btn sm" title="Send to the minors to develop faster" onclick="sendDown('${p.id}')">↓ Farm</button>`:''}</span>`;
+  return `<span class="pcard" draggable="true" ondragstart="dragStart(event,'${p.id}')">${ovrHTML(p.ovr)}${(p.pot>p.ovr&&!decl)?' '+ceilMini(p.pot):''} <b>${p.name}</b>${customEmoji(p)}${fanFavEmoji(p)}${dawgEmoji(p)} <span class="small muted">${p.pos} ${p.age}y</span>${flexTag(p)}${decl}${dawgTag(p)}${duraTag(p)}${injTag(p)} <span class="small">${contractCell(p)}</span>${p.years<=4?' '+extendSelect(p.id):''}${(p.age<=26&&p.pot>p.ovr+1)?` <button class="btn sm" title="Send to the minors to develop faster" onclick="sendDown('${p.id}')">↓ Farm</button>`:''}</span>`;
 }
 function rSlot(slot,p){
   return `<div class="slot" ondragover="allowDrop(event,'${slot}')" ondragleave="dropLeave(event)" ondrop="dropOn(event,'${slot}')">
@@ -1317,7 +1357,7 @@ function screenRoster(){
    </div>
    <div class="panel">
      <div class="row" style="align-items:center;justify-content:space-between;gap:10px">
-       <p class="sub" style="margin:0;flex:1"><b>Drag a player onto an eligible slot</b> to set your lineup — a <span class="pill blue" style="padding:0 5px">↔</span> tag means a player can flex elsewhere. A filled slot won't take a drop: drag its player to the <b>Bench</b> first to free it. ${G.manualLineup?'<span style="color:var(--gold)">Manual mode on — empty slots play at replacement level.</span>':'Slots are on <b>auto</b> until you move someone.'}</p>
+       <p class="sub" style="margin:0;flex:1"><b>Drag a player onto an eligible slot</b> to set your lineup — a <span class="pill blue" style="padding:0 5px">↔</span> tag means he can flex elsewhere. A filled slot won't take a drop: drag its player to the <b>Bench</b> first to free it. ${G.manualLineup?'<span style="color:var(--gold)">Manual mode on — empty slots play at replacement level.</span>':'Slots are on <b>auto</b> until you move someone.'}</p>
        ${G.manualLineup?`<button class="btn sm ghost" onclick="resetLineup()">⟳ Back to auto-fill</button>`:''}
      </div>
      <div class="sectlbl">Lineup (9)</div>
@@ -1363,18 +1403,20 @@ function ensureManual(){if(G.manualLineup)return;const a=buildActive(G.roster);G
   ROT_SLOTS.forEach((s,i)=>{if(a.rotation[i])G.lineupSet[s]=a.rotation[i].id;});
   PEN_SLOTS.forEach((s,i)=>{if(a.pen[i])G.lineupSet[s]=a.pen[i].id;});
   G.manualLineup=true;}
-function dropOn(ev,slot){ev.preventDefault();const id=_dragId;const p=G.roster.find(x=>x.id===id);if(!p)return;
-  if(!eligibleForSlot(p,slot)){toast(`${p.name} can't play ${slotRole(slot)}`);return;}
+// shared move logic used by BOTH drag-and-drop (mouse) and tap-to-move (touch)
+function moveToSlot(id,slot){const p=G.roster.find(x=>x.id===id);if(!p)return false;
+  if(!eligibleForSlot(p,slot)){toast(`${p.name} can't play ${slotRole(slot)}`);return false;}
   ensureManual();
   const occ=G.lineupSet[slot];
-  // only a VALID, still-rostered occupant counts — clear stale ids (traded/sent-down players) so the slot is droppable
+  // only a VALID, still-rostered occupant counts — clear stale ids (traded/sent-down players) so the slot is usable
   const occValid=occ&&occ!==id&&G.roster.some(x=>x.loc==="mlb"&&x.id===occ);
   if(occ&&!occValid&&occ!==id)delete G.lineupSet[slot];
-  if(occValid){toast("That slot's taken — drag its player to the Bench first");screenRoster();return;}
+  if(occValid){toast("That slot's taken — bench its player first");return false;}
   Object.keys(G.lineupSet).forEach(s=>{if(G.lineupSet[s]===id)delete G.lineupSet[s];});
-  G.lineupSet[slot]=id;_dragId=null;saveGame();screenRoster();}
-function dropBench(ev){ev.preventDefault();const id=_dragId;if(!id)return;ensureManual();
-  Object.keys(G.lineupSet).forEach(s=>{if(G.lineupSet[s]===id)delete G.lineupSet[s];});_dragId=null;saveGame();screenRoster();}
+  G.lineupSet[slot]=id;saveGame();return true;}
+function moveToBench(id){if(!id)return;ensureManual();Object.keys(G.lineupSet).forEach(s=>{if(G.lineupSet[s]===id)delete G.lineupSet[s];});saveGame();}
+function dropOn(ev,slot){ev.preventDefault();const id=_dragId;_dragId=null;moveToSlot(id,slot);screenRoster();}
+function dropBench(ev){ev.preventDefault();const id=_dragId;_dragId=null;moveToBench(id);screenRoster();}
 function resetLineup(){G.lineupSet={};G.manualLineup=false;saveGame();screenRoster();}
 function depthRow(p){return `<tr><td><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age}</span>${flexTag(p)}${duraTag(p)}${attrTags(p)}</td>
   <td class="num">${ovrHTML(p.ovr)}${p.pot>p.ovr?' '+ceilMini(p.pot):''}</td><td class="num">${contractCell(p)}</td>
@@ -1855,12 +1897,14 @@ function survSubmitPanel(){return `<div class="panel center" id="lbsubmit">
 function screenFired(){render(`<div class="hero"><div class="pill red">DISMISSED</div>
      <h1 style="font-size:46px;margin:6px 0;color:var(--red)">Fired after ${G.yearsServed} season${G.yearsServed===1?'':'s'}</h1>
      <p class="sub" style="max-width:600px;margin:0 auto">Ownership ran out of patience. The run is over — but they'll remember it.</p></div>
+   ${xpEndNotice()}
    ${survEndStats()}
    ${survSubmitPanel()}
    <div class="center" style="margin-top:8px"><button class="btn" onclick="(function(){localStorage.removeItem(SAVE);screenTitle();})()">New Franchise</button></div>`);}
 function screenRetire(){render(`<div class="hero"><div class="pill gold">A LEGEND STEPS AWAY</div>
      <h1 style="font-size:44px;margin:6px 0;color:var(--gold)">${G.yearsServed} seasons · ${G.survTitles||0} title${G.survTitles===1?'':'s'}</h1>
      <p class="sub">You walked away on your own terms — a front-office immortal.</p></div>
+   ${xpEndNotice()}
    ${survEndStats()}
    ${survSubmitPanel()}
    <div class="center" style="margin-top:8px"><button class="btn" onclick="(function(){localStorage.removeItem(SAVE);screenTitle();})()">New Franchise</button></div>`);}
@@ -1986,6 +2030,7 @@ function endGame(){
   render(`<div class="hero"><div class="pill gold">FRONT-OFFICE REVIEW</div>
      <h1 style="font-size:60px;margin:6px 0;color:var(--gold)">${score}<span style="font-size:26px;color:var(--dim)">/100</span> &nbsp;${grade}</h1>
      <p class="sub" style="max-width:600px;margin:0 auto">${blurb}</p></div>
+   ${xpEndNotice()}
    <div class="panel"><h3>Why you scored ${score}</h3>
      <table><tbody>${items.map(it=>`<tr><td>${it.label}</td>
        <td class="num" style="color:${it.pts>0?'var(--green)':it.pts<0?'var(--red)':'var(--dim)'};font-weight:700">${it.pts>0?'+':''}${it.pts}</td></tr>`).join("")}</tbody></table>
@@ -2014,6 +2059,7 @@ function endGame(){
    LEADERBOARD — local by default; set LEADERBOARD_API for a shared board
    ============================================================ */
 const LEADERBOARD_API="https://tank-leaderboard.josh-c2f.workers.dev"; // shared leaderboard backend
+const AUTH_API="https://tank-auth.josh-c2f.workers.dev"; // account worker (logins on)
 const LB_KEY="tankCommander_lb_v2";
 const LB_BANNED_TEAMS=["river city rovers"];   // old-build team names kept off the board
 const lbBanned=t=>LB_BANNED_TEAMS.includes(String(t||"").trim().toLowerCase());
@@ -2092,6 +2138,323 @@ function submitSurvivor(){
   const entry={name,team:G.teamName,score:sc,mode:"survivor",years:G.yearsServed||0,titles:G.survTitles||0,peak:G.bestWins,ts:Date.now(),date:todayStr(),did:deviceId()};
   lbSubmit(entry);toast(`Submitted: ${name} — ${sc}`);
   screenLeaderboard(true,'survivor');
+}
+
+/* ============================================================
+   PLAYER PROFILE — XP, levels, unlocks, Create-A-Player
+   (lives in its own localStorage key, so it persists across franchises)
+   ============================================================ */
+const PROFILE_KEY="tankCommander_profile_v1";
+function loadProfile(){try{return Object.assign({xp:0,gamesPlayed:0,createdPlayer:null},JSON.parse(localStorage.getItem(PROFILE_KEY)||"{}"));}catch(e){return {xp:0,gamesPlayed:0,createdPlayer:null};}}
+function saveProfile(){PROFILE.updated=Date.now();try{localStorage.setItem(PROFILE_KEY,JSON.stringify(PROFILE));}catch(e){}if(typeof cloudSync==="function")cloudSync();}
+let PROFILE=loadProfile();
+const MAX_LEVEL=30;
+function levelOf(xp){return Math.min(MAX_LEVEL,1+Math.floor(Math.sqrt(Math.max(0,xp||0)/40)));}
+function xpForLevel(L){return Math.pow(L-1,2)*40;}
+function plLevel(){return levelOf(PROFILE.xp);}
+function addXP(amt){PROFILE.xp=(PROFILE.xp||0)+Math.max(0,Math.round(amt));saveProfile();}
+// unlocks by level
+const POS_UNLOCK=[[2,"RF"],[3,"LF"],[4,"CF"],[5,"1B"],[6,"3B"],[7,"DH"],[8,"2B"],[9,"SS"],[10,"C"],[12,"SP"],[14,"RP"]];
+function unlockedPositions(){const L=plLevel();return POS_UNLOCK.filter(u=>L>=u[0]).map(u=>u[1]);}
+function attrPointsForLevel(){const L=plLevel();return L<2?0:clamp(Math.round(6+(L-2)*1.6),6,52);}
+function allocMaxForLevel(){return clamp(Math.round(5+plLevel()*0.4),5,16);}
+function ceilCapForLevel(){return clamp(Math.round(82+(plLevel()-2)*0.65),82,99);}
+function capUnlocked(){return (PROFILE.gamesPlayed||0)>=1;}
+function awardFranchiseXP(seasons,titles,bonus){
+  const before=plLevel();
+  addXP((seasons||0)*6+(titles||0)*15+(bonus||0));
+  PROFILE.gamesPlayed=(PROFILE.gamesPlayed||0)+1;saveProfile();
+  return {leveledUp:plLevel()>before,from:before,to:plLevel()};
+}
+function unlockNoteFor(r){if(!r||!r.leveledUp)return '';
+  const np=POS_UNLOCK.filter(u=>u[0]>r.from&&u[0]<=r.to).map(u=>u[1]);
+  return (np.length?`Unlocked ${np.join("/")} for your Created Player, plus `:`Earned `)+`more attribute points.`;}
+function xpEndNotice(){
+  if(!G._xpAwarded){let seasons,titles,bonus;
+    if(G.mode==="survivor"){seasons=G.yearsServed||0;titles=G.survTitles||0;bonus=Math.round((G.cumScore||0)/10);}
+    else{seasons=(G.history?G.history.length:6);titles=G.champions||0;bonus=Math.round((computeGrade().score||0)/5);}
+    G._xpRes=awardFranchiseXP(seasons,titles,bonus);G._xpAwarded=true;try{saveGame();}catch(e){}}
+  const r=G._xpRes||{};
+  return `<div class="panel center" style="border-color:var(--gold)">
+    <div class="pill gold">🎖️ GM PROFILE</div>
+    <p class="sub" style="margin:6px 0 0">${r.leveledUp?`<b style="color:var(--gold)">LEVEL UP → GM Level ${r.to}!</b> ${unlockNoteFor(r)}`:`You're GM Level ${plLevel()}.`}</p>
+    ${PROFILE.gamesPlayed===1?'<div class="pill gold" style="margin-top:6px;display:inline-block">⭐ Create-A-Player unlocked on the main menu!</div>':''}
+    <div style="max-width:380px;margin:8px auto 0">${xpPanel()}</div></div>`;
+}
+function xpPanel(){
+  const L=plLevel(),xp=PROFILE.xp||0,cur=xpForLevel(L),next=xpForLevel(L+1);
+  const pct=L>=MAX_LEVEL?100:clamp(Math.round((xp-cur)/(next-cur)*100),0,100);
+  return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center"><b>🎖️ GM Level ${L}</b><span class="small muted">${L>=MAX_LEVEL?'MAX':xp+' / '+next+' XP'}</span></div>
+    <div class="favtrack" style="height:10px;margin-top:6px"><div class="favbar" style="width:${pct}%;background:var(--gold)"></div></div>
+    <div class="small muted" style="margin-top:5px">Play franchises to earn XP and level up — unlocking more positions and attribute points for your Created Player.</div></div>`;
+}
+
+/* ---------- Create-A-Player ---------- */
+const ATTR_BASE=64;   // every attribute starts here (peak value), points raise it
+let _cap=null;   // working draft {name,pos,alloc,dawg}
+function capDefaults(){return {name:"My Player",pos:"RF",alloc:{},dawg:0};}
+function capAttrsFor(pos){return (pos==="SP"||pos==="RP")?PIT_ATTRS:HIT_ATTRS;}
+function capSpent(){let s=0;const a=_cap.alloc||{};Object.keys(a).forEach(k=>s+=a[k]);return s+(_cap.dawg||0);}
+function capPeak(d,k){return clamp(ATTR_BASE+((d.alloc||{})[k]||0)*5,ATTR_BASE,99);}   // attribute value at full development
+function capBuild(d){   // turn a draft into a finished prospect template
+  const keys=capAttrsFor(d.pos);
+  const peakMean=keys.reduce((s,k)=>s+capPeak(d,k),0)/keys.length;
+  const pot=clamp(Math.round(peakMean),64,ceilCapForLevel());   // ceiling = avg of your attribute peaks, capped by level
+  const ovr=clamp(pot-22,30,74);
+  const attr={};keys.forEach(k=>attr[k]=capPeak(d,k)-pot);   // store as offset so attribute hits its peak when fully developed
+  const dawg=clamp(50+(d.dawg||0)*5,5,99);
+  return {name:(d.name||"My Player").slice(0,20),pos:d.pos,age:20,ovr,pot,realCeil:pot,attr,dawg,
+    createdLevel:plLevel(),custom:true};
+}
+function screenCreatePlayer(){
+  if(!capUnlocked()){screenTitle();return;}
+  if(!_cap){const cp=PROFILE.createdPlayer;_cap=cp?{name:cp.name,pos:cp.pos,alloc:cp._alloc||{},dawg:cp._dawg||0}:capDefaults();}
+  const positions=unlockedPositions();
+  if(!positions.includes(_cap.pos))_cap.pos=positions[0]||"RF";
+  const total=attrPointsForLevel(),spent=capSpent(),left=total-spent;
+  const built=capBuild(_cap);
+  const isPit=(_cap.pos==="SP"||_cap.pos==="RP");
+  const keys=capAttrsFor(_cap.pos);
+  const allKnownPos=["RF","LF","CF","1B","3B","DH","2B","SS","C","SP","RP"];
+  const posChip=p=>{const open=positions.includes(p);const lk=POS_UNLOCK.find(u=>u[1]===p);
+    return `<span class="tbchip ${_cap.pos===p?'on':''}" ${open?`onclick="capSetPos('${p}')"`:'style="opacity:.4"'}>${p}${open?'':` 🔒L${lk?lk[0]:'?'}`}</span>`;};
+  const amax=allocMaxForLevel();
+  const attrRow=k=>{const v=(_cap.alloc[k]||0);const peak=capPeak(_cap,k);
+    return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0"><span class="small" style="flex:0 0 70px">${ATTR_LABEL[k]}</span>
+      <button class="btn sm" onclick="capAdj('${k}',-1)">−</button><b style="width:24px;text-align:center">${v}</b><button class="btn sm" onclick="capAdj('${k}',1)">＋</button>
+      <span class="small muted">→ <b style="color:${peak>=85?'var(--gold)':'var(--dim)'}">${peak}</b> at peak${v>=amax?' <span style="color:var(--dim)">(max)</span>':''}</span></div>`;};
+  render(`<div class="row" style="align-items:center;margin-bottom:6px"><h2 style="flex:1">⭐ Create-A-Player</h2><button class="btn ghost" onclick="(function(){_cap=null;screenTitle();})()">← Home</button></div>
+    ${xpPanel()}
+    <div class="panel">
+      <p class="sub">Build your franchise cornerstone. He joins your farm in <b>every new game you start</b>. Level up to unlock more positions and points.</p>
+      <div style="margin:8px 0"><input id="capname" value="${(_cap.name||'').replace(/"/g,'&quot;')}" oninput="_cap.name=this.value" maxlength="20" style="width:60%;max-width:280px"></div>
+      <div class="sectlbl">Position ${unlockedPositions().length<allKnownPos.length?'<span class="small muted">(more unlock as you level)</span>':''}</div>
+      <div>${allKnownPos.map(posChip).join("")}</div>
+      <div class="sectlbl">Attribute points <span class="small" style="color:${left>0?'var(--gold)':'var(--dim)'}">${left} of ${total} left</span></div>
+      ${total<=0?'<p class="small muted">Reach Level 2 to earn attribute points.</p>':keys.map(attrRow).join("")}
+      <div style="display:flex;align-items:center;gap:8px;margin:6px 0 3px"><span class="small" style="flex:0 0 70px">🐶 DAWG</span>
+        <button class="btn sm" onclick="capAdj('dawg',-1)">−</button><b style="width:24px;text-align:center">${_cap.dawg||0}</b><button class="btn sm" onclick="capAdj('dawg',1)">＋</button>
+        <span class="small muted">→ ${built.dawg} clutch</span></div>
+    </div>
+    <div class="panel">
+      <h3>Preview</h3>
+      <div class="pcard" style="cursor:default">${ovrHTML(built.ovr)} ${built.pot>built.ovr?ceilMini(built.pot):''} <b>${built.name||'My Player'}</b>${built.dawg>=78?' 🐶':''} <span class="small muted">${built.pos} ${built.age}y</span></div>
+      <p class="small muted" style="margin-top:8px">Starts at ${built.ovr} OVR with a ${built.pot} ceiling${isPit?' (pitcher)':''}. He's a prospect — develop him in your minors like any other.</p>
+    </div>
+    <div class="center"><button class="btn primary" onclick="saveCreatedPlayer()">Save Player</button>
+      ${PROFILE.createdPlayer?'<button class="btn ghost" onclick="(function(){if(confirm){};PROFILE.createdPlayer=null;saveProfile();_cap=capDefaults();toast(\'Player cleared\');screenCreatePlayer();})()">Delete</button>':''}</div>`);
+}
+function capSetPos(p){_cap.pos=p;_cap.alloc={};screenCreatePlayer();}   // switching hitter<->pitcher resets attr alloc
+function capAdj(k,d){const total=attrPointsForLevel(),amax=allocMaxForLevel();
+  if(k==='dawg'){let v=(_cap.dawg||0)+d;if(v<0)v=0;if(v>amax)v=amax;const test=capSpent()-(_cap.dawg||0)+v;if(test>total&&d>0)return;_cap.dawg=v;}
+  else{let v=(_cap.alloc[k]||0)+d;if(v<0)v=0;if(v>amax)v=amax;const test=capSpent()-(_cap.alloc[k]||0)+v;if(test>total&&d>0)return;_cap.alloc[k]=v;}
+  screenCreatePlayer();}
+function saveCreatedPlayer(){const nm=(document.getElementById('capname')||{}).value;if(nm)_cap.name=nm;
+  const built=capBuild(_cap);built._alloc=Object.assign({},_cap.alloc);built._dawg=_cap.dawg||0;
+  PROFILE.createdPlayer=built;saveProfile();toast(`${built.name} saved — he'll appear in your next new game!`);screenTitle();}
+function makeCreatedProspect(){const c=PROFILE.createdPlayer;if(!c)return null;
+  return {id:uid(),name:c.name,pos:c.pos,age:c.age||20,ovr:c.ovr,pot:c.pot,realCeil:c.pot,
+    dura:rollDura(c.age||20),attr:Object.assign({},c.attr),dawg:c.dawg,mlbYears:0,salary:0.75,years:6,
+    loc:"farm",inj:0,src:"draft",fic:true,prospect:true,custom:true};}
+
+/* ============================================================
+   SAVE / BACKUP
+   ============================================================ */
+function showSavePanel(){
+  if(!(typeof G!=="undefined"&&G)){toast("Start a game first");return;}
+  saveGame();
+  let code="";try{code=btoa(unescape(encodeURIComponent(localStorage.getItem(SAVE)||"")));}catch(e){code="";}
+  const old=document.getElementById('saveov');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='saveov';ov.className='saveov';
+  ov.innerHTML=`<div class="savebox">
+    <div class="row" style="align-items:center"><h3 style="flex:1;margin:0">💾 Save & Backup</h3><button class="btn ghost sm" onclick="document.getElementById('saveov').remove()">✕</button></div>
+    <p class="sub">Your game <b>saves automatically on this device</b> after every move — just close and come back, then hit <b>Continue</b>.</p>
+    <p class="sub" style="margin-top:6px">To <b>back it up</b> or move to another phone/computer, use a backup below:</p>
+    <div class="center" style="margin:8px 0">
+      <button class="btn primary" onclick="copyBackup()">📋 Copy backup code</button>
+      <button class="btn" onclick="downloadBackup()">⬇️ Download file</button>
+    </div>
+    <textarea id="savecode" readonly class="savecode">${code}</textarea>
+    <div class="sectlbl">Restore a backup</div>
+    <p class="small muted">Paste a backup code below (or use the file you downloaded) and restore. <b style="color:var(--red)">This overwrites your current game.</b></p>
+    <textarea id="restorecode" class="savecode" placeholder="Paste a backup code here…"></textarea>
+    <div class="center" style="margin-top:8px"><button class="btn primary" onclick="restoreBackup()">↩ Restore from code</button>
+      <label class="btn" style="cursor:pointer">📂 Restore from file<input type="file" accept=".tankcmd,.txt,application/json" style="display:none" onchange="restoreFromFile(event)"></label></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function copyBackup(){const t=document.getElementById('savecode');if(!t)return;t.select();
+  try{navigator.clipboard.writeText(t.value);}catch(e){try{document.execCommand('copy');}catch(_){}}
+  toast("Backup code copied — paste it somewhere safe");}
+function downloadBackup(){const t=document.getElementById('savecode');if(!t)return;
+  const blob=new Blob([t.value],{type:"text/plain"});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`tank-commander-${(G&&G.teamName||'save').replace(/[^a-z0-9]/gi,'-').toLowerCase()}.tankcmd`;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+  toast("Backup file downloaded");}
+function applyBackupCode(code){
+  try{const json=decodeURIComponent(escape(atob((code||"").trim())));const obj=JSON.parse(json);
+    if(!obj||!obj.roster)throw 0;
+    G=obj;localStorage.setItem(SAVE,json);saveGame();
+    const ov=document.getElementById('saveov');if(ov)ov.remove();
+    toast("Game restored!");
+    if(G.mode==="survivor"&&G.survStage===0&&!G.fired)startSurvivorYear();else goPhase(G.phase||0);
+    return true;
+  }catch(e){toast("That backup code didn't work");return false;}
+}
+function restoreBackup(){const t=document.getElementById('restorecode');if(!t||!t.value.trim()){toast("Paste a code first");return;}applyBackupCode(t.value);}
+function restoreFromFile(ev){const f=ev.target.files&&ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>applyBackupCode(String(r.result||""));r.readAsText(f);}
+function showRestoreOnTitle(){
+  const old=document.getElementById('saveov');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='saveov';ov.className='saveov';
+  ov.innerHTML=`<div class="savebox">
+    <div class="row" style="align-items:center"><h3 style="flex:1;margin:0">📂 Restore a backup</h3><button class="btn ghost sm" onclick="document.getElementById('saveov').remove()">✕</button></div>
+    <p class="sub">Paste a backup code (or load a downloaded file) to restore a saved game.</p>
+    <textarea id="restorecode" class="savecode" placeholder="Paste a backup code here…"></textarea>
+    <div class="center" style="margin-top:8px"><button class="btn primary" onclick="restoreBackup()">↩ Restore from code</button>
+      <label class="btn" style="cursor:pointer">📂 From file<input type="file" accept=".tankcmd,.txt,application/json" style="display:none" onchange="restoreFromFile(event)"></label></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+/* ============================================================
+   ACCOUNTS & CLOUD SYNC  (username + password; profile + franchise save)
+   Backend: AUTH_API (Cloudflare Worker + D1). Empty AUTH_API = feature hidden.
+   ============================================================ */
+const AUTH_KEY="tankCommander_auth";
+function authEnabled(){return !!AUTH_API;}
+function authState(){try{return JSON.parse(localStorage.getItem(AUTH_KEY)||"null");}catch(e){return null;}}
+function setAuth(a){try{a?localStorage.setItem(AUTH_KEY,JSON.stringify(a)):localStorage.removeItem(AUTH_KEY);}catch(e){}}
+async function authCall(path,body){
+  const r=await fetch(AUTH_API+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  let j={};try{j=await r.json();}catch(e){}
+  if(!r.ok)throw new Error((j&&j.error)||("Server error "+r.status));
+  return j;
+}
+function mergeProfileFromCloud(cloudStr){
+  let c=null;try{c=cloudStr?JSON.parse(cloudStr):null;}catch(e){}
+  if(!c)return;
+  const lx=PROFILE.xp||0,cx=c.xp||0;
+  PROFILE.xp=Math.max(lx,cx);
+  PROFILE.gamesPlayed=Math.max(PROFILE.gamesPlayed||0,c.gamesPlayed||0);
+  PROFILE.createdPlayer=(cx>lx? (c.createdPlayer||PROFILE.createdPlayer) : (PROFILE.createdPlayer||c.createdPlayer))||null;
+  saveProfile();
+}
+async function reconcileAfterLogin(d){
+  mergeProfileFromCloud(d.profile);
+  let loadedCloud=false;
+  const localSave=localStorage.getItem(SAVE);
+  const localAt=parseInt(localStorage.getItem(SAVE_AT)||"0",10);
+  const cloudAt=d.updated||0;
+  if(d.save && (!localSave || cloudAt>localAt)){
+    try{localStorage.setItem(SAVE,d.save);localStorage.setItem(SAVE_AT,String(cloudAt));loadedCloud=true;}catch(e){}
+  }
+  await cloudSyncNow();   // push the merged result back up
+  return loadedCloud;
+}
+let _syncT=null,_syncing=false;
+function cloudSync(){if(!authEnabled()||!authState())return;clearTimeout(_syncT);_syncT=setTimeout(cloudSyncNow,1500);}
+async function cloudSyncNow(){
+  const a=authState();if(!authEnabled()||!a||_syncing)return;
+  _syncing=true;
+  try{
+    const now=Date.now();
+    await authCall("/sync",{token:a.token,profile:JSON.stringify(PROFILE),save:localStorage.getItem(SAVE)||null,updated:now});
+    localStorage.setItem(SAVE_AT,String(now));
+  }catch(e){ if(/signed in|401/i.test(e.message)){setAuth(null);} }
+  finally{_syncing=false;}
+}
+const _v=id=>{const el=document.getElementById(id);return el?el.value.trim():"";};
+let _authMode="login";
+function screenAccount(){
+  if(!authEnabled()){render(`<div class="row" style="align-items:center;margin-bottom:6px"><h2 style="flex:1">Account</h2><button class="btn ghost" onclick="screenTitle()">← Home</button></div>
+     <div class="panel"><p class="sub">Online accounts aren't switched on for this build yet. Your progress is still saved on this device, and you can move it with the 💾 Save backup code.</p></div>`);return;}
+  const a=authState();
+  if(a){
+    render(`<div class="row" style="align-items:center;margin-bottom:6px"><h2 style="flex:1">Account</h2><button class="btn ghost" onclick="screenTitle()">← Home</button></div>
+      ${xpPanel()}
+      <div class="panel center">
+        <div class="pill gold">SIGNED IN</div>
+        <h3 style="margin:8px 0 2px">${(a.username||'').replace(/</g,'&lt;')}</h3>
+        <p class="small muted">GM Level ${plLevel()} · your level, created player, and current game sync automatically across devices.</p>
+        <div style="margin-top:10px"><button class="btn" onclick="cloudSyncNow().then(()=>toast('Synced'))">⟲ Sync now</button>
+          <button class="btn ghost" onclick="doLogout()">Log out</button></div>
+      </div>`);return;
+  }
+  const tab=(k,l)=>`<button class="btn sm ${_authMode===k?'primary':'ghost'}" onclick="_authMode='${k}';screenAccount()">${l}</button>`;
+  let form;
+  if(_authMode==="signup"){
+    form=`<p class="sub">Create an account so your GM level and games follow you to any device.</p>
+      <div style="margin:8px 0"><input id="au_user" placeholder="username (3–20 letters/numbers)" maxlength="20" autocapitalize="off" autocorrect="off"></div>
+      <div style="margin:8px 0"><input id="au_pass" type="password" placeholder="password (min 8 characters)"></div>
+      <button class="btn primary" onclick="doSignup()">Create account →</button>
+      <p class="small muted" style="margin-top:8px">No email needed. You'll get a one-time recovery code — it's the only way to reset a forgotten password, so save it.</p>`;
+  } else if(_authMode==="reset"){
+    form=`<p class="sub">Forgot your password? Enter your recovery code to set a new one.</p>
+      <div style="margin:8px 0"><input id="au_user" placeholder="username" maxlength="20" autocapitalize="off" autocorrect="off"></div>
+      <div style="margin:8px 0"><input id="au_rec" placeholder="recovery code (TANK-XXXX-XXXX-XXXX)" autocapitalize="characters" autocorrect="off"></div>
+      <div style="margin:8px 0"><input id="au_pass" type="password" placeholder="new password (min 8 characters)"></div>
+      <button class="btn primary" onclick="doReset()">Reset password →</button>`;
+  } else {
+    form=`<p class="sub">Sign in to sync your GM level and current game across devices.</p>
+      <div style="margin:8px 0"><input id="au_user" placeholder="username" maxlength="20" autocapitalize="off" autocorrect="off"></div>
+      <div style="margin:8px 0"><input id="au_pass" type="password" placeholder="password"></div>
+      <button class="btn primary" onclick="doLogin()">Log in →</button>`;
+  }
+  render(`<div class="row" style="align-items:center;margin-bottom:6px"><h2 style="flex:1">Account</h2><button class="btn ghost" onclick="screenTitle()">← Home</button></div>
+    <div style="margin-bottom:8px">${tab('login','Log in')} ${tab('signup','Create account')} ${tab('reset','Reset')}</div>
+    <div class="panel">${form}</div>`);
+}
+async function doSignup(){
+  const u=_v('au_user'),p=_v('au_pass');
+  if(!u||!p){toast("Fill in a username and password");return;}
+  try{const d=await authCall("/signup",{username:u,password:p});
+    setAuth({token:d.token,username:d.username});
+    await cloudSyncNow();   // push whatever local progress they already have
+    showRecovery(d.recovery);
+  }catch(e){toast(e.message);}
+}
+async function doLogin(){
+  const u=_v('au_user'),p=_v('au_pass');
+  if(!u||!p){toast("Enter your username and password");return;}
+  try{const d=await authCall("/login",{username:u,password:p});
+    setAuth({token:d.token,username:d.username});
+    const loaded=await reconcileAfterLogin(d);
+    toast("Signed in as "+d.username);
+    if(loaded){screenTitle();toast("Your saved game was loaded from the cloud");}else screenTitle();
+  }catch(e){toast(e.message);}
+}
+async function doReset(){
+  const u=_v('au_user'),rec=_v('au_rec'),p=_v('au_pass');
+  if(!u||!rec||!p){toast("Fill in every field");return;}
+  try{const d=await authCall("/reset",{username:u,recovery:rec,password:p});
+    setAuth({token:d.token,username:d.username});
+    await reconcileAfterLogin(d);
+    toast("Password reset — you're signed in");_authMode="login";screenTitle();
+  }catch(e){toast(e.message);}
+}
+async function doLogout(){
+  const a=authState();
+  try{await cloudSyncNow();}catch(e){}
+  try{if(a)await authCall("/logout",{token:a.token});}catch(e){}
+  setAuth(null);toast("Logged out");screenTitle();
+}
+function showRecovery(code){
+  const old=document.getElementById('saveov');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='saveov';ov.className='saveov';
+  ov.innerHTML=`<div class="savebox">
+    <h3 style="margin:0 0 6px">🔑 Save your recovery code</h3>
+    <p class="sub">There's no email on file, so this code is the <b>only</b> way to reset your password if you forget it. Write it down or store it somewhere safe.</p>
+    <div style="font-family:monospace;font-size:20px;letter-spacing:2px;text-align:center;background:var(--panel2);border:1px solid var(--gold);border-radius:8px;padding:14px;margin:10px 0;color:var(--gold)">${code}</div>
+    <div class="center"><button class="btn" onclick="(function(){try{navigator.clipboard.writeText('${code}');}catch(e){};toast('Recovery code copied');})()">📋 Copy code</button></div>
+    <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;cursor:pointer"><input type="checkbox" id="recack" onchange="document.getElementById('recdone').disabled=!this.checked" style="width:auto"> I've saved my recovery code somewhere safe.</label>
+    <div class="center"><button id="recdone" class="btn primary" disabled onclick="(function(){document.getElementById('saveov').remove();toast('Account ready — you\\'re signed in');screenTitle();})()">Continue</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+// push progress up when the app is backgrounded / closed
+if(typeof document!=="undefined"&&document.addEventListener){
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")cloudSyncNow();});
 }
 
 /* boot */
