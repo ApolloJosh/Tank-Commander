@@ -439,6 +439,11 @@ const eff=p=>warOfC(p)*injFactor(p);
 function warToWins(w){return clamp(round(81+(w-33)*1.25),47,114);}
 const REP_BAT=0.86, REP_SP=0.95, REP_RP=0.37;   // replacement-level fill for empty slots
 let _dlMode=false;   // true during the in-season trade deadline (shifts valuations)
+// how far BELOW market you're paying a player for his ability — 1 = dirt-cheap/cost-controlled, 0 = paid full market or more.
+// Trade value is surplus value: a player on a fair-market contract (e.g. a free agent you just signed) has little surplus to flip.
+function controlFactor(p){const market=Math.max(8,salaryFor(p.ovr,6));return clamp(1-((p.salary||0)/market),0,1);}
+// longer deals trade a little annual money for security (shown on the sign/extend dropdowns)
+function termAAV(base,years){const mult=clamp(1.08-years*0.03,0.78,1.08);return Math.max(0.75,Math.round(base*mult*10)/10);}
 function tradeValueDeadline(p){
   const ovr=p.ovr, pot=Math.max(p.pot||ovr,ovr), age=p.age, yrs=p.years==null?6:p.years;
   // at the deadline, CURRENT ability dominates and the ceiling/youth premium shrinks
@@ -449,7 +454,7 @@ function tradeValueDeadline(p){
   if(ovr>=88) v += Math.pow(ovr-88,1.4)*3.0;
   // contract control matters more now: rentals are cheap, cost-controlled long-term assets command a premium
   if(yrs<=1) v*=0.70; else if(yrs>=4) v*=1.14; else if(yrs>=3) v*=1.06;
-  v -= Math.max(0,(p.salary-14))*(age>31?0.5:0.25);
+  v *= (0.45 + 0.55*controlFactor(p));   // surplus value — a market-rate contract carries little to flip
   if(pot<70&&ovr<70) v=Math.min(v, 3+Math.max(0,(ovr-55))*0.7);
   return Math.max(1, Math.round(v));
 }
@@ -466,8 +471,9 @@ function tradeValue(p){
   if(ovr>=75 && ovr<=88 && age<=33) v += (ovr-73)*(age<=31?1.0:0.7);
   // superstar tax
   if(ovr>=88) v += Math.pow(ovr-88,1.4)*2.4;
-  // salary drag on pricey, aging players
-  v -= Math.max(0,(p.salary-14))*(age>31?0.5:0.2);
+  // surplus value: you can only trade the value you're getting ABOVE what you pay. A player on a fair-market deal
+  // (a free agent you just signed, a maxed-out vet) has little surplus — cost-controlled talent keeps its value.
+  v *= (0.35 + 0.65*controlFactor(p));
   if(p.years<=1) v*=0.8;                    // rental discount
   // unplayable ceiling => little trade value
   if(pot<70) v=Math.min(v, 3+Math.max(0,(ovr-55))*0.7);
@@ -792,23 +798,24 @@ function developAll(){
   return {notes,retired:ret,fa:G.leftAsFA};
 }
 // pick-your-term extension control (1/3/5/10 yrs)
-function extendSelect(pid){return `<select class="exsel" onchange="extendDo('${pid}',this.value)" style="font-size:11px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 3px">
-  <option value="">Extend…</option><option value="1">+1 yr</option><option value="3">+3 yr</option><option value="5">+5 yr</option><option value="10">+10 yr</option></select>`;}
+// the base AAV (1-yr-equivalent) for an extension — a farm/prospect deal is priced on a discounted blend of
+// current ability and ceiling (you pay for unguaranteed upside); an established player pays full freight.
+function extendBaseAAV(p){
+  const onFarm=(p.loc==="farm")||p.prospect;
+  if(onFarm){const ceil=Math.min(p.realCeil||p.pot,p.pot);const effOvr=Math.round(p.ovr+(ceil-p.ovr)*0.55);
+    return Math.max(0.75,Math.round(salaryFor(effOvr,6)*0.88*10)/10);}
+  return salaryFor(p.ovr,6);
+}
+function extendSelect(pid){const p=G.roster.find(x=>x.id===pid)||G.farm.find(x=>x.id===pid);const b=p?extendBaseAAV(p):0;
+  const o=y=>`<option value="${y}">+${y} yr · $${termAAV(b,y)}M/yr</option>`;
+  return `<select class="exsel" onchange="extendDo('${pid}',this.value)" style="font-size:11px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 3px">
+  <option value="">Extend…</option>${o(1)}${o(3)}${o(5)}${o(10)}</select>`;}
 function extendDo(pid,years){years=parseInt(years);if(!years)return;
   const p=G.roster.find(x=>x.id===pid)||G.farm.find(x=>x.id===pid);if(!p)return;
+  p.salary=termAAV(extendBaseAAV(p),years);   // longer deals shave a little off the annual; LOCKED for the term
   p.years=Math.min(p.years+years,14);   // megadeals top out around 14 years
   p.mlbYears=Math.max(p.mlbYears||6,6);
   p.locked=true;   // an extension LOCKS the AAV for the term — it won't re-price as the player grows or fades
-  const onFarm=(p.loc==="farm")||p.prospect;
-  if(onFarm){
-    // pre-breakout deal: priced on a blend of current ability and realized ceiling — you pay for upside,
-    // at a discount because it isn't guaranteed (and if he busts, you're stuck with it).
-    const ceil=Math.min(p.realCeil||p.pot,p.pot);
-    const effOvr=Math.round(p.ovr+(ceil-p.ovr)*0.55);
-    p.salary=Math.max(0.75,Math.round(salaryFor(effOvr,6)*0.88*10)/10);
-  } else {
-    p.salary=salaryFor(p.ovr,6);   // established player: full freight for current ability, now locked in
-  }
   if(G.mode==="survivor"){const ff=isFanFav(p);favorChange(ff?4:(p.src==="draft"?2:0.5),`Extended ${p.name}${ff?' (fan favorite)':''}`);fanChange(ff?5:(p.src==="draft"?2:1),`Fans cheered keeping ${p.name}`);}
   toast(`${p.name} locked up ${years} yr ($${p.salary}M/yr, now ${p.years}yr)`);saveGame();
   if(G.phase===0)screenTrade();else screenRoster();
@@ -961,17 +968,18 @@ function renderFA(){
   return G.faMarket.map(fa=>{const p=fa.player;
     return `<div class="offer"><div class="row" style="align-items:center">
      <div style="flex:2"><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • ${ovrHTML(p.ovr)} OVR</span>${p.fic?'':' <span class="small" style="color:var(--blue)">real FA</span>'}</div>
-     <div style="flex:1;text-align:right"><span class="pill gold">$${fa.aav}M/yr</span>
-       <select onchange="signFA('${fa.id}',this.value)" style="font-size:11px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:2px 4px"><option value="">Sign…</option><option value="1">1 yr</option><option value="3">3 yr</option><option value="5">5 yr</option></select></div></div></div>`;}).join("");
+     <div style="flex:1;text-align:right"><span class="small muted">asks ~$${fa.aav}M/yr</span>
+       <select onchange="signFA('${fa.id}',this.value)" style="font-size:11px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:2px 4px"><option value="">Sign…</option><option value="1">1 yr · $${termAAV(fa.aav,1)}M/yr</option><option value="3">3 yr · $${termAAV(fa.aav,3)}M/yr</option><option value="5">5 yr · $${termAAV(fa.aav,5)}M/yr</option></select></div></div></div>`;}).join("");
 }
 function signFA(fid,years){
   const fa=(G.faMarket||[]).find(x=>x.id===fid);if(!fa)return;const p=fa.player;
   years=parseInt(years)||fa.years||3;
   if(p._fromPool){if(!G.pool.some(x=>x.id===p.id)){G.faMarket=G.faMarket.filter(x=>x.id!==fid);toast('No longer available');screenTrade();return;}
     G.pool=G.pool.filter(x=>x.id!==p.id);delete p._fromPool;}
-  p.salary=fa.aav;p.years=years;p.loc="mlb";p.src="fa";p.inj=0;p.mlbYears=6;
+  const aav=termAAV(fa.aav,years);
+  p.salary=aav;p.years=years;p.loc="mlb";p.src="fa";p.inj=0;p.mlbYears=6;
   G.roster.push(p);G.faMarket=G.faMarket.filter(x=>x.id!==fid);_custom=null;
-  _sugg=null;toast(`Signed ${p.name} — ${years}yr / $${fa.aav}M`);screenTrade();
+  _sugg=null;toast(`Signed ${p.name} — ${years}yr / $${aav}M/yr`);screenTrade();
 }
 function needsSurplus(){
   const mlb=G.roster.filter(p=>p.loc==="mlb");const a=buildActive(G.roster);
