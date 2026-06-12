@@ -618,10 +618,10 @@ function newGame(teamName,mode){
     weakSpotsTotal:0, weakSpotsYear:0,
     resources:{scouting:1/3,development:1/3,coaching:1/3},
     // --- Survivor Mode state ---
-    favor:62, reputation:88, survStage:0, survTitles:0,
+    favor:62, fanFavor:58, reputation:88, survStage:0, survTitles:0,
     lastTitleYear:null, lastWSYear:null, lastPlayoffYear:null,
     missStreak:0, taxNoRunStreak:0, cumScore:0, fired:false,
-    stance:null, ownerBar:null, agreedBar:null, favorLog:[]};
+    stance:null, ownerBar:null, agreedBar:null, favorLog:[], fanLog:[]};
   G.ownedPicks=freshDraftPicks();   // re-roll now that G.mode is set (survivor = 5 rounds, career = 3)
   saveGame();
 }
@@ -770,7 +770,7 @@ function developAll(){
   G.leftAsFA=[];
   G.roster=G.roster.filter(p=>{
     if(p.loc==="mlb"){if(p._skipYr){p._skipYr=false;}else{p.years--;}if(p.years<=0){
-      if(G.mode==="survivor"&&(isFanFav(p)||(p.src==="draft"&&p.ovr>=82)))favorChange(-5,`Let homegrown star ${p.name} walk for nothing`);
+      if(G.mode==="survivor"&&(isFanFav(p)||(p.src==="draft"&&p.ovr>=82))){favorChange(-5,`Let homegrown star ${p.name} walk for nothing`);fanChange(isFanFav(p)?-8:-4,`Fans watched ${p.name} leave for nothing`);}
       G.leftAsFA.push(p);return false;}}
     return true;
   });
@@ -809,7 +809,7 @@ function extendDo(pid,years){years=parseInt(years);if(!years)return;
   } else {
     p.salary=salaryFor(p.ovr,6);   // established player: full freight for current ability, now locked in
   }
-  if(G.mode==="survivor"){const ff=isFanFav(p);favorChange(ff?4:(p.src==="draft"?2:0.5),`Extended ${p.name}${ff?' (fan favorite)':''}`);}
+  if(G.mode==="survivor"){const ff=isFanFav(p);favorChange(ff?4:(p.src==="draft"?2:0.5),`Extended ${p.name}${ff?' (fan favorite)':''}`);fanChange(ff?5:(p.src==="draft"?2:1),`Fans cheered keeping ${p.name}`);}
   toast(`${p.name} locked up ${years} yr ($${p.salary}M/yr, now ${p.years}yr)`);saveGame();
   if(G.phase===0)screenTrade();else screenRoster();
 }
@@ -869,6 +869,7 @@ function screenTitle(){
        ${capUnlocked()?`<button class="btn ghost" onclick="screenCreatePlayer()">⭐ Create-A-Player${PROFILE.createdPlayer?'':' <span class="pill gold" style="padding:0 5px">NEW</span>'}</button>`:`<button class="btn ghost" style="opacity:.55" onclick="toast('Finish one franchise to unlock Create-A-Player')">⭐ Create-A-Player 🔒</button>`}
        ${authEnabled()?`<button class="btn ghost" onclick="screenAccount()">${authState()?'▣ '+(authState().username||'Account'):'👤 Log in / Sign up'}</button>`:''}
        <button class="btn ghost" onclick="showRestoreOnTitle()">📂 Restore backup</button>
+       <button class="btn ghost" onclick="screenWelcome()">ℹ️ Guide &amp; what's new</button>
      </div>
    </div>
    ${xpPanel()}
@@ -1070,7 +1071,7 @@ function detectFanFavorites(){   // homegrown, tenured, and a real performer bec
 }
 function giveAsset(a){
   if(a.kind==="player"){
-    if(G.mode==="survivor"&&isFanFav(a.player))favorChange(-2,`Traded away fan favorite ${a.player.name}`);
+    if(G.mode==="survivor"&&isFanFav(a.player)){favorChange(-2,`Traded away fan favorite ${a.player.name}`);fanChange(-9,`Fans are furious you dealt ${a.player.name}`);toast(`📣 Fans are crushed you traded ${a.player.name}`);}
     G.roster=G.roster.filter(p=>p.id!==a.player.id);G.farm=G.farm.filter(p=>p.id!==a.player.id);a.player.loc="pool";G.pool.push(a.player);}
   else{G.ownedPicks=G.ownedPicks.filter(pk=>pk.id!==a.pick.id);}
 }
@@ -1442,6 +1443,7 @@ function sendDown(pid){const p=G.roster.find(x=>x.id===pid);if(!p)return;G.roste
    ============================================================ */
 let _res=null;
 function screenSeason(){
+  if(G.seasonStage===1.5)return screenMedia();   // resume at the press conference after a reload
   if(G.seasonStage===1)return screenDeadline();   // resume at the deadline after a reload
   if(G.seasonStage===2){_rosterMode='deadline';return screenRoster();}   // resume at post-deadline roster
   render(`${header()}${stepbar(2)}
@@ -1469,7 +1471,116 @@ function screenServiceTime(){
 function promoteService(pid){const p=G.farm.find(x=>x.id===pid);if(!p)return;G.farm=G.farm.filter(x=>x.id!==pid);
   p.loc="mlb";if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;p._svcHold=true;p.salary=salaryFor(p.ovr,p.mlbYears);G.roster.push(p);
   toast(`${p.name} called up — service-time hold (no year burned)`);screenServiceTime();}
-function afterServiceTime(){G.seasonStage=1;saveGame();screenDeadline();}
+function afterServiceTime(){
+  if(G.mode==="survivor"&&G.year>=2&&!G._mediaAnswered&&Math.random()<0.6){
+    G.seasonStage=1.5;G._mediaQ=pickMediaQuestion();G._mediaAnswered=false;saveGame();return screenMedia();
+  }
+  G.seasonStage=1;saveGame();screenDeadline();}
+/* ---- mid-season stop 1.5 (Survivor): media press conference ---- */
+function mediaSituation(){const proj=projWinsNow(),pay=payroll(G.roster);
+  if(proj>=90||G.lastPlayoffYear===G.year-1)return 'contend';
+  if(pay>=220)return 'spend';
+  if(pay<120)return 'cheap';
+  if(proj<=74)return 'rebuild';
+  return 'direction';}
+const MEDIA_Q={
+  contend:{text:"Your club is built to win right now and the city can feel it. What's your message to a fan base dreaming of a deep October run?",ph:"e.g. We owe this city our best. Our guys are ready, and we won't hold anything back…"},
+  rebuild:{text:"Another long season looks likely. How do you sell this rebuild to fans who are running out of patience?",ph:"e.g. I get the frustration — but the young core is close, and the future here is bright…"},
+  spend:{text:"Ownership has opened the checkbook like never before. Is this a real win-now push, or pressure you can't afford to fumble?",ph:"e.g. We're spending because this city deserves a winner, and we intend to deliver one…"},
+  cheap:{text:"Fans are grumbling that the payroll is among the league's lowest. What do you say to them?",ph:"e.g. Every dollar is going into a plan — watch the farm system, the wins are coming…"},
+  direction:{text:"Six weeks in — where is this franchise actually headed?",ph:"e.g. We're building something that lasts. Here's what fans should watch for…"}};
+function pickMediaQuestion(){const s=mediaSituation();return Object.assign({id:s},MEDIA_Q[s]);}
+// preset answers — one per "direction." Each: {label, line, fan, owner, expect?, claimsPlan?, note?}
+const MEDIA_OPTS={
+  contend:[
+    {label:"🔥 Promise a deep run",line:"This is our year. I promise this city a deep October run — anything less is a failure.",fan:7,owner:5,expect:true,note:"A bold promise — fans roar, but the bar just went up."},
+    {label:"⚖️ Stay humble",line:"We're good, but we'll let our play do the talking. One game at a time.",fan:3,owner:3,note:"Measured and professional."},
+    {label:"❤️ Do it for the city",line:"Our fans have waited long enough. We are going all-out for them this year.",fan:6,owner:2,note:"You put the fans first."}],
+  rebuild:[
+    {label:"🌱 Sell the plan",line:"I know it's hard. But our young core is close, and the future here is bright.",fan:5,owner:1,claimsPlan:true,note:"You asked the fans for patience."},
+    {label:"🗣️ Be brutally honest",line:"We're not there yet. This year is about development, not wins. I won't lie to you.",fan:2,owner:-1,note:"Fans respect the honesty; the owner less so."},
+    {label:"😤 Defy the doubters",line:"Everyone's counting us out. I think we shock some people and make a push.",fan:5,owner:4,expect:true,note:"A gutsy promise from a rebuilding club."}],
+  spend:[
+    {label:"🔥 All-in to win",line:"We spent to win, and we intend to deliver. No excuses this year.",fan:5,owner:4,expect:true,note:"You staked the season on it."},
+    {label:"📈 A real investment",line:"This is a long-term investment in a winner, not a one-year gamble.",fan:3,owner:2,note:"Steady and reassuring."},
+    {label:"❤️ For the fans",line:"Ownership opened the checkbook because this city deserves a winner.",fan:6,owner:1,note:"Fans love the spending talk."}],
+  cheap:[
+    {label:"🌱 Point to the farm",line:"Every dollar is going into a plan — watch our farm system, the wins are coming.",fan:4,owner:1,claimsPlan:true,note:"You pointed fans toward the future."},
+    {label:"😤 Promise value anyway",line:"Low payroll or not, I promise you we'll be in the race this year.",fan:4,owner:3,expect:true,note:"A bold claim on a tight budget."},
+    {label:"🤷 It's ownership's call",line:"Payroll is an ownership decision. I focus on the players I've got.",fan:-5,owner:-2,note:"Fans hate the deflection."}],
+  direction:[
+    {label:"🏗️ Build to last",line:"We're building something sustainable — a real contender, not a one-year wonder.",fan:3,owner:1,note:"A patient, long-view answer."},
+    {label:"🔥 Win now",line:"The window is open and I promise we'll chase it — playoffs or bust.",fan:5,owner:4,expect:true,note:"You set the bar high."},
+    {label:"❤️ Listen to the fans",line:"We hear the fans. Everything we do is to bring this city a winner.",fan:5,owner:1,note:"You spoke to the fanbase."}]};
+function applyMediaChoice(i){
+  const q=G._mediaQ||pickMediaQuestion();const o=(MEDIA_OPTS[q.id]||[])[i];if(!o)return;
+  let fan=o.fan,owner=o.owner||0;const notes=[];
+  if(o.claimsPlan&&youngCorePlan()<2){fan=Math.min(fan,-2);owner=Math.min(owner,0);notes.push("You pointed to a plan — but the farm is bare, and fans aren't buying it.");}
+  else if(o.note)notes.push(o.note);
+  const fd=fanChange(fan,"Press conference"),od=favorChange(owner,"Press conference");
+  if(o.expect){G._mediaPromise=true;G._mediaPromiseYear=G.year;}
+  G._mediaResult={fan:fd,owner:od,notes:notes.length?notes:["The room takes down your words."],answer:o.line,expect:o.expect};
+  G._mediaAnswered=true;saveGame();screenMediaResult();}
+function gradeMediaAnswer(text){
+  const t=(text||"").toLowerCase();const has=(...ws)=>ws.some(w=>t.includes(w));
+  const words=t.trim().split(/\s+/).filter(Boolean).length;
+  if(words<3)return {fan:-3,owner:-3,expect:false,notes:["A non-answer — the room groans and moves on."]};
+  let fan=0,owner=0,expect=false;const notes=[];
+  if(has("don't care","dont care","whatever","not my fault","blame","excuse","no comment","shut up","stupid","idiot","relax","calm down")){fan-=8;owner-=5;notes.push("Dismissive and combative — that won't go over well.");}
+  if(has("fan","city","supporters","loyal","faithful","stadium","ballpark","community","this town","you all","fanbase")){fan+=5;notes.push("You spoke directly to the fans.");}
+  if(has("win","champion","ring","compete","contend","proud","believe","trust","fight","best","relentless")){fan+=4;owner+=3;notes.push("Confident, ambitious tone.");}
+  if(has("future","young","develop","prospect","build","plan","patient","core","long-term","foundation","sustainable")){fan+=3;owner+=1;notes.push("You laid out a clear plan.");}
+  if(has("spend","invest","sign","go get","aggressive","reinforcements")){fan+=3;notes.push("Fans liked the aggressive talk.");}
+  if(has("rebuild","retool","tear down","step back","not this year","take our time")){owner-=1;fan+=youngCorePlan()>=3?3:-1;notes.push("Honest about a step back.");}
+  if(has("guarantee","promise","we will win","world series","championship this","make the playoffs","going to win","book it","october this year")){fan+=5;owner+=4;expect=true;notes.push("A bold promise — the bar just went up.");}
+  fan=clamp(Math.round(fan),-10,12);owner=clamp(Math.round(owner),-8,8);
+  if(!notes.length)notes.push("A measured, middle-of-the-road answer.");
+  return {fan,owner,expect,notes};}
+function screenMedia(){
+  if(G._mediaAnswered)return screenMediaResult();
+  const q=G._mediaQ||pickMediaQuestion();
+  const opts=MEDIA_OPTS[q.id]||[];
+  const optBtns=opts.map((o,i)=>`<button class="btn" style="display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;white-space:normal" onclick="applyMediaChoice(${i})">
+      <b>${o.label}</b><div class="small muted" style="margin-top:2px;font-style:italic">"${o.line}"</div></button>`).join("");
+  render(`${survivorHeader()}
+    <div class="panel center" style="border-color:#6f4fa0">
+      <div class="pill" style="background:#3a2a55;color:#d9b3ff">🎙️ MID-SEASON PRESS CONFERENCE</div>
+      <h2 style="margin:6px 0">The media wants a word</h2>
+      <p class="sub" style="max-width:580px;margin:0 auto">"${q.text}"</p></div>
+    <div class="panel">
+      <div class="sectlbl">Pick a response</div>
+      ${optBtns}
+      <p class="small muted" style="margin:6px 0 0">A 🔥/😤 promise raises the bar — reach the playoffs this year or it backfires.</p>
+    </div>
+    <div class="panel">
+      <div class="sectlbl">— or say it in your own words —</div>
+      <textarea id="mediaans" style="width:100%;height:90px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:inherit;font-size:14px;-webkit-user-select:text;user-select:text" placeholder="${q.ph}"></textarea>
+      <div class="center" style="margin-top:8px"><button class="btn primary" onclick="submitMedia()">Address the media ▶</button>
+        <button class="btn ghost" onclick="skipMedia()">"No comment"</button></div>
+    </div>`);}
+function submitMedia(){
+  const t=(document.getElementById('mediaans')||{}).value||"";
+  const res=gradeMediaAnswer(t);
+  const fd=fanChange(res.fan,"Press conference"),od=favorChange(res.owner,"Press conference");
+  if(res.expect){G._mediaPromise=true;G._mediaPromiseYear=G.year;}
+  G._mediaResult={fan:fd,owner:od,notes:res.notes,answer:t.trim(),expect:res.expect};
+  G._mediaAnswered=true;saveGame();screenMediaResult();}
+function skipMedia(){
+  const fd=fanChange(-3,"Press conference"),od=favorChange(-2,"Press conference");
+  G._mediaResult={fan:fd,owner:od,notes:["You brushed off the media — fans noticed the silence."],answer:"(No comment.)",expect:false};
+  G._mediaAnswered=true;saveGame();screenMediaResult();}
+function screenMediaResult(){
+  const r=G._mediaResult||{fan:0,owner:0,notes:[]};
+  const chip=d=>`<b style="color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'+':''}${d}</b>`;
+  render(`${survivorHeader()}
+    <div class="panel">
+      <div class="pill" style="background:#3a2a55;color:#d9b3ff">🎙️ ON THE RECORD</div>
+      <p class="sub" style="margin:10px 0;font-style:italic">"${(r.answer||'').replace(/</g,'&lt;')||'(silence)'}"</p>
+      <div style="margin:8px 0">${r.notes.map(n=>`<div class="small" style="margin:2px 0">• ${n}</div>`).join("")}</div>
+      <div class="row" style="gap:18px;margin-top:10px;font-size:15px"><span>📣 Fans ${chip(r.fan)}</span><span>🪑 Owner ${chip(r.owner)}</span></div>
+      ${r.expect?'<div class="pill gold" style="margin-top:10px;display:inline-block">📈 You raised the stakes — reach the playoffs this year or pay for the promise</div>':''}
+    </div>
+    <div class="center"><button class="btn primary" onclick="(function(){G.seasonStage=1;saveGame();screenDeadline();})()">On to the deadline ▶</button></div>`);}
 /* ---- mid-season stop 2: trade deadline (game 110) ---- */
 function computeDeadlineStances(){
   const arr=G.ai.map(t=>({t,w:warToWins(t.war)}));
@@ -1725,7 +1836,8 @@ function screenDevelop(){
      ${res.retired.length?`<p class="small muted">Retired: ${res.retired.map(p=>p.name).join(", ")}</p>`:''}</div>
    <div class="center"><button class="btn primary" onclick="nextYear()">Begin Year ${G.year+1} →</button></div>`);
 }
-function nextYear(){G.year++;G.phase=0;G.tradeTries=3;G.seasonStage=0;_dlMode=false;_offers=null;_custom=null;_sugg=null;saveGame();
+function nextYear(){G.year++;G.phase=0;G.tradeTries=3;G.seasonStage=0;_dlMode=false;_offers=null;_custom=null;_sugg=null;
+  G._mediaAnswered=false;G._mediaQ=null;G._mediaResult=null;G._mediaPromise=false;saveGame();
   if(G.mode==="survivor")startSurvivorYear();else goPhase(0);}
 
 /* ============================================================
@@ -1755,6 +1867,24 @@ function favorBar(){const f=G.favor,t=favorTier(f);
   const cls=t==='irid'?'favbar irid':t==='diamond'?'favbar bdiamond':'favbar';
   const style=(t==='irid'||t==='diamond')?'':`background:${favorColor(f)}`;
   return `<div class="favtrack"><div class="${cls}" style="width:${Math.max(2,f)}%;${style}"></div></div>`;}
+/* ---- Fan Favor: a second meter the fans control. Doesn't fire you, but very low fan favor bleeds owner favor. Fans don't care about money — they care about winning, a real plan, and being spoken to. ---- */
+function fanVal(){return clamp(G.fanFavor==null?58:G.fanFavor,0,100);}
+function fanTier(f){return f<20?'cold':f<40?'cool':f<60?'mid':f<80?'warm':'hot';}
+function fanColor(f){return f<20?'#c0392b':f<40?'#d8742f':f<60?'#c9a227':f<80?'#4a9e3f':'#37c24a';}
+function fanChange(amt,label){const before=fanVal();G.fanFavor=clamp(Math.round((before+amt)*10)/10,0,100);
+  const d=Math.round((G.fanFavor-before)*10)/10;if(label&&Math.abs(d)>=0.05)(G.fanLog=G.fanLog||[]).push({year:G.year,amt:d,label});return d;}
+function fanBar(){const f=fanVal();return `<div class="favtrack" style="height:9px"><div class="favbar" style="width:${Math.max(2,f)}%;background:${fanColor(f)}"></div></div>`;}
+const FAN_MOODS={cold:["The fan base is furious — talk radio is on fire.","Boos rain down and seats sit empty.","The faithful have checked out."],
+  cool:["Fans are restless and skeptical.","Patience is wearing thin in the stands."],
+  mid:["The fan base is cautiously along for the ride.","A wait-and-see mood around town."],
+  warm:["Fans are buying in — the building has energy again.","The city believes in the direction."],
+  hot:["The fan base is electric. Tickets are gold.","This town is in love with the team."]};
+function fanMsg(){return pick(FAN_MOODS[fanTier(fanVal())]);}
+function dualBars(){return `<div style="display:flex;gap:7px;align-items:center;margin-bottom:3px"><span class="small" style="flex:0 0 50px;color:var(--dim)">🪑 Owner</span><div style="flex:1">${favorBar()}</div></div>
+  <div style="display:flex;gap:7px;align-items:center"><span class="small" style="flex:0 0 50px;color:var(--dim)">📣 Fans</span><div style="flex:1">${fanBar()}</div></div>`;}
+// fans reward a visible future: stocked farm + a young, productive MLB core
+function youngCorePlan(){const farmQ=G.farm.filter(p=>Math.min(p.realCeil||p.pot,p.pot)>=82).length;
+  const youngMLB=G.roster.filter(p=>p.loc==="mlb"&&p.age<=25&&p.ovr>=74).length;return farmQ+youngMLB;}
 function survivorHeader(){
   return `<div style="margin-bottom:8px">
     <div class="row" style="align-items:center;margin-bottom:4px">
@@ -1763,7 +1893,7 @@ function survivorHeader(){
       <div style="flex:1;text-align:right">${G.agreedBar?`<span class="pill ${G.stance==='go'?'gold':G.stance==='retool'?'blue':'green'}">Target: ${G.agreedBar} W</span>`:''}</div>
     </div>
     <div class="small" style="color:var(--dim);margin-bottom:3px">🪑 <i>"${G._ownerMsg||ownerMsg()}"</i></div>
-    ${favorBar()}
+    ${dualBars()}
   </div>`;
 }
 /* ---- expectations + negotiation ---- */
@@ -1856,6 +1986,31 @@ function applySurvivorSeason(){
   G.cumScore=(G.cumScore||0)+s;G._scoreThisYear=s;
   // new fan favorites
   detectFanFavorites();
+  // ----- FAN FAVOR ledger (fans ignore money; they want winning, a visible plan, and to be heard) -----
+  G._fanThisYear=[];
+  const fanFc=(amt,label)=>{const d=fanChange(amt,label);if(Math.abs(d)>=0.05)G._fanThisYear.push({amt:d,label});};
+  fanChange((55-fanVal())*0.06);   // fans have short memories — drift back toward neutral (unlogged)
+  const plan=youngCorePlan(),pay=payroll(G.roster);
+  if(madePO)fanFc(7,"The team reached October");
+  else fanFc(plan>=3?-2:-6, plan>=3?"Missed the playoffs — but fans see the young core coming":"Out of the race again, with no plan in sight");
+  if(w>=110)fanFc(4,"A historic 110-win season");else if(w>=100)fanFc(3,"A 100-win season thrilled the city");
+  else if(w<68&&!grace)fanFc(plan>=3?-1:-4,"A dismal record tested the fans' patience");
+  if(r.wonWS)fanFc(18,"WORLD SERIES CHAMPIONS — the city erupts");
+  else if(r.reachedWS)fanFc(8,"A pennant and a World Series trip");
+  if(pay>=260)fanFc(7,"Ownership spent big to win — fans love it");
+  else if(pay>=200)fanFc(4,"A top-tier payroll signals you're going for it");
+  else if(pay<120&&!madePO)fanFc(plan>=3?2:-7, plan>=3?"A lean budget, but fans trust the youth movement":"A bottom-five payroll with no plan — fans feel shortchanged");
+  (G._newFanFavs||[]).forEach(p=>fanFc(4,`${p.name} has become a fan favorite`));
+  if(_res.awards)['roy','cy','mvp'].forEach(k=>{const a=_res.awards[k];if(a&&a.won)fanFc(3,`${a.player.name} won ${a.name}`);});
+  // media promise comes due this season
+  if(G._mediaPromise&&G._mediaPromiseYear===G.year){
+    if(madePO){fc(4,"Delivered on your promise to the media");fanFc(6,"You promised October — and delivered");}
+    else{fc(-6,"Broke the promise you made to the media");fanFc(-9,"All talk: fans remember the promise you broke");}
+    G._mediaPromise=false;}
+  // fan favor's pull on the owner: very low fans bleed owner favor; a beloved front office helps a touch
+  const fnow=fanVal();
+  if(fnow<20)fc(-Math.min(6,(20-fnow)*0.25),"Fan unrest is reaching the owner's office");
+  else if(fnow>=85)fc(2,"A beloved front office and a packed ballpark");
   // reputation, mood, firing
   G.reputation=clamp(G.reputation*0.7+w*0.3+(r.wonWS?4:0),50,108);
   G.yearsServed=G.year;
@@ -1870,11 +2025,18 @@ function survivorResultPanel(){
   const ffPanel=ff.length?`<div class="panel2" style="border:1px solid var(--gold);border-radius:10px;padding:10px;margin-top:10px">
     <div style="font-weight:800;color:var(--gold)">⭐ New Fan Favorite${ff.length>1?'s':''}!</div>
     <p class="small muted" style="margin:3px 0 0">Homegrown, tenured, and beloved by the fanbase: ${ff.map(p=>`<b>${p.name}</b>`).join(", ")}. Keep them around (and extend them) for owner goodwill — dealing them away stings.</p></div>`:'';
+  const fitems=G._fanThisYear||[];
+  const frows=fitems.map(it=>`<div style="display:flex;justify-content:space-between;font-size:13px;margin:2px 0"><span>${it.label}</span><span style="font-weight:700;color:${it.amt>=0?'var(--green)':'var(--red)'}">${it.amt>=0?'+':''}${it.amt}</span></div>`).join("");
   return `<div class="panel"><h3>🪑 Owner Review</h3>
     <div class="small" style="color:var(--dim);margin-bottom:6px"><i>"${G._ownerMsg||ownerMsg()}"</i></div>
-    ${favorBar()}
+    ${dualBars()}
     <div style="margin-top:10px">${rows||'<span class="muted small">No change.</span>'}</div>
     <div class="small muted" style="margin-top:8px">Season score +${G._scoreThisYear||0} &nbsp;·&nbsp; running total <b style="color:var(--ink)">${Math.round(G.cumScore||0)}</b></div>
+    <div style="border-top:1px solid var(--line);margin:12px 0 8px"></div>
+    <h3 style="margin-bottom:2px">📣 The Fan Base</h3>
+    <div class="small" style="color:var(--dim);margin-bottom:6px"><i>"${fanMsg()}"</i></div>
+    <div>${frows||'<span class="muted small">Fans are unmoved this year.</span>'}</div>
+    ${fanVal()<20?'<div class="pill red" style="margin-top:8px;display:inline-block">⚠ Fan unrest is dragging the owner down</div>':''}
     ${ffPanel}
     ${G.fired?'<div class="pill red" style="margin-top:8px;display:inline-block">⚠ Owner Happiness hit zero — you are out.</div>':''}</div>`;
 }
@@ -1893,7 +2055,8 @@ function survSubmitPanel(){return `<div class="panel center" id="lbsubmit">
    <h3>🏆 Post to the Survivor leaderboard</h3>
    <div style="margin:8px 0"><input id="lbname" maxlength="12" placeholder="Name or initials" style="width:200px"/></div>
    <button class="btn primary" onclick="submitSurvivor()">Submit score ${survFinalScore()}</button>
-   <button class="btn ghost" onclick="screenLeaderboard(true,'survivor')">View leaderboard</button></div>`;}
+   <button class="btn ghost" onclick="screenLeaderboard(true,'survivor')">View leaderboard</button>
+   ${feedbackEnabled()?'<div style="margin-top:8px"><button class="btn ghost" onclick="openFeedback()">📝 Leave a note for the creator</button></div>':''}</div>`;}
 function screenFired(){render(`<div class="hero"><div class="pill red">DISMISSED</div>
      <h1 style="font-size:46px;margin:6px 0;color:var(--red)">Fired after ${G.yearsServed} season${G.yearsServed===1?'':'s'}</h1>
      <p class="sub" style="max-width:600px;margin:0 auto">Ownership ran out of patience. The run is over — but they'll remember it.</p></div>
@@ -1991,6 +2154,7 @@ function survivorRubric(){
   const rN=r=>`<tr><td>${r[0]}<div class="small muted">${r[1]}</div></td><td class="num" style="color:var(--red);font-weight:700;white-space:nowrap;vertical-align:top">−</td></tr>`;
   return `<p class="sub">Survivor Mode isn't graded out of 100 — you're managing the <b>Owner Happiness</b> bar. Keep it above zero and your run continues; hit zero and you're fired. Meanwhile a <b>running score</b> climbs each year from wins, playoff runs, titles, awards, and your homegrown core. Final score also rewards seasons survived and rings.</p>
     <p class="small" style="color:var(--gold)"><b>The first two seasons are rebuild years</b> — you were hired to tear it down, so losing is expected and the owner stays patient. Normal expectations kick in from Year 3.</p>
+    <p class="sub" style="margin-top:6px">📣 <b>Fan Favor</b> is a second meter beside the owner's. It can't fire you on its own — but let it sink too low and the unrest bleeds into the owner's office. Fans don't care about money; in fact they <i>like</i> a big payroll and resent penny-pinching — unless you're stocking real prospects and a plan for the future, which buys their patience. They live and die with winning, beloved homegrown players, and being spoken to honestly. A few times a year the <b>media</b> will put you on the spot mid-season; what you say there moves both meters, and a bold promise raises the bar you'll have to clear.</p>
     <div class="sectlbl" style="margin-top:6px">Gain favor</div>
     <table><tbody>${P.map(rP).join("")}</tbody></table>
     <div class="sectlbl">Lose favor</div>
@@ -2050,6 +2214,7 @@ function endGame(){
      <div style="margin:8px 0"><input id="lbname" maxlength="12" placeholder="Name or initials" style="width:200px"/></div>
      <button class="btn primary" onclick="submitScore()">Submit score ${score}</button>
      <button class="btn ghost" onclick="screenLeaderboard(true)">View leaderboard</button>
+     ${feedbackEnabled()?'<div style="margin-top:8px"><button class="btn ghost" onclick="openFeedback()">📝 Leave a note for the creator</button></div>':''}
    </div>
    <div class="center" style="margin-top:8px"><button class="btn" onclick="(function(){localStorage.removeItem(SAVE);screenTitle();})()">New Franchise</button></div>
    <p class="disclaimer">Unofficial fan-made prototype • not affiliated with MLB/MLBPA • all data fictional.</p>`);
@@ -2457,8 +2622,70 @@ if(typeof document!=="undefined"&&document.addEventListener){
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")cloudSyncNow();});
 }
 
+/* ============================================================
+   WELCOME / ONBOARDING + FEEDBACK ("leave a note for the creator")
+   ============================================================ */
+const WELCOME_KEY="tankCommander_welcomed";
+const NEWPILL='<span class="pill gold" style="font-size:9px;padding:0 5px;vertical-align:middle;margin-left:3px">NEW</span>';
+function screenWelcome(){
+  render(`<div class="hero" style="padding-top:8px">
+      <div class="pill" style="background:#1f3a1c;color:#9fe1cb">⚾ BETA</div>
+      <h1 style="font-size:34px;margin:8px 0 4px">Welcome to the<br>Baseball Tank Simulator</h1>
+      <p class="sub" style="max-width:600px;margin:0 auto">Hi — and welcome to the beta. You're the new <b>General Manager</b> of a washed-up ballclub. Your job: tear it down, lose on purpose to land premium <b>draft picks</b>, develop young talent, swing trades, and build a champion from the dirt up — all across a living, 16-team league where every rating, salary, and season plays out for real.</p>
+    </div>
+    <div class="panel"><h3 style="margin-top:0">🎮 Two ways to play</h3>
+      <div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:8px">
+        <div style="font-weight:800;color:var(--gold)">⚡ 6-Year Sprint</div>
+        <p class="small muted" style="margin:4px 0 0">The classic challenge. You get <b>six seasons</b> to flip a tanking team into a contender — then the front office grades your whole run out of 100. About 15 minutes a playthrough.</p></div>
+      <div class="panel2" style="border:1px solid var(--gold);border-radius:10px;padding:11px">
+        <div style="font-weight:800;color:var(--gold)">🪑 Survivor Mode ${NEWPILL}</div>
+        <p class="small muted" style="margin:4px 0 0">Endless. Keep the owner happy and <b>survive as long as you can</b> through the cycle of contention and rebuilds. Now featuring a <b>📣 Fan Favor meter</b>${NEWPILL} the fans control, and <b>🎙️ mid-season media press conferences</b>${NEWPILL} where what you say to reporters moves both meters. Your score climbs every year until you're fired — or retire a legend.</p></div>
+    </div>
+    <div class="panel"><h3 style="margin-top:0">✨ What else is new</h3>
+      <div class="small" style="line-height:1.5">
+        <div style="margin:5px 0"><b>⭐ Create-A-Player</b> ${NEWPILL} — earn XP every franchise to level up your GM profile and design a custom prospect who joins your farm in <i>every</i> new game.</div>
+        <div style="margin:5px 0"><b>👤 Accounts &amp; cloud save</b> ${NEWPILL} — make a free account (just a username and password) to carry your GM level and current game across devices.</div>
+        <div style="margin:5px 0"><b>💾 Save &amp; backup</b> — the game autosaves on your device automatically; the <b>💾 button</b> hands you a backup code to move or restore a save anytime.</div>
+        <div style="margin:5px 0"><b>🏆 Leaderboard</b> — post your final score and climb the global rankings (the 6-Year and Survivor boards are kept separate).</div>
+      </div>
+    </div>
+    <div class="panel center" style="border-color:#6f4fa0">
+      <p class="small muted" style="margin:0 0 8px">This is a <b>beta</b>, so it's rough in spots. When you finish a run you'll get the chance to <b>leave a note for the creator</b> — tell me what to fix, balance, or add.</p>
+    </div>
+    <div class="center" style="margin:6px 0 20px"><button class="btn primary" style="font-size:17px;padding:14px 28px" onclick="(function(){try{localStorage.setItem(WELCOME_KEY,'1');}catch(e){};screenTitle();})()">I'm ready for the job →</button></div>`);
+}
+/* ---- feedback ---- */
+function feedbackEnabled(){return !!AUTH_API;}
+function openFeedback(){
+  if(!feedbackEnabled()){toast("Feedback isn't switched on for this build yet");return;}
+  const old=document.getElementById('saveov');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='saveov';ov.className='saveov';
+  ov.innerHTML=`<div class="savebox">
+    <div class="row" style="align-items:center"><h3 style="flex:1;margin:0">📝 Leave a note for the creator</h3><button class="btn ghost sm" onclick="document.getElementById('saveov').remove()">✕</button></div>
+    <p class="sub">This is a beta — tell me what you loved, what felt off, and anything you'd add. It comes straight to me.</p>
+    <textarea id="fbnote" class="savecode" style="height:120px;font-family:inherit;font-size:14px" placeholder="What worked, what didn't, ideas, bugs…"></textarea>
+    <div class="center" style="margin-top:8px"><button class="btn primary" onclick="submitFeedback()">Send note ▶</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+async function submitFeedback(){
+  const t=((document.getElementById('fbnote')||{}).value||"").trim();
+  if(!t){toast("Write a note first");return;}
+  let score=0,detail="";
+  try{if(typeof G!=="undefined"&&G){
+    if(G.mode==="survivor"){score=survFinalScore();detail=`${G.yearsServed||0} yrs · ${G.survTitles||0} titles · score ${Math.round(G.cumScore||0)}`;}
+    else{const gr=computeGrade();score=gr.score;detail=`${gr.grade} (${gr.score}/100)`;}}}catch(e){}
+  const a=(typeof authState==="function")?authState():null;
+  try{
+    await fetch(AUTH_API+"/feedback",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({note:t,mode:(typeof G!=="undefined"&&G&&G.mode)||"",score,detail,username:(a&&a.username)||"anon"})});
+    const ov=document.getElementById('saveov');if(ov)ov.remove();
+    toast("Thank you — note sent! 🙏");
+  }catch(e){toast("Couldn't send — check your connection and try again");}
+}
+
 /* boot */
-screenTitle();
+(localStorage.getItem(WELCOME_KEY)?screenTitle:screenWelcome)();
 </script>
 </body>
 </html>
