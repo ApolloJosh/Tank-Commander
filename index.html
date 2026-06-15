@@ -574,8 +574,38 @@ function luxuryTax(){return Math.max(0,Math.floor((payroll(G.roster)-300)/10));}
 let G=null;
 const SAVE="tankCommander_v3";   // bumped for v5.1 — retires pre-rename ("River City Rovers") saves so everyone starts fresh on the new build
 const SAVE_AT="tankCommander_saveAt";
-function saveGame(){try{localStorage.setItem(SAVE,JSON.stringify(G));localStorage.setItem(SAVE_AT,String(Date.now()));}catch(e){}if(typeof cloudSync==="function")cloudSync();}
+function saveGame(){try{localStorage.setItem(SAVE,JSON.stringify(G));localStorage.setItem(SAVE_AT,String(Date.now()));archiveActive();}catch(e){}if(typeof cloudSync==="function")cloudSync();}
 function loadGame(){try{const s=localStorage.getItem(SAVE);if(s){G=JSON.parse(s);migrateSave();return true;}}catch(e){}return false;}
+/* ---- Runs library: every franchise is archived under its own key, so starting a new game (or a stray back-tap) can never overwrite another run ---- */
+const RUNS_KEY="tankCommander_runs", RUN_PREFIX="tankCommander_run_", MAX_RUNS=12;
+function loadRuns(){try{return JSON.parse(localStorage.getItem(RUNS_KEY)||"[]");}catch(e){return [];}}
+function saveRuns(a){try{localStorage.setItem(RUNS_KEY,JSON.stringify(a));}catch(e){}}
+function archiveActive(){
+  if(typeof G==="undefined"||!G)return;
+  if(!G._runId)G._runId=uid();
+  try{localStorage.setItem(RUN_PREFIX+G._runId,JSON.stringify(G));}catch(e){return;}
+  const runs=loadRuns();
+  const meta={id:G._runId,name:G.teamName,mode:G.mode,year:G.year,league:G.league||'',div:G.div||'',
+    score:G.mode==="survivor"?Math.round(G.cumScore||0):(G.champions||0),champions:G.champions||0,
+    fired:!!G.fired,updated:Date.now()};
+  const i=runs.findIndex(r=>r.id===meta.id);if(i>=0)runs[i]=meta;else runs.push(meta);
+  runs.sort((a,b)=>b.updated-a.updated);
+  runs.slice(MAX_RUNS).forEach(r=>{try{localStorage.removeItem(RUN_PREFIX+r.id);}catch(e){}});
+  saveRuns(runs.slice(0,MAX_RUNS));
+}
+function resumeRun(id){
+  try{const raw=localStorage.getItem(RUN_PREFIX+id);if(!raw){toast("That run's data is missing");return;}
+    G=JSON.parse(raw);G._runId=id;migrateSave();localStorage.setItem(SAVE,JSON.stringify(G));localStorage.setItem(SAVE_AT,String(Date.now()));
+    if(typeof cloudSync==="function")cloudSync();
+    if(G.mode==="survivor"&&G.survStage===0&&!G.fired)startSurvivorYear();else goPhase(G.phase||0);
+  }catch(e){toast("Couldn't load that run");}
+}
+function deleteRun(id){
+  saveRuns(loadRuns().filter(r=>r.id!==id));
+  try{localStorage.removeItem(RUN_PREFIX+id);}catch(e){}
+  try{const s=localStorage.getItem(SAVE);if(s&&JSON.parse(s)._runId===id)localStorage.removeItem(SAVE);}catch(e){}
+  screenTitle();
+}
 // bring an older save up to the 30-team, divisional structure
 function migrateSave(){
   if(typeof G==="undefined"||!G||!G.ai)return;
@@ -939,17 +969,24 @@ function extend(pid){extendDo(pid,5);}   // legacy default
    UI ROUTER
    ============================================================ */
 const app=()=>document.getElementById('app');
-function render(h){app().innerHTML="";app().appendChild($(`<div>${h}</div>`));ensureSaveBtn();}
-function ensureSaveBtn(){let b=document.getElementById('savebtn');
-  if(!b){b=document.createElement('button');b.id='savebtn';b.className='savebtn';b.innerHTML='💾 Save';b.onclick=showSavePanel;document.body.appendChild(b);}
-  b.style.display=(typeof G!=="undefined"&&G)?'flex':'none';}
+let _atTitle=false;
+function render(h){_atTitle=false;app().innerHTML="";app().appendChild($(`<div>${h}</div>`));ensureNavBtns();}
+function ensureNavBtns(){
+  const inGame=(typeof G!=="undefined"&&G&&!_atTitle);
+  let s=document.getElementById('savebtn');
+  if(!s){s=document.createElement('button');s.id='savebtn';s.className='savebtn';s.innerHTML='💾 Save';s.onclick=showSavePanel;document.body.appendChild(s);}
+  s.style.display=inGame?'flex':'none';
+}
+function ensureSaveBtn(){ensureNavBtns();}
+function goHome(){try{saveGame();}catch(e){}screenTitle();}
+function homeBtn(){return `<button class="btn ghost sm" onclick="goHome()" title="Back to the home menu (your game is saved)">🏠</button> `;}
 const PHASES=["Trade Hub","Set Roster","Play Season","Draft","Develop"];
 function stepbar(a){const ph=(G.mode!=="survivor"&&G.year>=6)?PHASES.slice(0,3):PHASES;
   return `<div class="stepbar">${ph.map((s,i)=>`<div class="step ${i<a?'done':''} ${i===a?'on':''}">${i+1}. ${s}</div>`).join("")}</div>`;}
 function mandate(){if(G.year<=2)return{cls:'blue',txt:'Mandate: Rebuild — losing is OK'};
   if(G.year===3)return{cls:'gold',txt:'Mandate: Turn the corner'};return{cls:'green',txt:'Mandate: CONTEND now'};}
 function header(){if(G.mode==="survivor")return survivorHeader();const m=mandate();return `<div class="row" style="align-items:center;margin-bottom:4px">
-   <div style="flex:2"><h2 style="margin-bottom:2px">${G.teamName}</h2>
+   <div style="flex:2"><h2 style="margin-bottom:2px">${homeBtn()}${G.teamName}</h2>
      <span class="sub">Year ${G.year} of 6 &bull; ${G.league||''} ${G.div||''} &bull; payroll $${payroll(G.roster)}M</span></div>
    <div style="flex:1;text-align:right"><button class="btn ghost sm" onclick="openFranchise()">📜 Franchise</button> <span class="pill ${m.cls}">${m.txt}</span></div></div>`;}
 function goPhase(p){G.phase=p;saveGame();
@@ -961,7 +998,7 @@ const WAR_PUNS=["Saving Private Ryans","Apocalypse Mounders","Full Metal Jackets
 const warPun=()=>pick(WAR_PUNS);
 function screenTitle(){
   render(`<div class="hero">
-     <div class="pill gold" style="margin-bottom:10px">⚾ REBUILD SIMULATOR · v7</div>
+     <div class="pill gold" style="margin-bottom:10px">⚾ REBUILD SIMULATOR · v8</div>
      <h1>TANK COMMANDER</h1>
      <p class="sub" style="max-width:600px;margin:6px auto 0">You take over a club that won it all four years ago — but the
        stars have aged, the farm's gone bare, and the team's stuck at a crossroads. <b>Tear it down, stockpile
@@ -995,7 +1032,26 @@ function screenTitle(){
    ${xpPanel()}
    <details class="panel" style="padding:14px"><summary style="cursor:pointer;font-weight:700">📐 6-Year Sprint — how you're graded</summary><div style="margin-top:10px">${gradeRubric()}</div></details>
    <details class="panel" style="padding:14px"><summary style="cursor:pointer;font-weight:700">🪑 Career Mode — how you're judged</summary><div style="margin-top:10px">${survivorRubric()}</div></details>
+   ${runsPanel()}
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
+  _atTitle=true;ensureNavBtns();
+}
+function runsPanel(){
+  if(!(authEnabled()&&authState()))return '';
+  const runs=loadRuns();if(!runs.length)return '';
+  const ago=t=>{const d=Date.now()-t,m=Math.floor(d/60000);if(m<1)return'just now';if(m<60)return m+'m ago';const h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago';};
+  let activeId=null;try{activeId=JSON.parse(localStorage.getItem(SAVE)||'{}')._runId;}catch(e){}
+  const row=r=>`<div class="panel2" style="border:1px solid ${r.id===activeId?'var(--gold)':'var(--line)'};border-radius:10px;padding:10px;margin-bottom:7px;display:flex;align-items:center;gap:8px">
+     <div style="flex:1;min-width:0">
+       <div style="font-weight:700">${(r.name||'Untitled').replace(/</g,'&lt;')} ${r.id===activeId?'<span class="pill gold" style="padding:0 5px;font-size:9px">CURRENT</span>':''}${r.fired?' <span class="pill red" style="padding:0 5px;font-size:9px">FIRED</span>':''}</div>
+       <div class="small muted">${r.mode==='survivor'?'Career Mode':'6-Year Sprint'} · ${r.league||''} ${r.div||''} · ${r.mode==='survivor'?'Season '+r.year:'Year '+r.year+'/6'} · ${r.mode==='survivor'?('score '+(r.score||0)):((r.champions||0)+'× 🏆')} · ${ago(r.updated)}</div>
+     </div>
+     <button class="btn sm primary" onclick="resumeRun('${r.id}')">Resume</button>
+     <button class="btn sm ghost" title="Delete this run" onclick="(function(){if(confirm('Delete this run permanently? This cannot be undone.'))deleteRun('${r.id}');})()">✕</button>
+   </div>`;
+  return `<div class="panel"><h3>📁 Your Current Runs <span class="small muted">(${runs.length})</span></h3>
+    <p class="sub" style="margin:2px 0 8px">Every franchise is saved separately — pick up any of them right where you left off.</p>
+    ${runs.map(row).join("")}</div>`;
 }
 
 /* ============================================================
@@ -2139,7 +2195,7 @@ function youngCorePlan(){const farmQ=G.farm.filter(p=>Math.min(p.realCeil||p.pot
 function survivorHeader(){
   return `<div style="margin-bottom:8px">
     <div class="row" style="align-items:center;margin-bottom:4px">
-      <div style="flex:2"><h2 style="margin-bottom:2px">${G.teamName}</h2>
+      <div style="flex:2"><h2 style="margin-bottom:2px">${homeBtn()}${G.teamName}</h2>
         <span class="sub">Career Mode <span class="pill" style="padding:0 5px;background:#3a2a55;color:#d9b3ff;font-size:10px">BETA</span> · ${G.league||''} ${G.div||''} · Season ${G.year} &bull; payroll $${payroll(G.roster)}M &bull; score ${Math.round(G.cumScore||0)}</span></div>
       <div style="flex:1;text-align:right"><button class="btn ghost sm" onclick="openFranchise()">📜 Franchise</button><br>${G.agreedBar?`<span class="pill ${G.stance==='go'?'gold':G.stance==='retool'?'blue':'green'}" style="margin-top:4px;display:inline-block">Target: ${G.agreedBar} W</span>`:''}</div>
     </div>
