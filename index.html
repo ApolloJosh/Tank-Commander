@@ -751,7 +751,7 @@ function archiveActive(){
   if(!G._runId)G._runId=uid();
   try{localStorage.setItem(RUN_PREFIX+G._runId,JSON.stringify(G));}catch(e){return;}
   const runs=loadRuns();
-  const meta={id:G._runId,name:G.teamName,mode:G.mode,year:G.year,league:G.league||'',div:G.div||'',
+  const meta={id:G._runId,name:G.teamName,mode:G.mode,owner:!!G.owner,clubValue:G.owner?G.owner.clubValue:0,year:G.year,league:G.league||'',div:G.div||'',
     score:G.mode==="survivor"?Math.round(G.cumScore||0):(G.champions||0),champions:G.champions||0,
     fired:!!G.fired,updated:Date.now()};
   const i=runs.findIndex(r=>r.id===meta.id);if(i>=0)runs[i]=meta;else runs.push(meta);
@@ -1205,20 +1205,362 @@ function stepbar(a){const ph=(G.mode!=="survivor"&&G.year>=6)?PHASES.slice(0,3):
   return `<div class="stepbar">${ph.map((s,i)=>`<div class="step ${i<a?'done':''} ${i===a?'on':''}">${i+1}. ${s}</div>`).join("")}</div>`;}
 function mandate(){if(G.year<=2)return{cls:'blue',txt:'Mandate: Rebuild — losing is OK'};
   if(G.year===3)return{cls:'gold',txt:'Mandate: Turn the corner'};return{cls:'green',txt:'Mandate: CONTEND now'};}
-function header(){if(G.mode==="survivor")return survivorHeader();const m=mandate();return `<div class="row" style="align-items:center;margin-bottom:4px">
+function header(){if(G.owner)return ownerHeader();if(G.mode==="survivor")return survivorHeader();const m=mandate();return `<div class="row" style="align-items:center;margin-bottom:4px">
    <div style="flex:2"><h2 style="margin-bottom:2px">${homeBtn()}${G.teamName}${G.hard?' <span class="pill" style="background:#3a1414;color:#ff8a6b;border:1px solid #c0392b;padding:0 6px;font-size:11px;vertical-align:middle">🔥 HARD</span>':''}</h2>
      <span class="sub">Year ${G.year} of 6 &bull; ${G.league||''} ${G.div||''} &bull; payroll $${payroll(G.roster)}M</span></div>
    <div style="flex:1;text-align:right"><button class="btn ghost sm" onclick="openFranchise()">📜 Franchise</button> <span class="pill ${m.cls}">${m.txt}</span></div></div>`;}
 function goPhase(p){G.phase=p;saveGame();
+  if(G.owner&&p===0)return ownerOffice();   // owners run the offseason from the owner's office, not the trade hub
   if(p===0)screenTrade();else if(p===1){_rosterMode='pre';screenRoster();}else if(p===2)screenSeason();
   else if(p===3)screenDraft();else if(p===4)screenDevelop();}
+
+/* ===========================================================
+   OWNER MODE — buy a club, build the ballpark, hire the front office,
+   then win, grow the franchise's value, and sell for the biggest profit.
+   (Phase 1: the full buy-in flow + handoff into the endless season engine.
+    Finances, GM-veto, and the sell screen layer in next.)
+   ============================================================ */
+const OWNER_BUDGET=4000;   // $4.0 Billion, tracked in $M
+const fmtB=m=>m>=1000?('$'+(m/1000).toFixed(m%1000?2:1)+'B'):('$'+m+'M');
+// 5 clubs across the spectrum — cheap & run-down (tier 0) to premier (tier 4)
+const OWNER_TEAMS=[
+  {name:"Riverside Rustbelters",price:1500,tier:0,market:"Small",mult:0.78,fan:30,farm:-1,rosterAdj:-7,
+   desc:"A fire-sale price on a gutted club. The farm's been stripped for parts, attendance is dead, and talk radio wants blood. Cheap to buy — brutal to fix. The biggest upside if you can turn it around."},
+  {name:"Harbor City Tide",price:1850,tier:1,market:"Mid",mult:0.95,fan:44,farm:0,rosterAdj:-3,
+   desc:"A middling franchise drifting in mediocrity. A thin-but-not-barren system and a fan base that's gone quiet. Affordable, with room to grow."},
+  {name:"Midland Aviators",price:2150,tier:2,market:"Mid",mult:1.12,fan:57,farm:1,rosterAdj:0,
+   desc:"A balanced, well-run club in a solid market. Decent roster, respectable farm, fans who'll show up if you give them a reason. The safe buy."},
+  {name:"Capital Sentinels",price:2400,tier:3,market:"Large",mult:1.28,fan:69,farm:2,rosterAdj:3,
+   desc:"A proud big-market club with a strong roster and a loaded-ish system. Fans are engaged and expectations are high. Pricey, but you're buying a head start."},
+  {name:"Empire Monarchs",price:2600,tier:4,market:"Huge",mult:1.5,fan:82,farm:3,rosterAdj:6,
+   desc:"The crown jewel. Huge market, stacked roster, elite farm, adoring sellout crowds. Leaves little for the ballpark and staff — and the fans expect titles now."}];
+// 5 base-stadium blueprints — pricier parks seat more and draw better
+const STADIUM_BASES=[
+  {id:"refit",name:"Sandlot Refit",cost:400,cap:34000,fan:0,rev:0.8,desc:"Renovate the existing yard. Cheapest path — modest capacity and amenities, but it keeps your powder dry for the roster."},
+  {id:"heritage",name:"Heritage Field",cost:620,cap:38000,fan:3,rev:0.95,desc:"A classic brick-and-steel ballpark with old-school charm. Solid capacity, fan-friendly bones."},
+  {id:"skyline",name:"Skyline Park",cost:820,cap:42000,fan:6,rev:1.1,desc:"A modern downtown park with skyline views and strong revenue potential."},
+  {id:"cathedral",name:"Grand Cathedral",cost:1040,cap:46000,fan:9,rev:1.28,desc:"A showcase ballpark built to host All-Star Games. Big capacity, premium feel."},
+  {id:"colosseum",name:"The Colosseum",cost:1240,cap:52000,fan:12,rev:1.5,desc:"A jaw-dropping mega-park. Top capacity and revenue ceiling in the league — if you can afford it after the team."}];
+// optional ballpark upgrades — fan = happiness pts, rev = revenue weight, cap = added seats
+const STADIUM_UPGRADES=[
+  {id:"restrooms",name:"Modern restrooms",cost:35,fan:4,rev:0.2,desc:"No more 6th-inning lines. A small thing fans notice every game."},
+  {id:"comfortSeats",name:"Wider, padded general seating",cost:80,fan:6,rev:0.4,cap:-1000,desc:"More comfortable seats (slightly fewer of them) — the bread-and-butter fan experience."},
+  {id:"fanZones",name:"Fan activation zones",cost:95,fan:8,rev:0.6,desc:"Interactive plazas, games, photo spots. Families linger and spend."},
+  {id:"kidsZone",name:"Kids zone & playground",cost:50,fan:5,rev:0.3,desc:"Turns the ballpark into a family day out and grows the next generation of fans."},
+  {id:"clubLevel",name:"Luxury club level",cost:170,fan:4,rev:1.4,cap:1500,desc:"Climate-controlled club seating and suites — a major premium revenue driver."},
+  {id:"eliteSeats",name:"Elite Club seats (behind the plate)",cost:130,fan:3,rev:1.2,desc:"The best seats in the house, sold at the highest margins in baseball."},
+  {id:"premConcessions",name:"Premium concessions & local food hall",cost:65,fan:5,rev:0.9,desc:"Craft beer, local vendors, shorter lines — fans eat it up, literally."},
+  {id:"scoreboardBig",name:"Big HD scoreboard",cost:110,fan:6,rev:0.5,desc:"A crisp, large videoboard that makes the in-park experience pop."},
+  {id:"scoreboardMega",name:"Megaboard & ribbon displays",cost:200,fan:10,rev:0.8,desc:"A league-leading videoboard wrapped with ribbon screens. The wow factor."},
+  {id:"roof",name:"Retractable roof",cost:210,fan:5,rev:0.7,desc:"Never lose a date to weather. Protects your gate and your schedule."}];
+// team-side facilities — dev = player development, heal = injury reduction, happy = clubhouse morale, farm = prospect growth, coach = staff effectiveness
+const FACILITY_OPTS=[
+  {id:"clubhouse",name:"Players' clubhouse",cost:90,happy:1,dev:0.5,desc:"A first-class clubhouse keeps your stars happy and signing here."},
+  {id:"medical",name:"Sports medicine & recovery center",cost:110,heal:1,dev:0.3,desc:"State-of-the-art training and recovery — fewer and shorter injuries."},
+  {id:"batLab",name:"Hitting lab",cost:70,dev:0.7,desc:"Biomechanics and swing analytics that accelerate hitter development."},
+  {id:"pitchLab",name:"Pitching lab",cost:70,dev:0.7,desc:"Pitch-design and velocity programs that develop arms faster."},
+  {id:"academy",name:"Player development academy",cost:120,farm:1.2,desc:"A pipeline that turns raw prospects into big-leaguers. Supercharges the farm."},
+  {id:"travel",name:"Team travel luxuries",cost:60,happy:0.8,desc:"Charter upgrades and road comfort — happier, fresher players."},
+  {id:"coachOffices",name:"Coaches' offices & video suite",cost:50,coach:0.8,desc:"Gives your staff the tools to get the most out of the roster."}];
+const GM_TIERS=[
+  {tier:0,name:"Up-and-comer GM",cost:5,desc:"Cheap and hungry, but green. More misses, needs your oversight."},
+  {tier:1,name:"Solid operator",cost:12,desc:"A steady, competent baseball mind. Few disasters."},
+  {tier:2,name:"Proven executive",cost:22,desc:"A respected GM with a track record of smart moves."},
+  {tier:3,name:"Star architect",cost:38,desc:"A league-best executive. Finds value, nails the draft, fleeces rivals."}];
+const ANALYTICS_TIERS=[
+  {tier:0,name:"No analytics dept.",cost:0,desc:"Gut feel only. You're flying blind on value and projections."},
+  {tier:1,name:"Basic analytics",cost:8,desc:"A small group covering the essentials."},
+  {tier:2,name:"Advanced analytics",cost:22,desc:"A real R&D group — sharper draft and trade intel."},
+  {tier:3,name:"Elite analytics",cost:46,desc:"Industry-leading quants. The best edge money can buy."}];
+const SCOUT_TIERS=[
+  {tier:0,name:"Shoestring scouting",cost:0,desc:"A skeleton crew. You'll miss hidden gems."},
+  {tier:1,name:"Standard scouting",cost:7,desc:"League-average coverage of amateurs and pros."},
+  {tier:2,name:"Aggressive scouting",cost:16,desc:"Boots on the ground everywhere — better draft and trade targets."},
+  {tier:3,name:"Best-in-class scouting",cost:30,desc:"The deepest scouting network in baseball."}];
+const COACH_TIERS=[
+  {tier:0,name:"Journeyman skipper",cost:4,desc:"Fills the chair. Gets little extra out of the roster."},
+  {tier:1,name:"Respected manager",cost:11,desc:"A good clubhouse presence who wins close games."},
+  {tier:2,name:"Top-tier manager",cost:22,desc:"A proven winner who maximizes talent and October edge."},
+  {tier:3,name:"Hall-of-Fame manager",cost:36,desc:"A legend in the dugout — the best in-game and player-dev boost available."}];
+
+let _own=null;   // in-progress buy-in selections
+function ownInit(){_own={teamIdx:null,baseIdx:null,upgrades:[],facilities:[],gm:null,analytics:null,scout:null,coach:null};}
+function ownSpent(){if(!_own)return 0;let s=0;
+  if(_own.teamIdx!=null)s+=OWNER_TEAMS[_own.teamIdx].price;
+  if(_own.baseIdx!=null)s+=STADIUM_BASES[_own.baseIdx].cost;
+  _own.upgrades.forEach(id=>{const u=STADIUM_UPGRADES.find(x=>x.id===id);if(u)s+=u.cost;});
+  _own.facilities.forEach(id=>{const f=FACILITY_OPTS.find(x=>x.id===id);if(f)s+=f.cost;});
+  if(_own.gm!=null)s+=GM_TIERS[_own.gm].cost;
+  if(_own.analytics!=null)s+=ANALYTICS_TIERS[_own.analytics].cost;
+  if(_own.scout!=null)s+=SCOUT_TIERS[_own.scout].cost;
+  if(_own.coach!=null)s+=COACH_TIERS[_own.coach].cost;
+  return s;}
+function ownLeft(){return OWNER_BUDGET-ownSpent();}
+function ownBudgetBar(){const left=ownLeft(),pct=clamp(Math.round(left/OWNER_BUDGET*100),0,100);
+  const col=left<200?'var(--red)':left<700?'var(--gold)':'var(--green)';
+  return `<div class="panel" style="position:sticky;top:0;z-index:5;padding:10px 12px;border-color:${col}">
+    <div class="row" style="align-items:center;justify-content:space-between"><span style="font-weight:800">💰 Budget remaining</span>
+      <span style="font-weight:800;color:${col};font-size:18px">${fmtB(left)}</span></div>
+    <div class="favtrack" style="height:8px;margin-top:6px"><div class="favbar" style="width:${pct}%;background:${col}"></div></div>
+    <div class="small muted" style="margin-top:4px">Spent ${fmtB(ownSpent())} of ${fmtB(OWNER_BUDGET)} · whatever's left becomes your franchise's starting <b>cash reserve</b>.</div>
+  </div>`;}
+function ownStepBar(step){const steps=["Team","Ballpark","Upgrades","Facilities","Front office","Review"];
+  return `<div class="row" style="gap:5px;margin:8px 0;flex-wrap:wrap">${steps.map((s,i)=>`<span class="pill ${i===step?'gold':''}" style="${i===step?'':'opacity:.5'};padding:2px 9px">${i+1}. ${s}</span>`).join("")}</div>`;}
+
+function ownerStartSetup(){ownInit();
+  render(`<div class="hero">
+    <div class="pill gold" style="margin-bottom:10px">💼 OWNER MODE</div>
+    <h1>BUY THE BALLCLUB</h1>
+    <p class="sub" style="max-width:640px;margin:6px auto 0">You've got <b>${fmtB(OWNER_BUDGET)}</b> and a dream. Buy a Major League franchise, build and outfit the ballpark, staff your front office, then hand the baseball to your GM. Your job: <b>win titles, pack the house, grow the club's value</b>, and one day sell for the biggest profit you can — or pass a dynasty down to your heirs.</p></div>
+   <div class="panel center">
+     <p class="sub">This is the buy-in. Every dollar you spend now is an investment in the franchise's value — but spend too freely and you'll have no cash reserve to operate. Choose wisely.</p>
+     <button class="btn primary" style="font-size:16px;padding:13px 26px" onclick="ownerBuyTeam()">Start building → </button>
+     <div style="margin-top:8px"><button class="btn ghost sm" onclick="goHome()">← Back</button></div>
+   </div>`);}
+
+function ownerBuyTeam(){
+  const card=(t,i)=>{const sel=_own.teamIdx===i;const afford=t.price<=OWNER_BUDGET;
+    const dots=n=>'●'.repeat(Math.max(0,n))+'○'.repeat(Math.max(0,5-Math.max(0,n)));
+    return `<div class="panel2" style="border:2px solid ${sel?'var(--gold)':'var(--line)'};border-radius:11px;padding:13px;margin-bottom:10px;${afford?'':'opacity:.5'}">
+      <div class="row" style="align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="flex:1"><div style="font-weight:800;font-size:17px;color:var(--gold)">${t.name}</div>
+          <div class="small muted">${t.market} market · Tier ${t.tier+1}/5</div></div>
+        <div style="text-align:right"><div style="font-weight:800;font-size:19px">${fmtB(t.price)}</div><div class="small muted">purchase price</div></div>
+      </div>
+      <p class="small" style="margin:8px 0">${t.desc}</p>
+      <div class="grid2" style="gap:6px">
+        <div class="small">🧢 Roster: <b style="color:${t.rosterAdj>=3?'var(--green)':t.rosterAdj<=-3?'var(--red)':'var(--ink)'}">${t.rosterAdj>0?'+':''}${t.rosterAdj} OVR feel</b></div>
+        <div class="small">🌱 Farm: <b>${dots(t.farm+2)}</b></div>
+        <div class="small">📣 Fans: <b style="color:${fanColor(t.fan)}">${t.fan}/100</b></div>
+        <div class="small">🎟️ Market: <b>${dots(Math.round((t.mult-0.7)/0.2))}</b></div>
+      </div>
+      <button class="btn ${sel?'primary':''} sm" style="margin-top:9px;width:100%" onclick="(function(){_own.teamIdx=${i};ownerBuyTeam();})()">${sel?'✓ Selected — change?':'Buy this club'}</button>
+    </div>`;};
+  render(`${ownBudgetBar()}${ownStepBar(0)}
+    <div class="panel"><h3>🏟️ Pick a franchise to take over</h3>
+      <p class="sub">Five clubs are on the market. Pay up for a winner with a happy fan base and a stocked system, or grab a fixer-upper cheap and pocket the savings for the ballpark and roster.</p></div>
+    ${OWNER_TEAMS.map(card).join("")}
+    <div class="row" style="justify-content:space-between;margin-top:6px">
+      <button class="btn ghost" onclick="ownerStartSetup()">← Back</button>
+      <button class="btn primary" ${_own.teamIdx==null?'disabled style="opacity:.5"':''} onclick="${_own.teamIdx==null?'':'ownerStadiumBase()'}">Next: build the ballpark →</button>
+    </div>`);}
+
+function ownerStadiumBase(){
+  const card=(b,i)=>{const sel=_own.baseIdx===i;const afford=b.cost<=ownLeft()+( _own.baseIdx===i?b.cost:0);
+    return `<div class="panel2" style="border:2px solid ${sel?'var(--gold)':'var(--line)'};border-radius:11px;padding:13px;margin-bottom:10px;${afford?'':'opacity:.5'}">
+      <div class="row" style="align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="flex:1"><div style="font-weight:800;font-size:17px;color:var(--gold)">${b.name}</div>
+          <div class="small muted">Capacity ~${b.cap.toLocaleString()} · revenue ${'★'.repeat(Math.round(b.rev*3))}</div></div>
+        <div style="text-align:right"><div style="font-weight:800;font-size:19px">${fmtB(b.cost)}</div></div>
+      </div>
+      <p class="small" style="margin:8px 0">${b.desc}</p>
+      <button class="btn ${sel?'primary':''} sm" style="width:100%" ${afford?'':'disabled'} onclick="(function(){_own.baseIdx=${i};ownerStadiumBase();})()">${sel?'✓ Selected':'Build this ballpark'}</button>
+    </div>`;};
+  render(`${ownBudgetBar()}${ownStepBar(1)}
+    <div class="panel"><h3>🏗️ Choose your base ballpark</h3>
+      <p class="sub">Bigger parks seat more fans and unlock more revenue — but every dollar here is a dollar you can't spend on the team. You'll add premium upgrades next.</p></div>
+    ${STADIUM_BASES.map(card).join("")}
+    <div class="row" style="justify-content:space-between;margin-top:6px">
+      <button class="btn ghost" onclick="ownerBuyTeam()">← Back</button>
+      <button class="btn primary" ${_own.baseIdx==null?'disabled style="opacity:.5"':''} onclick="${_own.baseIdx==null?'':'ownerUpgrades()'}">Next: stadium upgrades →</button>
+    </div>`);}
+
+function ownerToggle(listKey,id,catalog,reRender){
+  const list=_own[listKey];const at=list.indexOf(id);
+  if(at>=0){list.splice(at,1);}
+  else{const item=catalog.find(x=>x.id===id);if(item.cost>ownLeft()){toast("Not enough budget for that.");return;}list.push(id);}
+  reRender();}
+function ownChecklist(catalog,listKey,reRenderName){
+  return catalog.map(it=>{const on=_own[listKey].includes(it.id);const afford=on||it.cost<=ownLeft();
+    const tags=[];if(it.fan)tags.push(`📣 +${it.fan}`);if(it.rev)tags.push(`💵 ${'★'.repeat(Math.round(it.rev*2))||'·'}`);
+    if(it.cap)tags.push(`🎟️ ${it.cap>0?'+':''}${it.cap}`);if(it.dev)tags.push(`📈 dev`);if(it.heal)tags.push(`🏥 health`);
+    if(it.farm)tags.push(`🌱 farm`);if(it.happy)tags.push(`😊 morale`);if(it.coach)tags.push(`🎓 staff`);
+    return `<div class="panel2" style="border:1.5px solid ${on?'var(--gold)':'var(--line)'};border-radius:10px;padding:11px;margin-bottom:8px;${afford?'':'opacity:.5'}">
+      <div class="row" style="align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="flex:1"><div style="font-weight:700">${on?'✓ ':''}${it.name}</div>
+          <p class="small muted" style="margin:3px 0 5px">${it.desc}</p>
+          <div class="small">${tags.join(' &nbsp; ')}</div></div>
+        <div style="text-align:right;min-width:78px"><div style="font-weight:800">${fmtB(it.cost)}</div>
+          <button class="btn ${on?'':'primary'} sm" style="margin-top:6px" ${afford?'':'disabled'} onclick="ownerToggle('${listKey}','${it.id}',${reRenderName==='ownerUpgrades'?'STADIUM_UPGRADES':'FACILITY_OPTS'},${reRenderName})">${on?'Remove':'Add'}</button></div>
+      </div></div>`;}).join("");}
+
+function ownerUpgrades(){
+  render(`${ownBudgetBar()}${ownStepBar(2)}
+    <div class="panel"><h3>✨ Premium ballpark upgrades</h3>
+      <p class="sub">Add as many as you can afford. Upgrades drive <b>fan happiness</b> (attendance & loyalty) and <b>revenue</b> (your future profit). Skip them to save for the roster — your call.</p></div>
+    ${ownChecklist(STADIUM_UPGRADES,'upgrades','ownerUpgrades')}
+    <div class="row" style="justify-content:space-between;margin-top:6px">
+      <button class="btn ghost" onclick="ownerStadiumBase()">← Back</button>
+      <button class="btn primary" onclick="ownerFacilities()">Next: team facilities →</button>
+    </div>`);}
+
+function ownerFacilities(){
+  render(`${ownBudgetBar()}${ownStepBar(3)}
+    <div class="panel"><h3>🏋️ Team facilities</h3>
+      <p class="sub">Invest in the baseball side: facilities that <b>develop players faster</b>, keep them <b>healthy and happy</b>, and grow your <b>farm system</b>. These compound over the years.</p></div>
+    ${ownChecklist(FACILITY_OPTS,'facilities','ownerFacilities')}
+    <div class="row" style="justify-content:space-between;margin-top:6px">
+      <button class="btn ghost" onclick="ownerUpgrades()">← Back</button>
+      <button class="btn primary" onclick="ownerFrontOffice()">Next: hire the front office →</button>
+    </div>`);}
+
+function ownTierPicker(label,tiers,key){
+  return `<div class="panel"><h3>${label}</h3>
+    ${tiers.map((t,i)=>{const sel=_own[key]===i;const afford=sel||t.cost<=ownLeft();
+      return `<div class="panel2" style="border:1.5px solid ${sel?'var(--gold)':'var(--line)'};border-radius:10px;padding:10px;margin-bottom:7px;${afford?'':'opacity:.5'}">
+        <div class="row" style="align-items:center;justify-content:space-between;gap:10px">
+          <div style="flex:1"><div style="font-weight:700">${sel?'✓ ':''}${t.name} <span class="small muted">${t.cost?fmtB(t.cost):'free'}</span></div>
+            <p class="small muted" style="margin:3px 0 0">${t.desc}</p></div>
+          <button class="btn ${sel?'':'primary'} sm" ${afford?'':'disabled'} onclick="(function(){_own.${key}=${i};ownerFrontOffice();})()">${sel?'Chosen':'Hire'}</button>
+        </div></div>`;}).join("")}</div>`;}
+function ownerFrontOffice(){
+  const ready=_own.gm!=null&&_own.analytics!=null&&_own.scout!=null&&_own.coach!=null;
+  render(`${ownBudgetBar()}${ownStepBar(4)}
+    <div class="panel center"><h3>🧠 Build your front office</h3>
+      <p class="sub">Hire the people who'll actually run your baseball operation. You'll lean on them — a sharper GM and analytics group make smarter moves you can trust (and rarely need to veto).</p></div>
+    ${ownTierPicker('General Manager',GM_TIERS,'gm')}
+    ${ownTierPicker('Analytics department',ANALYTICS_TIERS,'analytics')}
+    ${ownTierPicker('Scouting budget',SCOUT_TIERS,'scout')}
+    ${ownTierPicker('Head coach',COACH_TIERS,'coach')}
+    <div class="row" style="justify-content:space-between;margin-top:6px">
+      <button class="btn ghost" onclick="ownerFacilities()">← Back</button>
+      <button class="btn primary" ${ready?'':'disabled style="opacity:.5"'} onclick="${ready?'ownerReview()':''}">Review &amp; confirm →</button>
+    </div>`);}
+
+function ownerReview(){
+  const t=OWNER_TEAMS[_own.teamIdx],b=STADIUM_BASES[_own.baseIdx];
+  const ups=_own.upgrades.map(id=>STADIUM_UPGRADES.find(x=>x.id===id));
+  const facs=_own.facilities.map(id=>FACILITY_OPTS.find(x=>x.id===id));
+  const gm=GM_TIERS[_own.gm],an=ANALYTICS_TIERS[_own.analytics],sc=SCOUT_TIERS[_own.scout],co=COACH_TIERS[_own.coach];
+  const line=(k,v)=>`<div class="row" style="justify-content:space-between;padding:3px 0"><span class="small">${k}</span><span class="small" style="font-weight:700">${v}</span></div>`;
+  const der=ownerDerive();
+  render(`${ownBudgetBar()}${ownStepBar(5)}
+    <div class="panel"><h3>📋 Your franchise</h3>
+      ${line('🏟️ Club',`${t.name} — ${fmtB(t.price)}`)}
+      ${line('🏗️ Ballpark',`${b.name} (~${b.cap.toLocaleString()}) — ${fmtB(b.cost)}`)}
+      ${line('✨ Upgrades',ups.length?ups.map(u=>u.name).join(', '):'—')}
+      ${line('🏋️ Facilities',facs.length?facs.map(f=>f.name).join(', '):'—')}
+      ${line('🧠 GM',`${gm.name} — ${fmtB(gm.cost)}`)}
+      ${line('📊 Analytics',`${an.name} — ${fmtB(an.cost)}`)}
+      ${line('🔭 Scouting',`${sc.name} — ${fmtB(sc.cost)}`)}
+      ${line('🎓 Head coach',`${co.name} — ${fmtB(co.cost)}`)}
+    </div>
+    <div class="panel"><h3>📈 Opening day outlook</h3>
+      <div class="grid4">
+        <div class="kpi"><div class="big" style="color:${fanColor(der.fan)}">${der.fan}</div><div class="lbl">Fan happiness</div></div>
+        <div class="kpi"><div class="big">${fmtB(der.clubValue)}</div><div class="lbl">Est. club value</div></div>
+        <div class="kpi"><div class="big" style="color:${ownLeft()<150?'var(--red)':'var(--ink)'}">${fmtB(ownLeft())}</div><div class="lbl">Cash reserve</div></div>
+        <div class="kpi"><div class="big">${der.gmStars}</div><div class="lbl">Front office</div></div>
+      </div>
+      <p class="small muted" style="margin-top:8px">Your cash reserve carries into the franchise to cover payroll and operations (the money game arrives in the next update). Spend it all now and you'll start cash-strapped.</p>
+    </div>
+    <div class="center" style="margin-top:6px">
+      <button class="btn primary" style="font-size:16px;padding:13px 28px" onclick="ownerConfirm()">✍️ Sign the papers &amp; take over →</button>
+      <div style="margin-top:8px"><button class="btn ghost sm" onclick="ownerFrontOffice()">← Back</button></div>
+    </div>`);}
+
+// derive the franchise modifiers from the buy-in choices
+function ownerDerive(){
+  const t=OWNER_TEAMS[_own.teamIdx],b=STADIUM_BASES[_own.baseIdx];
+  const ups=_own.upgrades.map(id=>STADIUM_UPGRADES.find(x=>x.id===id));
+  const facs=_own.facilities.map(id=>FACILITY_OPTS.find(x=>x.id===id));
+  const gm=GM_TIERS[_own.gm],an=ANALYTICS_TIERS[_own.analytics],sc=SCOUT_TIERS[_own.scout],co=COACH_TIERS[_own.coach];
+  let fan=t.fan+b.fan+ups.reduce((s,u)=>s+(u.fan||0),0)+facs.reduce((s,f)=>s+(f.happy||0)*2,0);
+  fan=clamp(Math.round(fan),5,100);
+  const capacity=b.cap+ups.reduce((s,u)=>s+(u.cap||0),0);
+  const revWeight=b.rev+ups.reduce((s,u)=>s+(u.rev||0),0);
+  const revPerGame=Math.round(capacity/1000*(0.9+revWeight*0.18)*t.mult*10)/10;   // $M/game potential (next-pass finances)
+  const devBonus=facs.reduce((s,f)=>s+(f.dev||0),0)+co.tier*0.4;
+  const farmBonus=facs.reduce((s,f)=>s+(f.farm||0),0)+sc.tier*0.5;
+  const coachBonus=co.tier+facs.reduce((s,f)=>s+(f.coach||0),0);
+  const healBonus=facs.reduce((s,f)=>s+(f.heal||0),0);
+  const spend=ownSpent();
+  // initial valuation: what you paid + goodwill from a nice park, happy fans, and a sharp front office
+  const clubValue=Math.round(t.price + b.cost*0.7 + ups.reduce((s,u)=>s+u.cost*0.6,0) + facs.reduce((s,f)=>s+f.cost*0.5,0) + fan*4 + (gm.tier+an.tier+co.tier)*25);
+  const gmStars='★'.repeat(1+gm.tier)+'☆'.repeat(3-gm.tier);
+  return {fan,capacity,revWeight,revPerGame,devBonus,farmBonus,coachBonus,healBonus,clubValue,spend,
+    gmTier:gm.tier,analyticsTier:an.tier,scoutTier:sc.tier,coachTier:co.tier,gmStars,
+    market:t.market,marketMult:t.mult,rosterAdj:t.rosterAdj,farmTier:t.farm};
+}
+
+function ownerConfirm(){
+  const t=OWNER_TEAMS[_own.teamIdx];const der=ownerDerive();const cashReserve=ownLeft();
+  newGame(t.name,'survivor');           // build a baseline endless franchise (reuses the full season engine)
+  applyOwnerSetup(der,cashReserve);
+  startOwnerYear();
+}
+// scale the inherited club to the tier you bought, then attach the owner layer
+function applyOwnerSetup(der,cashReserve){
+  // roster feel: nudge the starters' OVR toward the tier you paid for
+  const adj=der.rosterAdj;
+  if(adj!==0){G.roster.filter(p=>p.loc==="mlb").forEach(p=>{p.ovr=clamp(p.ovr+ri(Math.min(0,adj),Math.max(0,adj)),40,99);p.pot=Math.max(p.pot,p.ovr);});}
+  // farm depth scales with the tier and your scouting/academy investment
+  const extraFarm=Math.max(0,der.farmTier)+Math.round(der.farmBonus);
+  for(let i=0;i<extraFarm;i++){const p=ficProspect();p.loc="farm";p.src="original";G.farm.push(p);}
+  if(der.farmTier<0&&G.farm.length>1)G.farm.splice(0,1);   // run-down club: a thinner system
+  G.fanFavor=der.fan;
+  // steer the existing development engine with the owner's investments (scouting / development / coaching)
+  const sPts=1+der.scoutTier+der.farmBonus, dPts=1+der.devBonus, cPts=1+der.coachBonus, tot=sPts+dPts+cPts;
+  G.resources={scouting:sPts/tot,development:dPts/tot,coaching:cPts/tot};
+  G.owner={team:G.teamName,market:der.market,marketMult:der.marketMult,
+    capacity:der.capacity,revPerGame:der.revPerGame,revWeight:der.revWeight,
+    fanStart:der.fan,gmTier:der.gmTier,analyticsTier:der.analyticsTier,scoutTier:der.scoutTier,coachTier:der.coachTier,
+    devBonus:der.devBonus,farmBonus:der.farmBonus,coachBonus:der.coachBonus,healBonus:der.healBonus,
+    clubValue:der.clubValue,startValue:der.clubValue,cashReserve:cashReserve,totalSpent:der.spend+0,
+    boughtFor:OWNER_TEAMS[_own.teamIdx].price,founded:1,lifespanYears:50,
+    // --- Phase 2: finances + the GM you steer ---
+    ticketTier:3,concessionTier:2,merchTier:2,sponsors:[],
+    gmName:gmFirstName()+' '+gmLastName(),gmMorale:72,gmGradeLog:[],
+    mandate:'contend',payrollBudget:null,directives:{protectProspects:false,splurge:false,getYounger:false,pitchingFirst:false},
+    history:[]};
+  // opening valuation from a real revenue estimate (keeps the number honest vs the season-end books)
+  const rev0=ownerRevenue();G.owner.clubValue=ownerValuation(rev0);G.owner.startValue=G.owner.clubValue;
+  G.survStage=1;G.stance='compete';G.agreedBar=null;
+  saveGame();
+}
+function startOwnerYear(){
+  if(G.draftOrderYear!==G.year)computeDraftOrder();
+  G.survStage=1;G.stance='compete';G.agreedBar=null;
+  G._ownerMsg=ownerSeasonMsg();
+  saveGame();
+  // a brief owner preseason note, then hand the baseball to the GM (build phase)
+  render(`${ownerHeader()}
+    <div class="panel center" style="border-color:var(--gold)">
+      <div class="pill gold">💼 OWNER · SEASON ${G.year}</div>
+      <h2 style="margin:6px 0">${G.year>=G.owner.lifespanYears?'Your final season at the helm':'A new season begins'}</h2>
+      <p class="sub">${G._ownerMsg}</p>
+      ${G.year>=G.owner.lifespanYears?`<p class="small" style="color:var(--gold)">You're 50 years in. After this season the club passes to your heirs — make it count, or sell now for the legacy profit.</p>`:''}
+    </div>
+    <div class="center"><button class="btn primary" style="font-size:16px;padding:12px 26px" onclick="ownerOffice()">Into the owner's office →</button></div>`);}
+function ownerSeasonMsg(){
+  const v=G.owner.clubValue,paid=G.owner.totalSpent+G.owner.boughtFor;
+  const f=fanVal();
+  if(G.year===1)return `You own a ballclub. The fans (${Math.round(f)}/100 happy) are watching your first moves closely. Win, fill the seats, and grow what you built.`;
+  if(f<35)return `The fan base is restless — empty seats hurt the bottom line. A winner would change the mood fast.`;
+  if(v>paid*1.3)return `The franchise has appreciated nicely since you bought in. Keep winning and the valuation keeps climbing.`;
+  return `Another season to chase a title and build the brand. Your GM has a plan — keep an eye on it.`;
+}
+function ownerHeader(){const o=G.owner||{};const v=o.clubValue||0;
+  return `<div style="margin-bottom:8px">
+    <div class="row" style="align-items:center;margin-bottom:4px">
+      <div style="flex:2"><h2 style="margin-bottom:2px">${homeBtn()}${G.teamName} <span class="pill gold" style="padding:0 6px;font-size:10px;vertical-align:middle">💼 OWNER</span></h2>
+        <span class="sub">${G.league||''} ${G.div||''} · Season ${G.year}${o.lifespanYears?'/'+o.lifespanYears:''} &bull; payroll $${payroll(G.roster)}M</span></div>
+      <div style="flex:1;text-align:right"><button class="btn ghost sm" onclick="openFranchise()">📜 Franchise</button></div>
+    </div>
+    <div class="grid4" style="margin-top:4px">
+      <div class="kpi" style="padding:7px"><div class="big" style="font-size:16px">${fmtB(v)}</div><div class="lbl">Club value</div></div>
+      <div class="kpi" style="padding:7px"><div class="big" style="font-size:16px;color:${fanColor(fanVal())}">${Math.round(fanVal())}</div><div class="lbl">Fan happiness</div></div>
+      <div class="kpi" style="padding:7px"><div class="big" style="font-size:16px">${fmtB(o.cashReserve||0)}</div><div class="lbl">Cash reserve</div></div>
+      <div class="kpi" style="padding:7px"><div class="big" style="font-size:16px">${G.champions||0}🏆</div><div class="lbl">Titles</div></div>
+    </div>
+  </div>`;}
 
 /* ---------- TITLE ---------- */
 const WAR_PUNS=["Saving Private Ryans","Apocalypse Mounders","Full Metal Jackets","The Hurt Lockers","Band of Batters","Inglourious Bashers","Enemy at the Plates","We Were Sluggers","Black Hawk Grounders","A Pitch Too Far","The Longest Inning","Hacksaw Swingers","Lone Sluggers","Midway Mashers","Fury Fastballs","Dunkirk Dingers","Platoon Splitters","Where Eagles Bunt","Glory Gloves","Pearl Harbor Hurlers","The Thin Red Line Drives","Das Bunt","Casualties of Curveball","Kelly's Closers","Tora Tora Tag-ups","Bridge Over the River Strikeout"];
 const warPun=()=>pick(WAR_PUNS);
 function screenTitle(){
   render(`<div class="hero">
-     <div class="pill gold" style="margin-bottom:10px">⚾ REBUILD SIMULATOR · v8</div>
+     <div class="pill gold" style="margin-bottom:10px">⚾ REBUILD SIMULATOR · v9</div>
      <h1>TANK COMMANDER</h1>
      <p class="sub" style="max-width:600px;margin:6px auto 0">You take over a club that won it all four years ago — but the
        stars have aged, the farm's gone bare, and the team's stuck at a crossroads. <b>Tear it down, stockpile
@@ -1241,6 +1583,11 @@ function screenTitle(){
          <p class="small muted" style="margin:4px 0 8px">Endless. Stay in the owner's favor as long as you can — contend, manage the money, ride the cycle of windows and rebuilds. Score keeps climbing until you're fired.</p>
          <button class="btn primary" onclick="(function(){newGame(document.getElementById('tname').value.trim(),'survivor');startSurvivorYear();})()">Take the job →</button>
        </div>
+     </div>
+     <div class="panel2" style="border:1px solid var(--gold);border-radius:10px;padding:12px;margin-top:10px;background:linear-gradient(180deg,rgba(201,162,39,0.08),transparent)">
+       <div style="font-weight:800;color:var(--gold)">💼 Owner Mode <span class="pill" style="padding:0 6px;background:#3a2a55;color:#d9b3ff;border:1px solid #6f4fa0">NEW · ALPHA</span></div>
+       <p class="small muted" style="margin:4px 0 8px">Sit in the owner's box. Spend $4B to <b>buy a club and build a ballpark</b>, hire your front office, then steer your GM, keep the fans happy, and grow the franchise's value. Endless — sell for profit or build a 50-year dynasty.</p>
+       <button class="btn primary" onclick="ownerStartSetup()">💰 Buy a team →</button>
      </div>
      <div style="margin-top:10px">
        ${localStorage.getItem(SAVE)?`<button class="btn ghost" onclick="(function(){if(loadGame()){if(G.mode==='survivor'&&G.survStage===0){startSurvivorYear();}else goPhase(G.phase||0);}else toast('No save');})()">↻ Continue</button>`:""}
@@ -1266,7 +1613,7 @@ function runsPanel(){
   const row=r=>`<div class="panel2" style="border:1px solid ${r.id===activeId?'var(--gold)':'var(--line)'};border-radius:10px;padding:10px;margin-bottom:7px;display:flex;align-items:center;gap:8px">
      <div style="flex:1;min-width:0">
        <div style="font-weight:700">${(r.name||'Untitled').replace(/</g,'&lt;')} ${r.id===activeId?'<span class="pill gold" style="padding:0 5px;font-size:9px">CURRENT</span>':''}${r.fired?' <span class="pill red" style="padding:0 5px;font-size:9px">FIRED</span>':''}</div>
-       <div class="small muted">${r.mode==='survivor'?'Career Mode':'6-Year Sprint'} · ${r.league||''} ${r.div||''} · ${r.mode==='survivor'?'Season '+r.year:'Year '+r.year+'/6'} · ${r.mode==='survivor'?('score '+(r.score||0)):((r.champions||0)+'× 🏆')} · ${ago(r.updated)}</div>
+       <div class="small muted">${r.owner?'💼 Owner Mode':r.mode==='survivor'?'Career Mode':'6-Year Sprint'} · ${r.league||''} ${r.div||''} · ${r.mode==='survivor'?'Season '+r.year:'Year '+r.year+'/6'} · ${r.owner?(fmtB(r.clubValue||0)+' value'):r.mode==='survivor'?('score '+(r.score||0)):((r.champions||0)+'× 🏆')} · ${ago(r.updated)}</div>
      </div>
      <button class="btn sm primary" onclick="resumeRun('${r.id}')">Resume</button>
      <button class="btn sm ghost" title="Delete this run" onclick="(function(){if(confirm('Delete this run permanently? This cannot be undone.'))deleteRun('${r.id}');})()">✕</button>
@@ -1922,7 +2269,7 @@ function promoteService(pid){const p=G.farm.find(x=>x.id===pid);if(!p)return;G.f
   p.loc="mlb";if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;p._svcHold=true;p.salary=salaryFor(p.ovr,p.mlbYears);G.roster.push(p);
   toast(`${p.name} called up — service-time hold (no year burned)`);screenServiceTime();}
 function afterServiceTime(){
-  if(G.mode==="survivor"&&G.year>=2&&!G._mediaAnswered&&Math.random()<0.6){
+  if(G.mode==="survivor"&&!G.owner&&G.year>=2&&!G._mediaAnswered&&Math.random()<0.6){
     G.seasonStage=1.5;G._mediaQ=pickMediaQuestion();G._mediaAnswered=false;saveGame();return screenMedia();
   }
   if(G.hard){G.seasonStage=0.7;saveGame();return screenEarlyBreak();}   // Hard: an early roster check before the All-Star break
@@ -2215,8 +2562,8 @@ function weakStartSpots(){   // count starting spots that are empty or filled by
 function doSeason(){
   _dlMode=false;
   const reg=simulateRegularSeason();
-  if(reg.madePO){G.seasonStage=2.8;saveGame();return screenPlayoffRoster();}   // made the playoffs → set your October roster first
-  finishSeason();   // missed October → straight to the bracket + results
+  if(reg.madePO&&!G.owner){G.seasonStage=2.8;saveGame();return screenPlayoffRoster();}   // made the playoffs → set your October roster first (the GM handles it in Owner Mode)
+  finishSeason();   // missed October (or owner mode) → straight to the bracket + results
 }
 // the player reached the postseason — let them set their playoff roster before the bracket runs
 function screenPlayoffRoster(){_rosterMode='playoff';G.phase=1;screenRoster();}
@@ -2297,7 +2644,434 @@ function reportCardPanel(){
       <div><div class="sectlbl" style="margin-top:0">Pitching</div>${PIT_ATTRS.map(row).join("")}</div>
     </div></div>`;
 }
+/* ===========================================================
+   OWNER MODE — Phase 2: the GM you steer (office, mandate, auto-moves, veto)
+   ============================================================ */
+const GM_FIRST=["Marcus","Eli","Dean","Sol","Ramon","Bryce","Cole","Nate","Vance","Gideon","Royce","Hank","Lou","Desmond","Ari","Knox"];
+const GM_LAST=["Calloway","Renner","Okafor","Brandt","Vesely","Mancini","Holloway","Sato","Delgado","Ferraro","Quill","Underwood","Boone","Marsh","Ellison","Pryce"];
+function gmFirstName(){return pick(GM_FIRST);}
+function gmLastName(){return pick(GM_LAST);}
+const MANDATES={
+  winNow:{name:"🏆 Win Now",desc:"Go all-in. The GM trades prospects and spends for established talent — flags get expected.",bar:96},
+  contend:{name:"⚖️ Contend",desc:"Compete every year. Balanced moves, sustainable payroll, no fire sales.",bar:86},
+  retool:{name:"🌱 Retool",desc:"Reload on the fly — sell short-term vets, keep the young core, stay flexible.",bar:75},
+  rebuild:{name:"🧨 Rebuild",desc:"Tear it down. Trade veterans for prospects and picks; payroll comes way down.",bar:62}};
+const SPONSOR_CATALOG=[
+  {type:'naming',name:'Stadium naming rights',rev:38,fanCost:7,desc:"Sell the ballpark's name. Huge money — but purists grumble."},
+  {type:'patch',name:'Jersey patch sponsor',rev:20,fanCost:4,desc:"A corporate patch on the uniform. Easy revenue, a mild eye-roll."},
+  {type:'outfield',name:'Outfield LED ad ring',rev:13,fanCost:2,desc:"Rotating digital ads ringing the field."},
+  {type:'concourse',name:'Concourse brand activations',rev:11,fanCost:1,desc:"Sponsored fan zones along the concourse."},
+  {type:'radio',name:'Flagship radio network',rev:9,fanCost:0,desc:"A multi-year local broadcast deal. Fans don't mind this one."}];
+
+// ---------- the Owner's Office (set the plan, prices, and deals) ----------
+function ownerBudgetPresets(){const rev=ownerRevenue().total;return [
+  {key:'frugal',name:'Frugal',cap:Math.max(70,Math.round(rev*0.40)),desc:'Run lean, bank the profit.'},
+  {key:'balanced',name:'Balanced',cap:Math.max(110,Math.round(rev*0.55)),desc:'Spend in line with revenue.'},
+  {key:'aggressive',name:'Aggressive',cap:Math.max(170,Math.round(rev*0.74)),desc:'Push payroll to chase wins.'},
+  {key:'blank',name:'Blank check',cap:Math.max(340,Math.round(rev*0.98)),desc:'Whatever it takes — tax be damned.'}];}
+function genSponsorOffers(){
+  if(G.owner._sponsorYear===G.year)return;
+  G.owner._sponsorYear=G.year;
+  const haveT=new Set((G.owner.sponsors||[]).map(s=>s.type));
+  const avail=SPONSOR_CATALOG.filter(s=>!haveT.has(s.type));
+  for(let i=avail.length-1;i>0;i--){const j=ri(0,i);[avail[i],avail[j]]=[avail[j],avail[i]];}
+  G.owner._sponsorOffers=avail.slice(0,Math.min(3,avail.length)).map(s=>Object.assign({},s));
+}
+function acceptSponsor(type){
+  const off=(G.owner._sponsorOffers||[]).find(s=>s.type===type);if(!off)return;
+  (G.owner.sponsors=G.owner.sponsors||[]).push({type:off.type,name:off.name,rev:off.rev});
+  if(off.fanCost)fanChange(-off.fanCost,`Sold ${off.name.toLowerCase()} — some fans grumbled`);
+  G.owner._sponsorOffers=G.owner._sponsorOffers.filter(s=>s.type!==type);
+  saveGame();ownerOffice();
+}
+function setMandate(m){G.owner.mandate=m;const presets=ownerBudgetPresets();
+  // nudge the default budget toward the mandate when the owner hasn't overridden it
+  const map={winNow:'aggressive',contend:'balanced',retool:'balanced',rebuild:'frugal'};
+  G.owner.payrollBudget=(presets.find(p=>p.key===map[m])||presets[1]).cap;ownerOffice();}
+function setBudget(cap){G.owner.payrollBudget=cap;ownerOffice();}
+function toggleDirective(k){G.owner.directives[k]=!G.owner.directives[k];ownerOffice();}
+function setTicket(i){G.owner.ticketTier=i;ownerOffice();}
+function setConc(i){G.owner.concessionTier=i;ownerOffice();}
+function setMerch(i){G.owner.merchTier=i;ownerOffice();}
+function ownerOffice(){
+  G.ownerStage='office';G.phase=0;
+  if(G.owner.payrollBudget==null){const pp=ownerBudgetPresets();G.owner.payrollBudget=pp[1].cap;}
+  genSponsorOffers();saveGame();
+  const o=G.owner,rev=ownerRevenue(),exp=ownerExpenses(),pay=payroll(G.roster),proj=warToWins(teamWAR(G.roster));
+  const mandOpt=Object.keys(MANDATES).map(k=>{const m=MANDATES[k],sel=o.mandate===k;
+    return `<div class="panel2" style="border:1.5px solid ${sel?'var(--gold)':'var(--line)'};border-radius:10px;padding:10px;flex:1;min-width:150px;cursor:pointer" onclick="setMandate('${k}')">
+      <div style="font-weight:800;${sel?'color:var(--gold)':''}">${sel?'✓ ':''}${m.name}</div>
+      <p class="small muted" style="margin:3px 0 0">${m.desc}</p></div>`;}).join("");
+  const presets=ownerBudgetPresets();
+  const budOpt=presets.map(p=>{const sel=Math.abs((o.payrollBudget||0)-p.cap)<1;
+    return `<button class="btn ${sel?'primary':''} sm" onclick="setBudget(${p.cap})" title="${p.desc}">${p.name} · $${p.cap}M</button>`;}).join(" ");
+  const dir=[['protectProspects','🛡️ Protect top prospects','GM won\'t trade your best farm talent.'],
+    ['splurge','💰 Splurge on free agents','Prioritize signing the best available bats/arms.'],
+    ['getYounger','🌱 Get younger','Favor youth; move aging veterans.'],
+    ['pitchingFirst','⚾ Pitching first','Address the rotation/bullpen before hitting.']];
+  const dirHtml=dir.map(([k,lbl,d])=>{const on=o.directives[k];
+    return `<div class="panel2" style="border:1.5px solid ${on?'var(--gold)':'var(--line)'};border-radius:9px;padding:8px;cursor:pointer" onclick="toggleDirective('${k}')">
+      <div style="font-weight:700">${on?'✓ ':''}${lbl}</div><p class="small muted" style="margin:2px 0 0">${d}</p></div>`;}).join("");
+  const tix=TICKET_TIERS.map((t,i)=>i?`<button class="btn ${o.ticketTier===i?'primary':''} sm" onclick="setTicket(${i})">${t.name} $${t.price}</button>`:'').join(" ");
+  const con=CONCESSION_TIERS.map((t,i)=>i?`<button class="btn ${o.concessionTier===i?'primary':''} sm" onclick="setConc(${i})">${t.name} $${t.perCap}</button>`:'').join(" ");
+  const mer=MERCH_TIERS.map((t,i)=>i?`<button class="btn ${o.merchTier===i?'primary':''} sm" onclick="setMerch(${i})">${t.name} $${t.perCap}</button>`:'').join(" ");
+  const offers=(o._sponsorOffers||[]);
+  const sponsorHtml=offers.length?offers.map(s=>`<div class="panel2" style="border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:7px">
+      <div class="row" style="align-items:center;justify-content:space-between;gap:8px">
+        <div style="flex:1"><div style="font-weight:700">${s.name} <span class="small" style="color:var(--green)">+$${s.rev}M/yr</span>${s.fanCost?` <span class="small" style="color:var(--red)">−${s.fanCost} fans</span>`:''}</div>
+          <p class="small muted" style="margin:2px 0 0">${s.desc}</p></div>
+        <button class="btn primary sm" onclick="acceptSponsor('${s.type}')">Accept</button></div></div>`).join(""):'<p class="small muted">No new sponsorship offers this year.</p>';
+  render(`${ownerHeader()}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">💼 OWNER'S OFFICE · SEASON ${G.year}</div>
+      <p class="sub" style="margin-top:6px">Set the plan and the prices, then hand the baseball to <b>GM ${o.gmName}</b>. Your roster currently projects to <b>${proj} wins</b> on a <b>$${pay}M</b> payroll.</p></div>
+    <div class="panel"><h3>📈 The books (projected this season)</h3>
+      <div class="grid4">
+        <div class="kpi"><div class="big" style="font-size:16px;color:var(--green)">$${rev.total}M</div><div class="lbl">Revenue</div></div>
+        <div class="kpi"><div class="big" style="font-size:16px;color:var(--red)">$${exp.total}M</div><div class="lbl">Expenses</div></div>
+        <div class="kpi"><div class="big" style="font-size:16px;color:${(rev.total-exp.total)>=0?'var(--green)':'var(--red)'}">${(rev.total-exp.total)>=0?'+':''}$${Math.round((rev.total-exp.total)*10)/10}M</div><div class="lbl">Net income</div></div>
+        <div class="kpi"><div class="big" style="font-size:16px">${rev.att.toLocaleString()}</div><div class="lbl">Fans/game</div></div>
+      </div></div>
+    <div class="panel"><div class="row" style="align-items:center;justify-content:space-between"><h3 style="margin:0">🧠 GM ${o.gmName} <span class="small muted">${'★'.repeat(o.gmTier+1)}${'☆'.repeat(3-o.gmTier)}</span></h3>
+        <button class="btn ghost sm" onclick="ownerReplaceGM()">🔄 Replace GM</button></div>
+      <div class="row" style="align-items:center;gap:10px;margin-top:6px"><span class="small muted" style="flex:0 0 54px">Morale</span><div style="flex:1">${(function(){const m=o.gmMorale||72;return `<div class="favtrack" style="height:8px"><div class="favbar" style="width:${m}%;background:${m>=66?'var(--green)':m>=40?'var(--gold)':'var(--red)'}"></div></div>`;})()}</div><span class="small">${o.gmMorale||72}</span></div>
+      ${o._gmGrade?`<p class="small muted" style="margin:6px 0 0">Last season he earned a <b style="color:${o._gmGrade[0]==='A'?'var(--green)':o._gmGrade==='D'?'var(--red)':'var(--gold)'}">${o._gmGrade}</b> against your ${MANDATES[o.mandate].name} mandate.</p>`:''}
+      ${o._feedbackYear===G.year?'<p class="small muted" style="margin:5px 0 0">You\'ve spoken with him this winter.</p>':`<div class="row" style="gap:8px;margin-top:7px"><button class="btn sm" onclick="gmFeedback('praise')">👍 Praise him</button><button class="btn sm" onclick="gmFeedback('pressure')">📣 Apply pressure</button></div>`}</div>
+    <div class="panel"><h3>🎯 GM mandate</h3><p class="sub" style="margin:2px 0 8px">Tell your GM how to operate this offseason.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:stretch">${mandOpt}</div></div>
+    <div class="panel"><h3>💵 Authorized payroll budget <span class="small muted">— the GM won't exceed this</span></h3>
+      <div style="margin:6px 0">${budOpt}</div>
+      <p class="small muted">Set to <b>$${o.payrollBudget}M</b>. Current payroll is $${pay}M. Set it below to make the GM shed salary, above to let him spend.</p></div>
+    <div class="panel"><h3>📋 Directives</h3><div class="grid2" style="gap:8px">${dirHtml}</div></div>
+    <div class="panel"><h3>🎟️ Pricing <span class="small muted">— higher prices earn more per fan but thin the crowd & cool the fan base</span></h3>
+      <div style="margin-bottom:4px"><span class="small muted">Tickets:</span><br>${tix}</div>
+      <div style="margin-top:8px"><span class="small muted">Concessions:</span><br>${con}</div>
+      <div style="margin-top:8px"><span class="small muted">Merchandise:</span><br>${mer}</div>
+      <p class="small muted" style="margin-top:6px">At these prices: ~<b>${ownerAttendance().toLocaleString()}</b> fans/game · gate+concessions+merch ≈ <b>$${Math.round((rev.gate+rev.conc+rev.merch)*10)/10}M</b>.</p></div>
+    <div class="panel"><h3>🤝 Sponsorship opportunities</h3>${sponsorHtml}
+      ${(o.sponsors||[]).length?`<p class="small muted" style="margin-top:6px">Active deals: ${o.sponsors.map(s=>s.name+' (+$'+s.rev+'M)').join(', ')}</p>`:''}</div>
+    <div class="center" style="margin-top:8px"><button class="btn primary" style="font-size:16px;padding:12px 26px" onclick="gmOffseason()">Hand it to GM ${o.gmName} → ⚾</button></div>`);
+}
+
+function gmFeedback(kind){const o=G.owner;if(o._feedbackYear===G.year)return;o._feedbackYear=G.year;
+  if(kind==='praise'){o.gmMorale=clamp((o.gmMorale||72)+6,0,100);toast(`GM ${o.gmName} appreciates the vote of confidence.`);}
+  else{o.gmMorale=clamp((o.gmMorale||72)-3,0,100);toast(`You put GM ${o.gmName} on notice.`);}
+  saveGame();ownerOffice();}
+function ownerReplaceGM(){
+  const o=G.owner;
+  render(`${ownerHeader()}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🔄 HIRE A NEW GM</div>
+      <p class="sub" style="margin-top:6px">Buy out ${o.gmName} and bring in your own person. Their salary comes out of your cash reserve (${fmtB(o.cashReserve||0)} on hand). A sharper GM makes smarter moves and needs fewer vetoes.</p></div>
+    ${GM_TIERS.map((t,i)=>`<div class="panel2" style="border:1.5px solid ${o.gmTier===i?'var(--gold)':'var(--line)'};border-radius:10px;padding:11px;margin-bottom:8px">
+      <div class="row" style="align-items:center;justify-content:space-between;gap:10px">
+        <div style="flex:1"><div style="font-weight:700">${'★'.repeat(i+1)}${'☆'.repeat(3-i)} ${t.name} <span class="small muted">$${t.cost}M/yr</span>${o.gmTier===i?' <span class="pill gold" style="padding:0 5px;font-size:9px">CURRENT</span>':''}</div>
+          <p class="small muted" style="margin:3px 0 0">${t.desc}</p></div>
+        ${o.gmTier===i?'':`<button class="btn primary sm" onclick="doReplaceGM(${i})">Hire</button>`}</div></div>`).join("")}
+    <div class="center"><button class="btn ghost" onclick="ownerOffice()">← Back to the office</button></div>`);
+}
+function doReplaceGM(i){const o=G.owner;o.gmTier=i;o.gmName=gmFirstName()+' '+gmLastName();o.gmMorale=74;o._gmGrade=null;
+  toast(`Hired ${o.gmName} as your new GM.`);saveGame();ownerOffice();}
+
+// ---------- the GM makes his moves (auto), big ones go to you for a veto ----------
+let _vetoQ=[];   // pending big moves awaiting owner approval (transient)
+function gmTalent(){return G.owner?G.owner.gmTier:1;}   // 0..3
+function gmProjPayroll(){return payroll(G.roster);}
+function gmOffseason(){
+  if(G.owner._gmYear===G.year)return gmReport();   // already ran this winter — show the digest
+  if(G.year>=2&&G.faYear!==G.year){G.faMarket=genFAMarket();G.faYear=G.year;}
+  const o=G.owner,tier=o.gmTier,mand=o.mandate,dir=o.directives,budget=o.payrollBudget||200;
+  const applied=[],pending=[];_vetoQ=[];
+  const ns=needsSurplus();let needs=ns.needs.slice();
+  if(dir.pitchingFirst)needs.sort((a,b)=>((b==='SP'||b==='RP')?1:0)-((a==='SP'||a==='RP')?1:0));
+  const logA=(d)=>applied.push(d);const logP=(d,fn,undo)=>{pending.push(d);_vetoQ.push({desc:d,fn,undo});};
+  const big=(p)=>p&&p.ovr>=84;
+  // 1) REBUILD / RETOOL / GET-YOUNGER: sell veterans for youth
+  if(mand==='rebuild'||mand==='retool'||dir.getYounger){
+    const vets=G.roster.filter(p=>p.loc==='mlb'&&p.age>=31&&p.ovr>=72&&!p._keeperYoung).sort((a,b)=>b.ovr-a.ovr);
+    const sellN=mand==='rebuild'?Math.min(3,vets.length):Math.min(1,vets.length);
+    vets.slice(0,sellN).forEach(p=>{
+      const desc=`Trade ${p.age}-yo ${p.pos} ${p.name} (${p.ovr} OVR${p.years<=1?', expiring':''}) for a prospect package`;
+      const fn=()=>{const idx=G.roster.indexOf(p);if(idx<0)return;G.roster.splice(idx,1);
+        const haul=1+(tier>=2?1:0)+(p.ovr>=86?1:0);for(let i=0;i<haul;i++){const pr=ficProspect();pr.pot=clamp(pr.pot+(tier*2)+(p.ovr-72),60,99);pr.loc='farm';pr.src='trade';G.farm.push(pr);}
+        if(p.ovr>=84&&(G.pendingComp=G.pendingComp||[])){G.pendingComp.push(mkFuturePick(2));}};
+      if(big(p)||isFanFav(p))logP('🔻 '+desc,fn);else{fn();logA('🔻 '+desc);}
+    });
+  }
+  // 2) WIN-NOW / CONTEND: chase an impact bat or arm via trade (costs prospects)
+  if((mand==='winNow'||mand==='contend')&&!dir.protectProspects){
+    const topFarm=G.farm.slice().sort((a,b)=>b.pot-a.pot);
+    if(topFarm.length>=2&&(mand==='winNow'||Math.random()<0.5)){
+      const starOvr=clamp(ri(83,90)+ (tier>=3?2:0),80,94);
+      const pos=needs[0]||pick(["SP","SS","CF","3B","RF"]);
+      const star=ficVeteran(true);star.ovr=starOvr;star.pot=Math.max(star.pot,starOvr);star.pos=(pos==='RP'||pos==='SP')?pos:star.pos;star.age=ri(27,31);star.salary=salaryFor(starOvr,4);star.years=ri(3,5);star.loc='mlb';star.src='trade';star.mlbYears=6;
+      // only propose it if your authorized budget can absorb the salary — so an approval always goes through
+      if(gmProjPayroll()+star.salary<=budget+25){
+        const cost=topFarm.slice(0,star.ovr>=88?2:1);
+        const desc=`Trade ${cost.map(c=>c.name+' ('+c.pot+' ceil)').join(' + ')} for star ${star.pos} ${star.name} (${star.ovr} OVR, $${star.salary}M)`;
+        cost.forEach(c=>{const i=G.farm.indexOf(c);if(i>=0)G.farm.splice(i,1);});   // reserve the prospects now so the backfill can't promote them out from under the deal
+        const fn=()=>{G.roster.push(star);};                 // approve: the star arrives (prospects already shipped out)
+        const undo=()=>{cost.forEach(c=>G.farm.push(c));};   // veto: the prospects come home
+        logP('🔺 '+desc,fn,undo);   // acquiring a star is always a big move → your call
+      }
+    }
+  }
+  // 3) FREE AGENCY: fill needs within budget (the bread and butter)
+  const fas=(G.faMarket||[]).slice().sort((a,b)=>b.player.ovr-a.player.ovr);
+  const wantPos=new Set(needs);
+  const splurge=dir.splurge||mand==='winNow';
+  let signs=0,maxSigns=splurge?4:mand==='rebuild'?1:3;
+  for(const fa of fas){
+    if(signs>=maxSigns)break;
+    const p=fa.player;const fits=wantPos.size===0||wantPos.has(p.pos)||(splurge&&p.ovr>=82);
+    if(!fits)continue;
+    const years=p.ovr>=84?ri(3,5):ri(1,3);const aav=termAAV(fa.aav,years);
+    if(gmProjPayroll()+aav>budget)continue;                 // stay under the authorized budget
+    if(mand==='rebuild'&&p.ovr>=80)continue;                // don't block youth in a teardown
+    const desc=`Sign ${p.pos} ${p.name} (${p.ovr} OVR, age ${p.age}) — ${years}yr/$${aav}M per`;
+    const fn=()=>{const cur=(G.faMarket||[]).find(x=>x.id===fa.id);if(!cur)return;
+      if(p._fromPool){if(!G.pool.some(x=>x.id===p.id)){G.faMarket=G.faMarket.filter(x=>x.id!==fa.id);return;}G.pool=G.pool.filter(x=>x.id!==p.id);delete p._fromPool;}
+      p.salary=aav;p.years=years;p.loc='mlb';p.src='fa';p.inj=0;p.mlbYears=6;p.happy=clamp(happyVal(p)+12,60,90);
+      G.roster.push(p);G.faMarket=G.faMarket.filter(x=>x.id!==fa.id);};
+    if(aav>=18||p.ovr>=85){logP('✍️ '+desc+' <span class="small muted">(major signing)</span>',fn);}
+    else{fn();logA('✍️ '+desc);}
+    wantPos.delete(p.pos);signs++;
+  }
+  // 4) backfill to a viable roster: promote the farm's best, then fill any gap with org depth
+  const mlbCount=()=>G.roster.filter(p=>p.loc==='mlb').length;
+  let promoted=0;
+  while(mlbCount()<26){
+    const ready=G.farm.slice().sort((a,b)=>b.ovr-a.ovr)[0];
+    if(ready&&(ready.ovr>=66||mlbCount()<24)){const i=G.farm.indexOf(ready);G.farm.splice(i,1);ready.loc='mlb';ready.src=ready.src||'draft';G.roster.push(ready);promoted++;}
+    else{const r=ficReplacement();r.loc='mlb';r.src='org';G.roster.push(r);}
+    if(mlbCount()>40)break;   // safety
+  }
+  if(promoted)logA(`⬆️ Promoted ${promoted} player${promoted>1?'s':''} from the farm to round out the roster`);
+  if(!applied.length&&!pending.length)applied.push('🤝 A quiet winter — GM '+o.gmName+' stood pat, happy with the group.');
+  o._gmYear=G.year;o._gmDigest={applied,pendingDesc:pending.slice()};
+  saveGame();
+  if(_vetoQ.length)return ownerVetoStep();
+  gmReport();
+}
+function ownerVetoStep(){
+  G.ownerStage='veto';
+  if(!_vetoQ.length)return gmReport();
+  const m=_vetoQ[0],o=G.owner;
+  render(`${ownerHeader()}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🛑 GM PROPOSES A BIG MOVE</div>
+      <h2 style="margin:8px 0;font-size:20px">${m.desc.replace(/^[^ ]+ /,'')}</h2>
+      <p class="sub">GM ${o.gmName} wants to pull the trigger. As the owner, you can approve it or kill it. ${_vetoQ.length>1?`(${_vetoQ.length} decisions pending)`:''}</p>
+      <div class="row" style="gap:10px;justify-content:center;margin-top:10px">
+        <button class="btn" style="border-color:#c0392b;color:#ff8a6b" onclick="vetoResolve(false)">🚫 Veto it</button>
+        <button class="btn primary" onclick="vetoResolve(true)">✅ Approve the move</button></div>
+    </div>`);
+}
+function vetoResolve(approve){
+  const m=_vetoQ.shift();if(!m)return ownerVetoStep();
+  if(approve){try{m.fn();}catch(e){}toast('Approved');}
+  else{try{if(m.undo)m.undo();}catch(e){}(G.owner._gmVetoed=G.owner._gmVetoed||[]).push(m.desc);G.owner.gmMorale=clamp((G.owner.gmMorale||72)-4,0,100);toast('Vetoed');}
+  saveGame();
+  if(_vetoQ.length)return ownerVetoStep();
+  gmReport();
+}
+function gmReport(){
+  G.ownerStage='gm';saveGame();
+  const o=G.owner,dig=o._gmDigest||{applied:[],pendingDesc:[]};
+  const vetoed=o._gmVetoed||[];
+  render(`${ownerHeader()}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">📝 GM'S OFFSEASON REPORT</div>
+      <h2 style="margin:6px 0">${MANDATES[o.mandate].name} · $${o.payrollBudget}M budget</h2>
+      <p class="sub">Here's what GM ${o.gmName} did with the winter. Payroll now sits at <b>$${payroll(G.roster)}M</b>; the club projects to <b>${warToWins(teamWAR(G.roster))} wins</b>.</p></div>
+    <div class="panel"><h3>✅ Moves made</h3>
+      <ul style="margin:4px 0">${(dig.applied.length?dig.applied:['No moves.']).map(d=>`<li class="small" style="margin:3px 0">${d}</li>`).join("")}</ul>
+      ${vetoed.length?`<h3 style="margin-top:10px">🚫 You vetoed</h3><ul style="margin:4px 0">${vetoed.map(d=>`<li class="small muted" style="margin:3px 0">${d}</li>`).join("")}</ul>`:''}
+    </div>
+    <div class="center"><button class="btn primary" style="font-size:16px;padding:12px 26px" onclick="ownerToDeadline()">Play the season ⚾ →</button></div>`);
+}
+// ---------- the in-season trade deadline: your GM pitches one big move, you approve or veto ----------
+let _dlMove=null;
+function genDeadlineMove(){
+  const o=G.owner,mand=o.mandate,tier=o.gmTier,proj=warToWins(teamWAR(G.roster)),bar=MANDATES[mand].bar,budget=o.payrollBudget||200;
+  // are we buyers or sellers at the deadline?
+  let stance=null;
+  if(mand==='rebuild')stance='sell';
+  else if(proj>=bar-4)stance='buy';
+  else if(proj<=bar-12&&mand!=='winNow')stance='sell';
+  else if(Math.random()<0.5)stance=proj>=bar-8?'buy':'sell';
+  if(!stance)return null;
+  if(stance==='buy'){
+    if(o.directives.protectProspects&&Math.random()<0.7)return null;
+    const top=G.farm.slice().sort((a,b)=>b.pot-a.pot)[0];if(!top)return null;
+    const ovr=clamp(ri(80,86)+(tier>=3?1:0),78,90),pos=needsSurplus().needs[0]||pick(["SP","RP","SS","CF","3B"]);
+    const rent=ficVeteran(true);rent.ovr=ovr;rent.pot=Math.max(rent.pot,ovr);rent.pos=(pos==='SP'||pos==='RP')?pos:rent.pos;rent.age=ri(28,33);rent.salary=Math.round(salaryFor(ovr,1)*0.5*10)/10;rent.years=1;rent.loc='mlb';rent.src='trade';rent.mlbYears=6;
+    if(gmProjPayroll()+rent.salary>budget+30)return null;
+    const i=G.farm.indexOf(top);if(i>=0)G.farm.splice(i,1);   // reserve the prospect
+    return {stance,desc:`acquire rental ${rent.pos} ${rent.name} (${rent.ovr} OVR, expiring) for prospect ${top.name} (${top.pot} ceil)`,
+      player:rent,proj,
+      fn:()=>{G.roster.push(rent);},undo:()=>{G.farm.push(top);}};
+  }else{
+    const vet=G.roster.filter(p=>p.loc==='mlb'&&p.age>=30&&p.ovr>=74&&p.years<=2).sort((a,b)=>b.ovr-a.ovr)[0];if(!vet)return null;
+    return {stance,desc:`sell veteran ${vet.pos} ${vet.name} (${vet.ovr} OVR) to a contender for a prospect haul`,
+      player:vet,proj,
+      fn:()=>{const i=G.roster.indexOf(vet);if(i<0)return;G.roster.splice(i,1);const haul=1+(tier>=2?1:0)+(vet.ovr>=84?1:0);for(let k=0;k<haul;k++){const pr=ficProspect();pr.pot=clamp(pr.pot+tier*2+(vet.ovr-74),60,99);pr.loc='farm';pr.src='trade';G.farm.push(pr);}(G.pendingComp=G.pendingComp||[]).push(mkFuturePick(3));},
+      undo:null};
+  }
+}
+function ownerToDeadline(){
+  if((G.history||[]).some(h=>h.year===G.year))return goPhase(3);   // already played this year
+  _dlMove=genDeadlineMove();
+  if(!_dlMove)return ownerPlaySeason();
+  G.ownerStage='deadline';saveGame();ownerDeadlineScreen();
+}
+function ownerDeadlineScreen(){
+  const o=G.owner,m=_dlMove;if(!m)return ownerPlaySeason();
+  const buying=m.stance==='buy';
+  render(`${ownerHeader()}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">📟 TRADE DEADLINE · SEASON ${G.year}</div>
+      <h2 style="margin:8px 0;font-size:20px">GM ${o.gmName} wants to ${buying?'<span style="color:var(--green)">BUY</span>':'<span style="color:#ff8a6b">SELL</span>'}</h2>
+      <p class="sub">The club projects to about <b>${m.proj} wins</b>. ${buying?'You\'re in the hunt — your GM wants to go for it:':'The season\'s slipping away — your GM wants to cash in:'}</p>
+      <p style="font-size:16px;font-weight:700;margin:10px 0">${m.desc.charAt(0).toUpperCase()+m.desc.slice(1)}.</p>
+      <div class="row" style="gap:10px;justify-content:center;margin-top:8px">
+        <button class="btn" style="border-color:#c0392b;color:#ff8a6b" onclick="resolveDeadline(false)">🚫 Veto — stand pat</button>
+        <button class="btn primary" onclick="resolveDeadline(true)">✅ Approve the deal</button></div>
+    </div>`);
+}
+function resolveDeadline(approve){
+  const m=_dlMove;_dlMove=null;
+  if(m){if(approve){try{m.fn();}catch(e){}toast('Deal approved');}else{try{if(m.undo)m.undo();}catch(e){}G.owner.gmMorale=clamp((G.owner.gmMorale||72)-2,0,100);toast('Stood pat');}}
+  saveGame();ownerPlaySeason();
+}
+function ownerPlaySeason(){
+  // reload-safety: if this season already simulated, jump ahead to the draft instead of re-simming
+  if((G.history||[]).some(h=>h.year===G.year))return goPhase(3);
+  G.ownerStage='season';G._gmVetoed=null;_dlMove=null;_dlMode=false;G.seasonStage=0;saveGame();
+  doSeason();
+}
+
+const TICKET_TIERS=[null,
+  {name:"Value",price:18,fan:3},{name:"Affordable",price:28,fan:1},
+  {name:"Market rate",price:42,fan:0},{name:"Premium",price:58,fan:-3},{name:"Luxury",price:78,fan:-7}];
+const CONCESSION_TIERS=[null,
+  {name:"Fan-friendly",perCap:14,fan:3},{name:"Standard",perCap:23,fan:0},{name:"Gouge 'em",perCap:35,fan:-5}];
+const MERCH_TIERS=[null,
+  {name:"Fan-first",perCap:9,fan:2},{name:"Standard",perCap:15,fan:0},{name:"Premium",perCap:24,fan:-3}];
+function ticketTier(){return TICKET_TIERS[(G.owner&&G.owner.ticketTier)||3];}
+function concTier(){return CONCESSION_TIERS[(G.owner&&G.owner.concessionTier)||2];}
+function merchTier(){return MERCH_TIERS[(G.owner&&G.owner.merchTier)||2];}
+// what fraction of the park fills: fans + winning draw, steep prices push people away
+function ownerFillRate(ticketIdx,concIdx){
+  const o=G.owner;const f=fanVal();const t=TICKET_TIERS[ticketIdx||o.ticketTier||3],c=CONCESSION_TIERS[concIdx||o.concessionTier||2];
+  const winPull=clamp((G.lastWins||75)-74,-26,42);
+  let r=0.40+f/100*0.42+winPull*0.0055;
+  r+=(t.price<=28?0.05:0)-(t.price>=58?0.09:0)-(t.price>=78?0.05:0);     // ticket-price elasticity
+  r+=(c.perCap>=35?-0.03:0);                                            // gouging at the stand costs a little too
+  return clamp(r,0.28,0.99);
+}
+function ownerAttendance(ti,ci){return Math.round((G.owner.capacity||40000)*ownerFillRate(ti,ci));}
+// full P&L for a season, in $M. Pass tiers to preview a pricing choice.
+function ownerRevenue(ti,ci,mi){
+  const o=G.owner;ti=ti||o.ticketTier||3;ci=ci||o.concessionTier||2;mi=mi||o.merchTier||2;
+  const att=ownerAttendance(ti,ci),games=81;
+  const gate=Math.round(att*TICKET_TIERS[ti].price*games/1e6*10)/10;
+  const conc=Math.round(att*CONCESSION_TIERS[ci].perCap*games/1e6*10)/10;
+  // merch: in-park sales + a year-round online store that swells with winning and a happy, big fan base
+  const merch=Math.round((att*MERCH_TIERS[mi].perCap*games/1e6*(0.55+fanVal()/180)+(G.champions||0)*2.5)*(o.marketMult||1)*10)/10;
+  const premium=Math.round((o.revWeight||1)*22*(o.marketMult||1)*(0.6+ownerFillRate(ti,ci)*0.6)*10)/10;
+  const media=Math.round((55+(G.champions||0)*6)*(o.marketMult||1)*10)/10;
+  const sponsor=Math.round(((o.sponsors||[]).reduce((s,d)=>s+d.rev,0))*10)/10;
+  const total=Math.round((gate+conc+merch+premium+media+sponsor)*10)/10;
+  return {gate,conc,merch,premium,media,sponsor,total,att};
+}
+function ownerStaffSalary(){const o=G.owner;return (GM_TIERS[o.gmTier]?GM_TIERS[o.gmTier].cost:0)+(ANALYTICS_TIERS[o.analyticsTier]?ANALYTICS_TIERS[o.analyticsTier].cost:0)+(SCOUT_TIERS[o.scoutTier]?SCOUT_TIERS[o.scoutTier].cost:0)+(COACH_TIERS[o.coachTier]?COACH_TIERS[o.coachTier].cost:0);}
+function ownerExpenses(){
+  const o=G.owner;
+  const payrollExp=payroll(G.roster);
+  const staff=ownerStaffSalary();
+  const ops=Math.round((o.capacity||40000)/1000*0.7*10)/10;            // stadium operations
+  const lux=Math.round(Math.max(0,payrollExp-300)*0.6*10)/10;          // a financial luxury-tax bite on big payrolls
+  const total=Math.round((payrollExp+staff+ops+lux)*10)/10;
+  return {payroll:payrollExp,staff,ops,lux,total};
+}
+function ownerValuation(rev){
+  const o=G.owner;const f=fanVal();
+  const mult=clamp(7+(G.champions||0)*0.4+(f-50)/30+((o.marketMult||1)-1)*1.6,6,11);
+  return Math.max(300,Math.round(rev.total*mult));
+}
+function ownerNetWorth(){return (G.owner.clubValue||0)+(G.owner.cashReserve||0);}
+function ownerNetProfit(){return ownerNetWorth()-OWNER_BUDGET;}   // you committed the full $4B
+// settle the books for the season: revenue − expenses → cash, then re-value the franchise
+function ownerSeasonFinance(){
+  if(!G.owner||G._ownValYear===G.year)return;
+  G._ownValYear=G.year;
+  const o=G.owner;const f=fanVal();
+  // fan happiness drifts toward how the team played and how fair the prices feel
+  const winPull=clamp(((G.lastWins||75)-78)*0.5,-10,12);
+  fanChange(clamp(Math.round(winPull+(ticketTier().fan+concTier().fan+merchTier().fan)*0.35+((_res&&_res.wonWS)?8:(_res&&_res.madePO)?4:0)),-14,16),"Season's results & ballpark experience");
+  const rev=ownerRevenue(),exp=ownerExpenses();
+  const net=Math.round((rev.total-exp.total)*10)/10;
+  o.cashReserve=Math.round(((o.cashReserve||0)+net)*10)/10;
+  const newVal=ownerValuation(rev);
+  o._lastDelta=newVal-(o.clubValue||newVal);
+  o.clubValue=newVal;
+  o._lastPL={rev,exp,net};
+  // grade the GM against the mandate he was given
+  const bar=MANDATES[o.mandate||'contend'].bar,wins=G.lastWins||75;
+  let g;
+  if((o.mandate||'contend')==='rebuild'){const farmQ=G.farm.filter(p=>p.pot>=85).length;g=farmQ>=3?'A':farmQ>=1?'B':'C';}
+  else{g=(_res&&_res.wonWS)?'A+':wins>=bar?'A':wins>=bar-6?'B':wins>=bar-14?'C':'D';}
+  o._gmGrade=g;o.gmMorale=clamp((o.gmMorale||72)+(g[0]==='A'?5:g==='B'?2:g==='D'?-8:-2),0,100);
+  (o.gmGradeLog=o.gmGradeLog||[]).push({year:G.year,grade:g,wins});
+  o.history=(o.history||[]);o.history.push({year:G.year,value:newVal,cash:o.cashReserve,net,wins:G.lastWins||0,att:rev.att});
+  o._feedbackYear=null;   // you can praise/pressure the GM again next winter
+  saveGame();
+}
+function ownerResultPanel(){
+  const o=G.owner,pl=o._lastPL||{rev:ownerRevenue(),exp:ownerExpenses(),net:0},profit=ownerNetProfit(),d=o._lastDelta||0;
+  const row=(k,v,c)=>`<div class="row" style="justify-content:space-between;padding:2px 0"><span class="small muted">${k}</span><span class="small" style="font-weight:700;color:${c||'var(--ink)'}">${v}</span></div>`;
+  return `<div class="panel" style="border-color:var(--gold)">
+    <div class="row" style="align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">💼 Front-office report</h3>
+      <button class="btn sm" onclick="ownerSellPrompt()">💰 Sell the club</button></div>
+    <div class="grid4" style="margin-top:8px">
+      <div class="kpi"><div class="big" style="font-size:17px">${fmtB(o.clubValue)}</div><div class="lbl">Club value ${d>=0?'<span style="color:var(--green)">▲'+fmtB(Math.abs(d))+'</span>':'<span style="color:var(--red)">▼'+fmtB(Math.abs(d))+'</span>'}</div></div>
+      <div class="kpi"><div class="big" style="font-size:17px;color:${(pl.net||0)>=0?'var(--green)':'var(--red)'}">${(pl.net||0)>=0?'+':''}$${Math.abs(pl.net||0)}M</div><div class="lbl">Net income</div></div>
+      <div class="kpi"><div class="big" style="font-size:17px;color:${(o.cashReserve||0)>=0?'var(--ink)':'var(--red)'}">${fmtB(o.cashReserve||0)}</div><div class="lbl">Cash reserve</div></div>
+      <div class="kpi"><div class="big" style="font-size:17px;color:${profit>=0?'var(--green)':'var(--red)'}">${profit>=0?'+':''}${fmtB(Math.abs(profit))}</div><div class="lbl">Total profit</div></div>
+    </div>
+    <details style="margin-top:8px"><summary class="small" style="cursor:pointer;font-weight:700">📊 Profit &amp; loss · ${(pl.rev.att||0).toLocaleString()} fans/game</summary>
+      <div class="grid2" style="gap:14px;margin-top:6px">
+        <div>${row('🎟️ Gate','$'+pl.rev.gate+'M')}${row('🍔 Concessions','$'+pl.rev.conc+'M')}${row('🧢 Merchandise','$'+(pl.rev.merch||0)+'M')}${row('💎 Premium seating','$'+pl.rev.premium+'M')}${row('📺 Media','$'+pl.rev.media+'M')}${row('🤝 Sponsorships','$'+pl.rev.sponsor+'M')}${row('Revenue','$'+pl.rev.total+'M','var(--green)')}</div>
+        <div>${row('🧢 Player payroll','$'+pl.exp.payroll+'M')}${row('👔 Front-office staff','$'+pl.exp.staff+'M')}${row('🏟️ Stadium ops','$'+pl.exp.ops+'M')}${row('💸 Luxury tax','$'+pl.exp.lux+'M')}${row('Expenses','$'+pl.exp.total+'M','var(--red)')}</div>
+      </div></details>
+    ${o._gmGrade?`<p class="small" style="margin-top:8px">🧠 GM ${o.gmName} graded <b style="color:${o._gmGrade[0]==='A'?'var(--green)':o._gmGrade==='D'?'var(--red)':'var(--gold)'}">${o._gmGrade}</b> on your ${MANDATES[o.mandate].name} mandate.</p>`:''}
+    <p class="small muted" style="margin-top:4px">${G.year>=o.lifespanYears?'This is your 50th and final season — sell now or pass the club to your heirs.':'Sell whenever you like to bank the profit, or keep building the dynasty.'}</p>
+  </div>`;
+}
+function ownerSellPrompt(){
+  const o=G.owner,profit=ownerNetProfit();
+  if(typeof confirm==="function"&&!confirm(`Sell ${G.teamName}?\n\nFranchise value: ${fmtB(o.clubValue)}\nCash on hand: ${fmtB(o.cashReserve||0)}\nYou take home: ${fmtB(ownerNetWorth())}\n\nYou committed ${fmtB(OWNER_BUDGET)} to start.\nTotal profit: ${profit>=0?'+':''}${fmtB(profit)}\n\nThis ends the run.`))return;
+  G.owner.sold=true;G.yearsServed=G.year;saveGame();screenOwnerEnd(false);
+}
+function screenOwnerEnd(heirs){
+  const o=G.owner,profit=ownerNetProfit();
+  render(`<div class="hero"><div class="pill gold" style="margin-bottom:10px">💼 ${heirs?'A LEGACY PASSED ON':'CLUB SOLD'}</div>
+    <h1>${profit>=0?'You built a fortune':'A costly love affair'}</h1></div>
+    <div class="panel center">
+      <div class="grid4" style="margin-top:4px">
+        <div class="kpi"><div class="big" style="font-size:17px">${fmtB(o.clubValue)}</div><div class="lbl">Franchise value</div></div>
+        <div class="kpi"><div class="big" style="font-size:17px">${fmtB(o.cashReserve||0)}</div><div class="lbl">Cash on hand</div></div>
+        <div class="kpi"><div class="big" style="font-size:17px;color:${profit>=0?'var(--green)':'var(--red)'}">${profit>=0?'+':''}${fmtB(Math.abs(profit))}</div><div class="lbl">${heirs?'Legacy profit':'Net profit'}</div></div>
+        <div class="kpi"><div class="big" style="font-size:17px">${G.champions||0}🏆</div><div class="lbl">Titles · ${G.year} yrs</div></div>
+      </div>
+      <p class="sub" style="margin-top:10px">${heirs?`After 50 years, you pass ${G.teamName} — worth ${fmtB(ownerNetWorth())} all-in — to your heirs. The dynasty lives on.`:`You sold ${G.teamName} for ${fmtB(ownerNetWorth())} all-in, having committed ${fmtB(OWNER_BUDGET)} to build it.`}</p>
+    </div>
+    <div class="panel center">
+      <h3 style="margin-top:0">🏆 Post to the Owner leaderboard</h3>
+      <p class="sub" style="margin:2px 0 8px">Stake your claim — the board ranks empires by <b>final franchise value</b>, with championships alongside.</p>
+      <input id="lbname" maxlength="12" placeholder="Your name" value="${(PROFILE&&PROFILE.lbName)||''}" style="text-align:center;max-width:220px"/>
+      <div class="center" style="margin-top:8px"><button class="btn primary" onclick="submitOwner(${heirs?'true':'false'})">Submit ${fmtB(ownerNetWorth())} ▶</button></div>
+    </div>
+    <div class="center" style="margin:10px 0"><button class="btn ghost" onclick="screenLeaderboard(true,'owner')">🏆 View leaderboard</button> <button class="btn ghost" onclick="goHome()">🏠 Home</button></div>`);
+}
 function showResult(){
+  if(G.owner)ownerSeasonFinance();
   const r=_res,me=r.me,last=G.year>=6;
   const verdict=r.wonWS?'🏆 WORLD SERIES CHAMPIONS!!!':r.madePO?'🎉 Made the playoffs!':
     me.wins<=70?'📉 Rough year — but hello, top pick.':'Season complete.';
@@ -2318,14 +3092,17 @@ function showResult(){
      ${r.injured.length?`<div class="small" style="margin-top:8px;text-align:left;max-width:560px;margin-left:auto;margin-right:auto">
         🩹 <b>Injuries</b>${r.injWinsLost>0?` — cost you about <b style="color:var(--red)">${r.injWinsLost} win${r.injWinsLost>1?'s':''}</b> (healthy projection was ${r.healthyProj})`:' (your depth absorbed them)'}:
         <div style="margin-top:3px">${r.injured.sort((a,b)=>b.inj-a.inj).map(p=>`<span class="pill ${p.injType==='long'?'red':''}" style="margin:2px">${p.pos} ${p.name} — ${p.injType==='long'?'long-term':'short-term'} (~${p.inj} g)</span>`).join("")}</div></div>`:''}</div>
-   ${G.mode==="survivor"?survivorResultPanel():""}
+   ${G.owner?ownerResultPanel():G.mode==="survivor"?survivorResultPanel():""}
    ${awardsPanel(_res.awards)}
    ${reportCardPanel()}
    <div class="panel"><h3>${leagueNameOf(me.league)} — ${me.div} Division</h3>
      <div class="scroll"><table><thead><tr><th class="num">#</th><th>Team</th><th class="num">W</th><th class="num">L</th><th></th></tr></thead><tbody>${stand}</tbody></table></div>
      <div style="margin-top:8px"><span class="small muted">${leagueNameOf(me.league)} playoff seeds:</span><br>${lgSeeds}</div></div>
    <div class="center">${
-     G.mode==="survivor"
+     G.owner
+       ? (G.year>=G.owner.lifespanYears?`<button class="btn primary" onclick="(function(){G.yearsServed=G.year;screenOwnerEnd(true);})()">Pass the club to your heirs →</button>`
+          : `<button class="btn primary" onclick="goPhase(3)">To the Draft →</button>`)
+       : G.mode==="survivor"
        ? (G.fired?`<button class="btn primary" onclick="screenFired()">Clean out your office →</button>`
           : G.year>=SURV_CAP?`<button class="btn primary" onclick="screenRetire()">Ride off into the sunset →</button>`
           : `<button class="btn primary" onclick="goPhase(3)">To the Draft →</button>`)
@@ -2350,22 +3127,35 @@ function screenDraft(){
     : (rd>=3?(G.year>=4?0.75:0.5):rd===2?(G.year>=4?0.6:0.3):(G.year>=4?0.5:G.year===3?0.25:0.08));
   const ps=[...POSALL];for(let i=ps.length-1;i>0;i--){const j=ri(0,i);[ps[i],ps[j]]=[ps[j],ps[i]];}
   _board=[];for(let i=0;i<10;i++)_board.push(draftee(slot,rd,Math.random()<advChance,ps[i%ps.length]));
+  // Owner Mode: the GM recommends a pick (best ceiling, weighted toward roster needs + his scouting tier)
+  if(G.owner){G.ownerStage='draft';
+    const ns=needsSurplus();const want=new Set(ns.needs);const tier=G.owner.gmTier||0;
+    let best=0,bestScore=-1;_board.forEach((p,i)=>{const s=p.pot+(want.has(p.pos)?7:0)+(p.advanced?2:0)+tier*0.5+Math.random()*1.5;if(s>bestScore){bestScore=s;best=i;}});
+    G._gmRec=best;
+    if(G._gmAutoDraft)return draftPick(best);
+  }
+  const rec=G.owner?G._gmRec:-1;
   render(`${header()}${stepbar(3)}
    ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0">
      <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none — roster is balanced</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span></div>`;})()}
+   ${G.owner?`<div class="panel2" style="border:1px solid var(--gold);border-radius:10px;padding:10px;margin-bottom:10px">
+     <span class="small">🎯 <b>GM ${G.owner.gmName}</b> recommends <b style="color:var(--gold)">${_board[rec].name}</b> (${_board[rec].pos}, ceiling ${_board[rec].pot}). Take his pick, override below, or let him run the rest.</span>
+     <div class="row" style="gap:8px;margin-top:8px"><button class="btn primary sm" onclick="draftPick(${rec})">✅ Take GM's pick</button>
+       <button class="btn sm" onclick="(function(){G._gmAutoDraft=true;screenDraft();})()">⏩ Let the GM finish the draft</button></div></div>`:''}
    <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster <span class="small muted">(draft to fill your needs)</span></summary>
      <div style="margin-top:8px">${rosterMini()}</div></details>
    <div class="panel"><h3>Draft — <span class="pill gold">${pk.comp?'🎟️ Comp Pick':'Round '+rd+' pick #'+slot}</span> <span class="small muted">(${_dq.length} selection${_dq.length>1?'s':''} left)</span></h3>
      <p class="sub">Ceiling is a <b>scouted projection, not a promise</b> — most prospects fall short of it. ${rd===1?'Round-1 talents have the highest ceilings but take years.':'Later-round picks are longer shots; "MLB-ready" types contribute sooner.'}</p>
-     <div class="scroll">${_board.map((p,i)=>`<div class="offer" style="padding:9px 12px"><div class="row" style="align-items:center">
-        <div style="flex:2"><b>${p.name}</b> <span class="small muted">${p.college}</span>
+     <div class="scroll">${_board.map((p,i)=>`<div class="offer" style="padding:9px 12px;${i===rec?'border:1px solid var(--gold);border-radius:8px':''}"><div class="row" style="align-items:center">
+        <div style="flex:2"><b>${p.name}</b> ${i===rec?'<span class="pill gold" style="padding:0 5px;font-size:9px">GM PICK</span>':''} <span class="small muted">${p.college}</span>
           <span class="small"><span class="pos">${p.pos}</span> age ${p.age} • ${p.ovr} OVR ${p.advanced?'<span class="pill green" style="padding:0 6px">MLB-ready</span>':'<span class="pill blue" style="padding:0 6px">project</span>'}</span></div>
         <div style="flex:1;text-align:right"><span class="pill ${ceilClass(p.pot)}">Ceiling ${p.pot}</span>
           <button class="btn primary sm" onclick="draftPick(${i})">Draft</button></div></div></div>`).join("")}</div></div>`);
 }
 function draftPick(i){const p=_board[i];p.loc="farm";p.src="draft";G.farm.push(p);_dpicks.push(p);_dq.shift();
-  toast(`Drafted ${p.name}`);screenDraft();}
+  if(!G._gmAutoDraft)toast(`Drafted ${p.name}`);screenDraft();}
 function draftDone(){
+  G._gmAutoDraft=false;G._gmRec=null;
   const got=_dpicks||[];G.ownedPicks=freshDraftPicks().concat(G.pendingComp||[]);G.pendingComp=[];_dq=null;_dpicks=null;saveGame();
   render(`${header()}${stepbar(3)}
    <div class="panel center"><h3>Draft complete</h3>
@@ -2515,6 +3305,7 @@ function stancePreview(stance){const ob=G.ownerBar;
   if((ob-projWinsNow())<6)cut=Math.round(cut*0.4);   // only a genuinely weak roster earns the full rebuild discount
   return Math.max(projWinsNow()-2,ob-cut);}
 function startSurvivorYear(){
+  if(G.owner)return startOwnerYear();   // owners skip the employee owner-meeting
   G.survStage=0;G.stance=null;G.agreedBar=null;
   if(G.draftOrderYear!==G.year)computeDraftOrder();
   G.ownerBar=ownerBaseBar();G._ownerMsg=ownerMsg();saveGame();screenMandate();}
@@ -2619,7 +3410,7 @@ function applySurvivorSeason(){
   // reputation, mood, firing
   G.reputation=clamp(G.reputation*0.7+w*0.3+(r.wonWS?4:0),50,108);
   G.yearsServed=G.year;
-  if(G.favor<=0){G.fired=true;G.firedYear=G.year;}
+  if(G.favor<=0&&!G.owner){G.fired=true;G.firedYear=G.year;}   // you can't fire yourself — owners are never fired
   G._ownerMsg=G.fired?"That's it. We're going in a different direction.":ownerMsg();
 }
 function survivorResultPanel(){
@@ -2852,6 +3643,17 @@ async function lbFetch(){
   return a.filter(x=>!lbBanned(x&&x.team));
 }
 function lbRankSurv(arr){return arr.slice().sort((a,b)=>(b.score-a.score)||((b.titles||0)-(a.titles||0))||((b.years||0)-(a.years||0)));}
+function lbRankOwner(arr){return arr.slice().sort((a,b)=>(b.score-a.score)||((b.titles||0)-(a.titles||0))||((b.years||0)-(a.years||0)));}
+function lbRowsOwner(arr){
+  if(!arr.length)return `<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">No moguls yet — buy a club and build an empire.</td></tr>`;
+  const fb=m=>m>=1000?('$'+(m/1000).toFixed(m>=10000?1:2)+'B'):('$'+Math.round(m)+'M');
+  return arr.map((e,i)=>`<tr>
+    <td class="num">${i+1}</td>
+    <td><b>${(e.name||'---').slice(0,12)}</b><br><span class="small muted">${e.team?e.team.slice(0,18):''}${e.heirs?' · 👑 heirs':' · sold'}</span></td>
+    <td class="num"><b style="color:var(--gold)">${fb(e.score||0)}</b></td>
+    <td class="num">${e.years||0}</td>
+    <td class="num">${e.titles||0}🏆</td></tr>`).join("");
+}
 function lbRows(arr){
   if(!arr.length)return `<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">No entries yet — be the first.</td></tr>`;
   return arr.map((e,i)=>`<tr>
@@ -2871,16 +3673,24 @@ function lbRowsSurv(arr){
     <td class="num">${e.titles||0}🏆</td></tr>`).join("");
 }
 async function screenLeaderboard(fromEnd,board){
-  board=board||((typeof G!=="undefined"&&G&&G.mode==="survivor")?'survivor':(typeof G!=="undefined"&&G&&G.hard?'hard':'career'));
+  board=board||((typeof G!=="undefined"&&G&&G.owner)?'owner':(typeof G!=="undefined"&&G&&G.mode==="survivor")?'survivor':(typeof G!=="undefined"&&G&&G.hard?'hard':'career'));
   const tab=(k,l)=>`<button class="btn sm ${board===k?'primary':'ghost'}" onclick="screenLeaderboard(${fromEnd?'true':'false'},'${k}')">${l}</button>`;
   render(`<div class="row" style="align-items:center;margin-bottom:6px"><h2 style="flex:1">🏆 Leaderboard</h2>
      <button class="btn ghost" onclick="screenTitle()">← Home</button></div>
-   <div style="margin-bottom:8px">${tab('career','⚡ 6-Year')} ${tab('hard','🔥 Hard 6-Year')} ${tab('survivor','🪑 Career')}</div>
+   <div style="margin-bottom:8px">${tab('career','⚡ 6-Year')} ${tab('hard','🔥 Hard 6-Year')} ${tab('survivor','🪑 Career')} ${tab('owner','💼 Owner')}</div>
    <p class="sub">${LEADERBOARD_API?'Global rankings across all players.':'Saved on this device only. To make it shared, see the README — it takes one free backend URL.'}</p>
    <div id="lbbody"><p class="muted">Loading…</p></div>`);
   const all=await lbFetch();
   const el=document.getElementById('lbbody'); if(!el)return;
-  if(board==='survivor'){
+  if(board==='owner'){
+    const ranked=lbRankOwner(all.filter(e=>e.mode==='owner'));
+    const today=ranked.filter(e=>(e.date||todayStr(new Date(e.ts||Date.now())))===todayStr());
+    const head=`<thead><tr><th class="num">#</th><th>Owner / Club</th><th class="num">Final value</th><th class="num">Yrs</th><th class="num">WS</th></tr></thead>`;
+    el.innerHTML=`<p class="small" style="margin:0 0 8px">💼 Owner Mode — ranked by the franchise's <b>final value</b> when sold or passed to your heirs.</p><div class="lbgrid">
+       <div class="panel"><h3>👑 Richest Empires</h3><div class="scroll"><table>${head}<tbody>${lbRowsOwner(ranked.slice(0,10))}</tbody></table></div></div>
+       <div class="panel"><h3>🔆 Top 10 Today</h3><div class="scroll"><table>${head}<tbody>${lbRowsOwner(today.slice(0,10))}</tbody></table></div></div>
+     </div>`;
+  } else if(board==='survivor'){
     const ranked=lbRankSurv(all.filter(e=>e.mode==='survivor'));
     const today=ranked.filter(e=>(e.date||todayStr(new Date(e.ts||Date.now())))===todayStr());
     const head=`<thead><tr><th class="num">#</th><th>GM / Club</th><th class="num">Score</th><th class="num">Yrs</th><th class="num">WS</th></tr></thead>`;
@@ -2912,6 +3722,14 @@ function submitSurvivor(){
   const entry={name,team:G.teamName,score:sc,mode:"survivor",years:G.yearsServed||0,titles:G.survTitles||0,peak:G.bestWins,ts:Date.now(),date:todayStr(),did:deviceId()};
   lbSubmit(entry);toast(`Submitted: ${name} — ${sc}`);
   screenLeaderboard(true,'survivor');
+}
+function submitOwner(heirs){
+  const inp=document.getElementById('lbname');const name=((inp&&inp.value.trim())||'Anon').slice(0,12);
+  const o=G.owner,worth=ownerNetWorth();
+  const entry={name,team:G.teamName,score:worth,mode:"owner",value:o.clubValue||0,cash:Math.round(o.cashReserve||0),
+    titles:G.champions||0,champs:G.champions||0,years:G.year||0,heirs:!!heirs,ts:Date.now(),date:todayStr(),did:deviceId()};
+  lbSubmit(entry);toast(`Submitted: ${name} — ${worth>=1000?('$'+(worth/1000).toFixed(2)+'B'):('$'+worth+'M')}`);
+  screenLeaderboard(true,'owner');
 }
 
 /* ============================================================
@@ -3234,7 +4052,7 @@ if(typeof document!=="undefined"&&document.addEventListener){
 /* ============================================================
    WELCOME / ONBOARDING + FEEDBACK ("leave a note for the creator")
    ============================================================ */
-const WELCOME_KEY="tankCommander_welcomed";
+const WELCOME_KEY="tankCommander_welcomed_v9";   // bumped for v9 so returning players see the Owner Mode + Hard Mode news once
 const NEWPILL='<span class="pill gold" style="font-size:9px;padding:0 5px;vertical-align:middle;margin-left:3px">NEW</span>';
 function screenWelcome(){
   render(`<div class="hero" style="padding-top:8px">
@@ -3242,7 +4060,16 @@ function screenWelcome(){
       <h1 style="font-size:34px;margin:8px 0 4px">Welcome to the<br>Baseball Tank Simulator</h1>
       <p class="sub" style="max-width:600px;margin:0 auto">Hi — and welcome to the beta. You're the new <b>General Manager</b> of a washed-up ballclub. Your job: tear it down, lose on purpose to land premium <b>draft picks</b>, develop young talent, swing trades, and build a champion from the dirt up — all across a living, 30-team league split into two leagues and six divisions, where every rating, salary, and season plays out for real.</p>
     </div>
-    <div class="panel"><h3 style="margin-top:0">🎮 Two ways to play</h3>
+    <div class="panel" style="border-color:var(--gold);background:linear-gradient(180deg,rgba(201,162,39,0.10),transparent)">
+      <h3 style="margin-top:0">🆕 New in v9</h3>
+      <div class="panel2" style="border:1px solid var(--gold);border-radius:10px;padding:11px;margin-bottom:8px">
+        <div style="font-weight:800;color:var(--gold)">💼 Owner Mode <span class="pill" style="padding:0 6px;background:#3a2a55;color:#d9b3ff;border:1px solid #6f4fa0;font-size:9px">ALPHA</span></div>
+        <p class="small muted" style="margin:4px 0 0">A whole new way to play. Spend <b>$4 billion</b> to <b>buy a ballclub and build the stadium</b>, fund facilities, and hire your front office — then sit in the owner's box. <b>Steer your GM</b> with mandates and budgets, <b>veto his big trades</b> (including at the deadline), and run the money: set <b>ticket, concession &amp; merch prices</b>, land <b>sponsorships</b>, and grow the franchise's value. Win titles, then <b>sell for the biggest profit</b> — or build a 50-year dynasty. <i>It's an alpha, so expect rough edges — feedback welcome.</i></p></div>
+      <div class="panel2" style="border:1px solid #c0392b;border-radius:10px;padding:11px">
+        <div style="font-weight:800;color:#ff8a6b">🔥 Hard Mode — 6-Year Sprint</div>
+        <p class="small muted" style="margin:4px 0 0">For veterans of the classic run: a <b>tougher league</b>, <b>realistic injuries</b> you manage at <b>extra in-season roster breaks</b> (with a real <b>Injured List</b>), a <b>deeper 5-round draft</b>, and <b>stricter grading</b> — with its own separate leaderboard. Pick it right under the 6-Year Sprint.</p></div>
+    </div>
+    <div class="panel"><h3 style="margin-top:0">🎮 Ways to play</h3>
       <div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:8px">
         <div style="font-weight:800;color:var(--gold)">⚡ 6-Year Sprint</div>
         <p class="small muted" style="margin:4px 0 0">The classic challenge. You get <b>six seasons</b> to flip a tanking team into a contender — then the front office grades your whole run out of 100. About 15 minutes a playthrough.</p></div>
