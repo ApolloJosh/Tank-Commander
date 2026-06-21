@@ -1252,7 +1252,58 @@ function developAll(){
     const core=G.pool.filter(keep), fringe=G.pool.filter(p=>!keep(p)).sort((a,b)=>tradeValue(b)-tradeValue(a));
     G.pool=core.concat(fringe.slice(0,Math.max(0,300-core.length)));
   }
-  return {notes,devList,retired:ret,fa:G.leftAsFA};
+  const cuts=enforceRosterCaps();   // keep long runs from bloating: 20-man MLB, 50-man org
+  return {notes,devList,retired:ret,fa:G.leftAsFA,cuts};
+}
+// ---- roster caps: 20 in the majors, 50 in the whole org ----
+// clears positional logjams by moving on from 2+ year players buried on the depth chart (3-deep for hitters,
+// 5-deep for pitchers), ranked by ceiling — packaging a couple for an upgrade when it can, releasing the rest.
+const MLB_ROSTER_CAP=20, ORG_ROSTER_CAP=50;
+function enforceRosterCaps(){
+  const log=[];
+  const ceilOf=p=>Math.max(p.ovr||0,(p.realCeil||p.pot||p.ovr||0));
+  const isPitPos=pos=>pos==="SP"||pos==="RP";
+  const mlbN=()=>G.roster.length;                 // G.roster IS the big-league roster
+  const orgN=()=>G.roster.length+G.farm.length;
+  const drop=p=>{let i=G.roster.indexOf(p);if(i>=0){G.roster.splice(i,1);}else{i=G.farm.indexOf(p);if(i>=0)G.farm.splice(i,1);else return null;}
+    p._teamYears=0;p.years=p.years||1;(G.pool=G.pool||[]).push(p);return true;};   // released players re-enter the league pool
+  // who's surplus: per position keep the top (3 hitters / 5 pitchers) by ceiling; the rest, if 2+ yrs with the club, are cuttable
+  const surplus=()=>{
+    const byPos={};G.roster.concat(G.farm).forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
+    const out=[];
+    Object.keys(byPos).forEach(pos=>{const keep=isPitPos(pos)?5:3;
+      byPos[pos].slice().sort((a,b)=>ceilOf(b)-ceilOf(a)).slice(keep).forEach(p=>{if((p._teamYears||0)>=2)out.push(p);});});
+    return out.sort((a,b)=>ceilOf(a)-ceilOf(b));    // worst ceiling moves first
+  };
+  let cands=surplus(),cons=0;
+  // 1) trim the ORG down to 50 using the surplus rule — consolidate two into an upgrade now and then, otherwise release
+  while(orgN()>ORG_ROSTER_CAP && cands.length){
+    if(cands.length>=2 && cons<2 && Math.random()<0.45){
+      const a=cands.shift(),b=cands.shift();drop(a);drop(b);
+      const need=(needsSurplus().needs[0])||a.pos;
+      const star=ficVeteran(true);
+      star.ovr=clamp(Math.max(ceilOf(a),ceilOf(b))+ri(2,6),62,92);
+      star.pot=Math.max(star.pot||star.ovr,star.ovr);
+      star.pos=(isPitPos(need)||LINEUP.includes(need))?need:a.pos;
+      star.age=ri(25,30);star.salary=salaryFor(star.ovr,4);star.years=ri(2,4);star.src="trade";star.mlbYears=4;star._teamYears=0;star.inj=0;star.prospect=false;
+      const toMlb=(star.ovr>=70&&mlbN()<MLB_ROSTER_CAP);star.loc=toMlb?"mlb":"farm";(toMlb?G.roster:G.farm).push(star);
+      log.push(`🔁 Packaged ${a.name} + ${b.name} for ${star.pos} ${star.name} (${star.ovr} OVR)`);cons++;
+    } else {
+      const p=cands.shift();drop(p);log.push(`🔻 Released ${p.pos} ${p.name} (${ceilOf(p)} ceiling) — surplus depth at ${p.pos}`);
+    }
+  }
+  // 2) hard org cap — if surplus ran out, let the lowest-ceiling fringe go (farm first)
+  while(orgN()>ORG_ROSTER_CAP){
+    const arr=G.farm.length?G.farm:G.roster;let low=arr[0];arr.forEach(p=>{if(ceilOf(p)<ceilOf(low))low=p;});
+    drop(low);log.push(`🔻 Released ${low.name} — 50-man org limit`);
+  }
+  // 3) 20-man MLB cap — option the lowest-ceiling big-leaguers to the minors (release only if the farm is full)
+  while(mlbN()>MLB_ROSTER_CAP){
+    let low=G.roster[0];G.roster.forEach(p=>{if(ceilOf(p)<ceilOf(low))low=p;});
+    if(orgN()<ORG_ROSTER_CAP){const i=G.roster.indexOf(low);G.roster.splice(i,1);low.loc="farm";G.farm.push(low);log.push(`⬇️ Optioned ${low.name} to the minors — 20-man limit`);}
+    else{drop(low);log.push(`🔻 Released ${low.name} — 20-man limit`);}
+  }
+  return log;
 }
 // attach a story to each entry that MATCHES the direction of the move, with no repeats inside one report
 function assignDevStories(list){
@@ -2175,7 +2226,7 @@ function tbMine(){return myTradeableAssets().map(a=>(a.team="me",a));}
 function tbFind(aid){return tbMine().concat(leagueAssets()).find(a=>a.aid===aid);}
 function tbSort(arr){const a=arr.slice();const k=_custom.sort||"val";a.sort((x,y)=>{
   if(x.kind==="pick"||y.kind==="pick"){if(x.kind==="pick"&&y.kind==="pick")return y.val-x.val;return x.kind==="pick"?1:-1;}
-  switch(k){case "ovr":return y.player.ovr-x.player.ovr;case "pot":return y.player.pot-x.player.pot;case "age":return x.player.age-y.player.age;case "years":return x.player.years-y.player.years;default:return y.val-x.val;}});return a;}
+  switch(k){case "ovr":return y.player.ovr-x.player.ovr;case "pot":return y.player.pot-x.player.pot;case "sal":return (y.player.salary||0)-(x.player.salary||0);case "age":return x.player.age-y.player.age;case "years":return x.player.years-y.player.years;default:return y.val-x.val;}});return a;}
 function tbMatch(a){const f=_custom.posF||"all";
   if(f!=="all"){if(a.kind==="pick")return f==="PK";if(a.player.pos!==f)return false;}
   if(_custom.search){const q=_custom.search.toLowerCase();const nm=a.kind==="pick"?("r"+a.pick.round+" pick "+a.pick.slot):a.player.name;if(!(nm.toLowerCase().includes(q)||(a.kind==="player"&&a.player.pos.toLowerCase()===q)))return false;}
@@ -2203,7 +2254,7 @@ function tbList(){
   const list=tbSort(tbSource().filter(tbMatch));
   if(!list.length)return `<p class="muted small" style="padding:8px">No players match — try another position or search.</p>`;
   return list.map(tbRow).join("");}
-function tbSortSel(){return `<select onchange="tbSetSort(this.value)" style="font-size:12px">${[["val","Trade value"],["ovr","Overall"],["pot","Ceiling"],["age","Age (young)"],["years","Yrs control"]].map(([k,l])=>`<option value="${k}" ${(_custom.sort||'val')===k?'selected':''}>Sort: ${l}</option>`).join("")}</select>`;}
+function tbSortSel(){return `<select onchange="tbSetSort(this.value)" style="font-size:12px">${[["val","Trade value"],["ovr","Overall"],["pot","Ceiling"],["sal","Contract $"],["age","Age (young)"],["years","Yrs control"]].map(([k,l])=>`<option value="${k}" ${(_custom.sort||'val')===k?'selected':''}>Sort: ${l}</option>`).join("")}</select>`;}
 function tbPosChips(){return ["all","C","1B","2B","3B","SS","LF","CF","RF","DH","SP","RP","PK"].map(p=>`<span class="tbchip ${(_custom.posF||'all')===p?'on':''}" onclick="tbSetPos('${p}')">${p}</span>`).join("");}
 function tbKey(){const a=k=>`<span style="display:inline-block;margin:1px 10px 1px 0"><span class="aemo s" style="margin:0">${ATTR_EMO[k]}</span> ${ATTR_LABEL[k]}${k==="eye"?" (walks)":k==="whiff"?" (Ks)":""}</span>`;
   return `<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">
@@ -3750,7 +3801,7 @@ function draftDone(){
    ============================================================ */
 let _devRes=null;
 function screenDevelop(){
-  if(G._devDoneYear===G.year){_devRes=_devRes||{fa:G.leftAsFA||[],notes:[],devList:[],retired:[]};return renderDevelopSummary();}   // reload-safe: don't age twice
+  if(G._devDoneYear===G.year){_devRes=_devRes||{fa:G.leftAsFA||[],notes:[],devList:[],cuts:[],retired:[]};return renderDevelopSummary();}   // reload-safe: don't age twice
   const res=developAll();G._devDoneYear=G.year;saveGame();_devRes=res;
   if((res.retired||[]).length)return screenRetirements();
   renderDevelopSummary();
@@ -3773,7 +3824,8 @@ function screenRetirements(){
     <div class="center"><button class="btn primary" onclick="renderDevelopSummary()">Continue to the offseason →</button></div>`);
 }
 function renderDevelopSummary(){
-  const res=_devRes||{fa:[],notes:[],devList:[],retired:[]};
+  const res=_devRes||{fa:[],notes:[],devList:[],cuts:[],retired:[]};
+  const cuts=(res.cuts||[]).filter(Boolean);
   const dl=(res.devList||[]).slice().sort((a,b)=>b.d-a.d);
   const risers=dl.filter(e=>e.d>0).length,fallers=dl.filter(e=>e.d<0).length;
   const clubhouse=(res.notes||[]).filter(Boolean);   // trade requests & morale beats live here now
@@ -3781,6 +3833,7 @@ function renderDevelopSummary(){
    <div class="panel"><h3>📋 Offseason Development${infoDot('How your players changed over the winter — prospects develop, vets age, and a few have a story behind the move. Sorted from biggest gain to biggest decline.')}</h3>
      <p class="small muted" style="margin:2px 0 10px">${dl.length?`<span style="color:var(--green)">▲ ${risers} improved</span> · <span style="color:var(--red)">▼ ${fallers} declined</span>`:'A quiet winter across the org.'}</p>
      ${dl.length?dl.map(devLineHTML).join(""):'<p class="muted">No notable changes this offseason.</p>'}
+     ${cuts.length?`<div class="sectlbl" style="margin-top:12px">🧹 Roster moves <span class="small muted">— trimming to the 20-man / 50-man limits</span></div>${cuts.slice(0,10).map(n=>`<div class="small" style="margin:3px 0">${n}</div>`).join("")}`:''}
      ${clubhouse.length?`<div class="sectlbl" style="margin-top:12px">🗣️ Clubhouse</div>${clubhouse.slice(0,8).map(n=>`<div class="small" style="margin:3px 0">• ${n}</div>`).join("")}`:''}
      ${res.fa.length?`<div class="sectlbl" style="margin-top:12px">🚶 Walked in free agency</div><p class="small" style="color:var(--dim);margin:3px 0 0">${res.fa.map(p=>p.name).join(", ")}</p>`:''}
      ${res.retired.length?`<p class="small muted" style="margin-top:10px">🎗️ ${res.retired.length} retired this winter — see the ceremony above${G.hof&&G.hof.length?'; check 📜 Franchise for the Hall of Fame':''}.</p>`:''}</div>
