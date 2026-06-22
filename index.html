@@ -1848,7 +1848,7 @@ function screenTitle(){
       <div class="row"><span class="v">${r.owner?fmtB(r.clubValue||0)+' value':r.mode==='survivor'?'Score '+(r.score||0):(r.champions||0)+'× 🏆'}</span><button class="rbtn" onclick="resumeRun('${r.id}')">Resume</button></div>
     </div>`;
   const runsHtml=runs.length?runs.slice(0,5).map(runCard).join(''):'<p class="small muted" style="margin:0">No franchises yet — start one from the left.</p>';
-  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><span class="ver">v9.5</span>`;
+  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v9.5</span>`;
   render(`
    <div class="tdash">
      <div class="tdash-top"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="tdash-top-r">${topR}</div></div>
@@ -1879,17 +1879,19 @@ function screenTitle(){
          <div class="tside-lab"><span><span class="lk"></span>Current Runs</span><span class="num">${runs.length}</span></div>
          ${runsHtml}
          <div class="tside-lab">GM Profile</div>
-         <div class="trun" style="border-left-color:var(--line2)">
-           <div class="n">GM Level ${plLevel()}</div>
-           <div class="s">${PROFILE.gamesPlayed||0} franchise${(PROFILE.gamesPlayed||0)===1?'':'s'} played · ${PROFILE.xp||0} XP</div>
+         <div style="display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:10px">
+           <div style="flex-shrink:0">${gmLevelDial(104)}</div>
+           <div style="min-width:0">
+             <div class="disp" style="font-size:12px;color:var(--gold)">GM Level ${plLevel()}</div>
+             <div class="small muted">${PROFILE.gamesPlayed||0} franchise${(PROFILE.gamesPlayed||0)===1?'':'s'} · ${PROFILE.xp||0} XP</div>
+             <div class="small" style="margin-top:6px;line-height:1.5"><span style="color:var(--amber)">💎 ${bwState().coins}</span><br><span style="color:var(--gold)">🎁 ${PROFILE.bw.packs.length}</span> bWARfare pack${PROFILE.bw.packs.length===1?'':'s'} to open</div>
+           </div>
          </div>
        </aside>
      </div>
      <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 9.5.0</span></div>
    </div>
-   ${xpPanel()}
-   <details class="panel" style="padding:14px"><summary style="cursor:pointer;font-weight:700">📐 6-Year Sprint — how you're graded</summary><div style="margin-top:10px">${gradeRubric()}</div></details>
-   <details class="panel" style="padding:14px"><summary style="cursor:pointer;font-weight:700">🪑 Career Mode — how you're judged</summary><div style="margin-top:10px">${survivorRubric()}</div></details>
+
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
   _atTitle=true;ensureNavBtns();
 }
@@ -5293,7 +5295,8 @@ function screenBwBattle(){
     if(won&&BW.meta&&!BW._rewarded){BW._rewarded=true;BW._reward=bwGauntWin();}
     field=`<div class="bwb-pop" style="color:${won?'var(--gold)':'var(--red)'};font-size:26px">${won?'🏆 VICTORY':'DEFEAT'}</div>
       <div class="muted">Final — Your Club ${BW.you.runs}, ${BW.cpu.name} ${BW.cpu.runs}</div>
-      ${won&&BW._reward?`<div style="margin-top:6px;color:var(--gold)" class="disp">🎁 Earned ${BW._reward.granted.length} ${BW._reward.boss?BW._reward.tierName+' ':''}pack${BW._reward.granted.length>1?'s':''}!</div>`:''}
+      ${won&&BW._reward?`<div style="margin-top:6px;color:var(--gold)" class="disp">🎁 Earned ${BW._reward.granted.length} ${BW._reward.boss?BW._reward.tierName+' ':''}pack${BW._reward.granted.length>1?'s':''}!</div>
+      <div style="margin-top:3px;color:var(--gold)" class="disp">🎖️ +${BW._reward.xp.xp} GM XP${BW._reward.xp.leveled?` · LEVEL UP → ${BW._reward.xp.to}!`:''}</div>`:''}
       <div style="display:flex;gap:8px;margin-top:10px">${won?`<button class="btn primary" onclick="screenGauntlet()">Continue ▸</button>`:`<button class="btn primary" onclick="bwGauntFight()">↻ Retry</button><button class="btn ghost" onclick="screenGauntlet()">Back</button>`}</div>`;
   } else if(BW.phase==='result'){
     const r=BW.last,pi=r.pitch==='FB'?{ic:'🔥',l:'FASTBALL',c:'var(--amber)'}:{ic:'💨',l:'OFFSPEED',c:'var(--blue)'};
@@ -5317,7 +5320,7 @@ function screenBwBattle(){
   const pedSide=yb?'H':'P';const canPed=(yb&&BW.phase==='swing')||(!yb&&BW.phase==='pitch');
   const pedsHTML=BW.you.phand.length?`<div class="bwb-peds" style="margin-top:8px">${BW.you.phand.map(e=>{const usable=canPed&&e.side===pedSide;return `<span class="bwb-ped ${e.side==='P'?'pit':''} ${usable?'':'dim'} ${BW.selEdge&&BW.selEdge.id===e.id?'sel':''}" ${usable?`onclick="bwbSelEdge('${e.id}')"`:''}>${e.name} · ${e.d}</span>`;}).join('')}</div>`:'';
   const oppMeta=BW.meta?`${BW.meta.boss?'👑 BOSS · ':''}${BW_TIERS[BW.meta.tier].name} ${BW.meta.boss?'':'#'+(BW.meta.step+1)}`:'';
-  render(`<div class="topbar"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="topbar-r"><button class="btn ghost sm" onclick="if(confirm('Forfeit this battle?'))screenGauntlet()">✕ Forfeit</button></div></div>
+  render(`<div class="topbar"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="topbar-r"><button class="btn ghost sm" onclick="showBwRules()">📖 Rules</button> <button class="btn ghost sm" onclick="if(confirm('Forfeit this battle?'))screenGauntlet()">✕ Forfeit</button></div></div>
     <div class="center" style="margin-bottom:6px"><span class="disp" style="letter-spacing:.1em;color:var(--gold);font-weight:700">b<span style="color:var(--ink)">WAR</span>fare</span> <span class="small muted">· ${oppMeta} · race to 10 · win after a full inning</span></div>
     <div class="bwb-score">
       <div class="bwb-sb ${!yb?'bat':''}"><div class="w">${BW.cpu.name}<small>${!yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r" style="color:var(--blue)">${BW.cpu.runs}</div></div>
@@ -5358,7 +5361,8 @@ function bwGauntWin(){
   if(boss){g.rings[tier]=true;const nt=PACK_TIERS[Math.min(3,tier+1)];for(let i=0;i<5;i++)granted.push(nt);g.tier=tier+1;g.step=0;}
   else{granted.push(PACK_TIERS[tier]);g.step=g.step+1;}
   bw.packs=bw.packs.concat(granted);saveProfile();
-  return {granted,boss,tier,tierName:BW_TIERS[Math.min(3,tier+(boss?1:0))].name};
+  const xpRes=bwAddBattleXP(boss?(30+tier*10):(8+tier*4));   // winning earns GM XP (bosses give more)
+  return {granted,boss,tier,tierName:BW_TIERS[Math.min(3,tier+(boss?1:0))].name,xp:xpRes};
 }
 function screenGauntlet(){
   bwState();bwEnsureStyles();bwbEnsureStyles();const g=bwGaunt();
@@ -5386,6 +5390,66 @@ function screenGauntlet(){
   _atTitle=true;ensureNavBtns();
 }
 
+// ---- GM level dial (270deg gauge, like the owner fan dial) ----
+function gmLevelDial(size){
+  size=size||104;const L=plLevel(),xp=PROFILE.xp||0,cur=xpForLevel(L),next=xpForLevel(L+1);
+  const pct=L>=MAX_LEVEL?100:clamp(Math.round((xp-cur)/(next-cur)*100),0,100);
+  const cx=size/2,cy=size/2,r=size*0.38,sw=size*0.075,a0=Math.PI*0.75,a1=Math.PI*2.25,span=a1-a0;
+  const pol=(a,rr)=>[cx+rr*Math.cos(a),cy+rr*Math.sin(a)];
+  const arcP=(s2,e,rr)=>{const[x0,y0]=pol(s2,rr),[x1,y1]=pol(e,rr);const lg=Math.abs(e-s2)>Math.PI?1:0;return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${rr.toFixed(1)} ${rr.toFixed(1)} 0 ${lg} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;};
+  let ticks='';for(let i=0;i<=10;i++){const a=a0+span*(i/10),r2=r-(i%5===0?sw:sw*0.6),[x1,y1]=pol(a,r),[x2,y2]=pol(a,r2);ticks+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${i%5===0?'#7d8a44':'#4a5330'}" stroke-width="${i%5===0?2:1}"/>`;}
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <path d="${arcP(a0,a1,r)}" stroke="#333b22" stroke-width="${sw.toFixed(1)}" fill="none"/>
+    <path d="${arcP(a0,a0+span*(pct/100),r)}" stroke="var(--gold)" stroke-width="${sw.toFixed(1)}" fill="none" stroke-linecap="round"/>
+    ${ticks}
+    <text x="${cx}" y="${(cy+size*0.05).toFixed(1)}" text-anchor="middle" font-family="'Chakra Petch',sans-serif" font-weight="700" font-size="${(size*0.30).toFixed(0)}" fill="var(--gold)">${L}</text>
+    <text x="${cx}" y="${(cy+size*0.20).toFixed(1)}" text-anchor="middle" font-family="'Chakra Petch',sans-serif" font-size="${(size*0.085).toFixed(0)}" fill="var(--dim)" letter-spacing="1">GM LEVEL</text>
+  </svg>`;
+}
+// ---- rules overlays ----
+function _rulesOverlay(title,html,wide){
+  const old=document.getElementById('saveov');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='saveov';ov.className='saveov';
+  ov.innerHTML=`<div class="savebox" style="max-width:${wide||620}px">
+    <div class="row" style="align-items:center"><h3 style="flex:1;margin:0">${title}</h3><button class="btn ghost sm" onclick="document.getElementById('saveov').remove()">✕</button></div>
+    <div style="margin-top:10px;font-size:13px;line-height:1.52">${html}</div></div>`;
+  document.body.appendChild(ov);
+}
+function showBwRules(){
+  _rulesOverlay('📖 bWARfare — How to play',`
+    <p><b>Goal.</b> Race to 10 runs — but a game only ends after a <b>full inning</b> with someone ahead. Reach 10 in the top and your opponent still bats the bottom to answer; ties go to extra innings.</p>
+    <p><b>Your deck.</b> 30 hitters, 10 pitchers, and a 12-card Player Edge Deck.</p>
+    <p><b>The at-bat.</b> The pitcher commits 🔥 Fastball or 💨 Offspeed (hidden). You send a hitter and may spend one Edge. Then:<br><b>Roll 2 dice + your hitter\'s vs-(pitch thrown) − the pitcher\'s rating in that pitch + Edge bonuses.</b></p>
+    <p><b>The ladder.</b> ≤7 out · 8–9 single · 10–11 double · 12–13 triple · 14+ home run.</p>
+    <p><b>Abilities shift the ladder.</b><br>Hitter <b style="color:var(--green)">CON</b>: the out line drops by 1 (7–9 is a single). <b style="color:var(--red)">PWR</b>: +1 base on any hit.<br>Pitcher <b style="color:var(--blue)">WHIFF</b>: the out line rises by 1 (only a 9 singles). <b style="color:var(--amber)">GB</b>: every extra-base hit drops a base and homers need 15+.</p>
+    <p><b>Base running.</b> A single scores runners from 2nd and 3rd; a double clears the corners; triples and homers clear the bases.</p>
+    <p><b>Once per game</b> you may make <b>one pitching change</b> (a random new arm) and <b>one Edge redraw</b> (a fresh hand of Edges).</p>
+    <p><b>Flow.</b> Three outs flip sides; a fresh pitcher takes the mound each inning.</p>
+    <p><b>The Gauntlet &amp; rewards.</b> Climb four battlefields (Bronze → Diamond), each 8 opponents + a boss. Beating an opponent earns a pack; beating a boss earns <b>5 next-tier packs + a ring</b>. <b>Every win grants GM XP</b> (bosses give more).</p>`);
+}
+function showGameRules(){
+  _rulesOverlay('📖 Rules &amp; Modes',`
+    <div class="sectlbl" style="margin:6px 0 4px">⚡ 6-Year Sprint</div>
+    <p class="small muted" style="margin:0">Inherit a washed-up club and get six seasons to build a 100-win contender — graded out of 100 at the end.</p>
+    <details style="margin:5px 0"><summary class="small" style="cursor:pointer;color:var(--gold)">How you\'re graded</summary><div style="margin-top:6px">${gradeRubric()}</div></details>
+    <div class="sectlbl" style="margin:12px 0 4px">🔥 Hard Mode</div>
+    <p class="small muted" style="margin:0">The 6-Year Sprint with a tougher league, real injuries to manage at extra in-season breaks, a deeper draft, and stricter grading — its own leaderboard.</p>
+    <div class="sectlbl" style="margin:12px 0 4px">🪑 Career Mode</div>
+    <p class="small muted" style="margin:0">Endless. Stay in the owner\'s favor — contend, manage the money, and ride the cycle of windows and rebuilds. Your score climbs until you\'re fired.</p>
+    <details style="margin:5px 0"><summary class="small" style="cursor:pointer;color:var(--gold)">How the owner judges you</summary><div style="margin-top:6px">${survivorRubric()}</div></details>
+    <div class="sectlbl" style="margin:12px 0 4px">💼 Owner Mode</div>
+    <p class="small muted" style="margin:0">Spend $4B to buy a club and build a ballpark, hire your front office, steer your GM, set ticket/concession/merch prices, and grow the franchise\'s value. Endless — sell for profit or build a 50-year dynasty.</p>
+    <div class="sectlbl" style="margin:12px 0 4px">⚔️ bWARfare</div>
+    <p class="small muted" style="margin:0">A collectible card battle — collect Set 1, build a deck, and climb the gauntlet. <a onclick="showBwRules()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Full battle rules ▸</a></p>`);
+}
+// ---- battle XP: winning grants GM XP (and any level-up rewards) ----
+function bwAddBattleXP(amt){
+  const before=plLevel();addXP(amt);const after=plLevel();
+  const bw=bwState();let packs=[],coins=0;
+  for(let L=before+1;L<=after;L++){packs.push(bwLevelTier(L));coins+=bwLevelCoins(L);}
+  if(packs.length){bw.coins=(bw.coins||0)+coins;bw.packs=bw.packs.concat(packs);saveProfile();}
+  return {xp:amt,leveled:after>before,to:after,packs:packs.length,coins};
+}
 function screenPlatoon(tab){
   bwState();bwEnsureStyles();_bwTab=tab||_bwTab||'deck';
   const bw=PROFILE.bw;
