@@ -4370,7 +4370,7 @@ async function screenLeaderboard(fromEnd,board){
      </div><p class="small muted" style="margin-top:6px">Career score = your running total + bonuses for seasons survived and World Series titles.</p>`;
   } else {
     const hardBoard=board==='hard';
-    const ranked=lbRank(all.filter(e=>e.mode!=='survivor'&&(hardBoard?e.hard:!e.hard)));
+    const ranked=lbRank(all.filter(e=>e.mode!=='survivor'&&e.mode!=='owner'&&(hardBoard?e.hard:!e.hard)));   // 6-Year board excludes Owner & Career entries
     const today=ranked.filter(e=>(e.date||todayStr(new Date(e.ts||Date.now())))===todayStr());
     const head=`<thead><tr><th class="num">#</th><th>GM / Club</th><th class="num">Score</th><th class="num">Peak</th><th class="num">WS</th></tr></thead>`;
     el.innerHTML=`${hardBoard?'<p class="small" style="color:#ff8a6b;margin:0 0 8px">🔥 Hard Mode — a tougher league, real injuries, and stricter grading. The truest test.</p>':''}<div class="lbgrid">
@@ -4442,7 +4442,7 @@ function xpEndNotice(){
     if(G.owner)qual=clamp(Math.round((G.champions||0)*16+Math.max(0,ownerNetProfit())/40),0,100);
     else if(G.mode==="survivor")qual=clamp(Math.round((G.cumScore||0)/12+(G.survTitles||0)*14),0,100);
     else qual=clamp(Math.round(computeGrade().score||0),0,100);
-    G._bwRes=bwReward(G._xpRes.leveledUp?(G._xpRes.to-G._xpRes.from):0,qual);
+    G._bwRes=bwReward(G._xpRes.from,G._xpRes.to,qual);
     G._xpAwarded=true;try{saveGame();}catch(e){}}
   const r=G._xpRes||{},bwr=G._bwRes||{};
   return `<div class="panel center" style="border-color:var(--gold)">
@@ -4756,6 +4756,15 @@ function screenWelcome(){
         <div style="font-weight:800;color:var(--gold)">🪑 Career Mode ${NEWPILL}</div>
         <p class="small muted" style="margin:4px 0 0">Endless. Keep the owner happy and <b>survive as long as you can</b> through the cycle of contention and rebuilds. Now featuring a <b>📣 Fan Favor meter</b>${NEWPILL} the fans control, and <b>🎙️ mid-season media press conferences</b>${NEWPILL} where what you say to reporters moves both meters. Your score climbs every year until you're fired — or retire a legend.</p></div>
     </div>
+    <div class="panel" style="border-color:var(--gold)"><h3 style="margin-top:0">⚔️ NEW: bWARfare ${NEWPILL}</h3>
+      <p class="small muted" style="margin:4px 0 8px">A collectible card battle built right on top of your franchise — collect a 500-card set, build a deck, and climb a gauntlet of opponents and bosses for rings.</p>
+      <div class="small" style="line-height:1.55">
+        <div style="margin:5px 0"><b>🎴 Collect cards</b> — every player is a card, Common → HOF (with the same flowing diamond &amp; rainbow elites you see on 95+ OVRs). <b>Leveling up your GM</b> by playing franchises earns you <b>packs + 💎 Diamond Coins</b> every level.</div>
+        <div style="margin:5px 0"><b>🏪 Store &amp; packs</b> — spend Diamond Coins on <b>Bronze / Silver / Gold / Diamond</b> packs; the higher the tier, the better the odds at MVPs and HOFs.</div>
+        <div style="margin:5px 0"><b>🃏 Build your deck</b> — head to <b>Platoon</b> and assemble <b>30 hitters, 10 pitchers, and 12 Edge cards</b>. Your <b>Create-A-Player</b> rides along as his own card that levels up with him.</div>
+        <div style="margin:5px 0"><b>⚔️ The Gauntlet</b> — duel through 8 opponents and a boss across four battlefields (Bronze → Diamond). Every win pays packs; the <b>Diamond boss</b> needs a stacked deck of HOFs &amp; MVPs. Each at-bat resolves on one dice roll — your card&#39;s matchup vs theirs.</div>
+      </div>
+      <div class="center" style="margin-top:8px"><button class="btn" onclick="(function(){try{localStorage.setItem(WELCOME_KEY,'1');}catch(e){};screenPlatoon();})()">Open Platoon ▸</button></div></div>
     <div class="panel"><h3 style="margin-top:0">✨ What else is new</h3>
       <div class="small" style="line-height:1.5">
         <div style="margin:5px 0"><b>⭐ Create-A-Player</b> ${NEWPILL} — earn XP every franchise to level up your GM profile and design a custom prospect who joins your farm in <i>every</i> new game.</div>
@@ -4870,6 +4879,7 @@ const PACK_TIERS=['bronze','silver','gold','diamond'];
 function bwState(){
   if(!PROFILE.bw){PROFILE.bw={coins:300,collection:{},deck:{h:[],p:[],e:[]},packs:['silver','silver']};bwGrantStarter();saveProfile();}
   const bw=PROFILE.bw;bw.deck=bw.deck||{h:[],p:[],e:[]};bw.collection=bw.collection||{};bw.packs=bw.packs||[];if(bw.coins==null)bw.coins=300;
+  bwRetroGrant();
   return bw;
 }
 function bwGrantStarter(){
@@ -4880,7 +4890,16 @@ function bwGrantStarter(){
   [...cH,...cP,...cE].forEach(c=>bw.collection[c.id]=(bw.collection[c.id]||0)+1);
   bw.deck.h=cH.slice(0,30).map(c=>c.id);bw.deck.p=cP.slice(0,10).map(c=>c.id);bw.deck.e=cE.slice(0,12).map(c=>c.id);
 }
-const bwOwned=id=>(PROFILE.bw&&PROFILE.bw.collection[id])||0;
+const bwOwned=id=>id==='CAP'?(PROFILE.createdPlayer?1:0):((PROFILE.bw&&PROFILE.bw.collection[id])||0);
+// your Create-A-Player as a live bWARfare card — stats track the player as you upgrade him
+function bwCapGet(){
+  const c=PROFILE.createdPlayer;if(!c)return null;
+  const pot=clamp(Math.round(c.pot||c.ovr||70),60,99),base=clamp(Math.round((pot-49)/5),1,10);
+  const isP=(c.pos==='SP'||c.pos==='RP'),rar=pot>=99?4:pot>=96?3:pot>=90?2:pot>=80?1:0;
+  const ab=isP?{whiff:pot>=82,soft:pot>=90}:{con:pot>=80,pwr:pot>=88};
+  return {id:'CAP',t:isP?'P':'H',name:(c.name||'My Player'),pos:c.pos||'DH',ov:pot,rar,vf:base,vo:base,ab,cap:true};
+}
+function bwCardById(id){return SET1.byId[id]||(id==='CAP'?bwCapGet():null);}
 const bwDistinct=()=>Object.keys((PROFILE.bw&&PROFILE.bw.collection)||{}).length;
 function bwRollRar(w){const tot=w.reduce((s,x)=>s+x,0);let r=Math.random()*tot;for(let i=0;i<w.length;i++){if((r-=w[i])<0)return i;}return 0;}
 function bwPlayerOfRar(rar){return pick(SET1.cards.filter(c=>c.rar===rar));}
@@ -4897,13 +4916,20 @@ function bwOpenPack(tier){
   saveProfile();return out;
 }
 // ---- franchise / level-up rewards ----
-function bwReward(levelGain,qual){
+function bwLevelTier(L){return L>=30?'diamond':L>=20?'gold':L>=10?'silver':'bronze';}
+function bwLevelCoins(L){return L>=30?500:L>=20?300:L>=10?200:100;}
+function bwReward(fromL,toL,qual){
   const bw=bwState();qual=clamp(qual||0,0,100);
-  const tier=qual>=80?'gold':qual>=50?'silver':'bronze';
-  const coins=120+Math.round(qual*2.2);
-  const packs=[tier];for(let i=0;i<(levelGain||0);i++)packs.push('silver');
+  let coins=120+Math.round(qual*2.2),packs=[qual>=80?'gold':qual>=50?'silver':'bronze'];   // franchise-completion pack by performance
+  for(let L=(fromL||0)+1;L<=(toL||0);L++){packs.push(bwLevelTier(L));coins+=bwLevelCoins(L);}   // per-level reward, scaling by band
   bw.coins=(bw.coins||0)+coins;bw.packs=bw.packs.concat(packs);saveProfile();
-  return {coins,packs:packs.length,tier};
+  return {coins,packs:packs.length};
+}
+function bwRetroGrant(){   // one-time catch-up: existing GM levels earn their level rewards
+  const bw=PROFILE.bw;if(bw._retroDone)return;bw._retroDone=true;
+  const L=plLevel();let coins=0,packs=[];
+  for(let l=1;l<=L;l++){packs.push(bwLevelTier(l));coins+=bwLevelCoins(l);}
+  if(packs.length){bw.coins=(bw.coins||0)+coins;bw.packs=bw.packs.concat(packs);saveProfile();}
 }
 // ---- styles (injected once) ----
 function bwEnsureStyles(){if(document.getElementById('bwcss'))return;const s=document.createElement('style');s.id='bwcss';s.textContent=`
@@ -4960,11 +4986,11 @@ function bwCardMini(c,inDeck){
   return `<div class="bwc ${inDeck?'indeck':''} ${c.rar===4?'hof':''}" onclick="bwToggle('${c.id}')">${top}
     <div class="bwc-r">${rlab}</div><div class="bwc-n">${c.name}</div>
     <div class="bwc-p">${c.pos} · ${numHTML}</div>
-    <div class="bwc-s">${c.t==='H'?`🔥${c.vf} 🪤${c.vo}`:`FB${c.vf} OF${c.vo}`}${bwAbHTML(c)}</div>${tail}</div>`;
+    <div class="bwc-s">${c.t==='H'?`🔥${c.vf} 💨${c.vo}`:`🔥${c.vf} 💨${c.vo}`}${bwAbHTML(c)}</div>${tail}</div>`;
 }
 // ---- deck toggle ----
 function bwToggle(id){
-  const c=SET1.byId[id],bw=bwState();if(!c)return;
+  const c=bwCardById(id),bw=bwState();if(!c)return;
   if(!bwOwned(id)){toast("You don't own that card yet.");return;}
   const list=c.t==='E'?bw.deck.e:(c.t==='H'?bw.deck.h:bw.deck.p);
   const cap=c.t==='E'?12:(c.t==='H'?30:10),i=list.indexOf(id);
@@ -4977,8 +5003,9 @@ function bwAutoBuild(){
   const bw=bwState();
   const pow=c=>(c.ov||0)+(c.t==='H'?((c.ab.con?2:0)+(c.ab.pwr?2:0)):((c.ab.whiff?2:0)+(c.ab.soft?2:0)));
   const own=id=>bwOwned(id)>0;
-  bw.deck.h=SET1.cards.filter(c=>c.t==='H'&&own(c.id)).sort((a,b)=>pow(b)-pow(a)).slice(0,30).map(c=>c.id);
-  bw.deck.p=SET1.cards.filter(c=>c.t==='P'&&own(c.id)).sort((a,b)=>pow(b)-pow(a)).slice(0,10).map(c=>c.id);
+  const _cap=bwCapGet();
+  bw.deck.h=(_cap&&_cap.t==='H'?[_cap]:[]).concat(SET1.cards.filter(c=>c.t==='H'&&own(c.id))).sort((a,b)=>pow(b)-pow(a)).slice(0,30).map(c=>c.id);
+  bw.deck.p=(_cap&&_cap.t==='P'?[_cap]:[]).concat(SET1.cards.filter(c=>c.t==='P'&&own(c.id))).sort((a,b)=>pow(b)-pow(a)).slice(0,10).map(c=>c.id);
   const ep=e=>(e.fb+e.off+e.any)+(e.rar*2)+(e.pwrBump?2:0);
   bw.deck.e=SET1.edges.filter(c=>own(c.id)).sort((a,b)=>ep(b)-ep(a)).slice(0,12).map(c=>c.id);
   saveProfile();toast('Auto-built your strongest deck.');screenPlatoon('deck');
@@ -4989,7 +5016,7 @@ let _bwTab='deck',_bwFilt={rar:'all',type:'all'};
 function bwDeckTab(){
   const d=PROFILE.bw.deck;
   const sec=(ids,label,cap)=>`<div class="sectlbl" style="margin:12px 0 6px">${label} <b style="color:${ids.length===cap?'var(--green)':'var(--gold)'}">${ids.length}/${cap}</b></div>
-    <div class="bwgrid">${ids.map(id=>bwCardMini(SET1.byId[id],true)).join('')||'<span class="muted">None — add from the Collection tab.</span>'}</div>`;
+    <div class="bwgrid">${ids.map(id=>bwCardMini(bwCardById(id),true)).join('')||'<span class="muted">None — add from the Collection tab.</span>'}</div>`;
   const valid=d.h.length===30&&d.p.length===10&&d.e.length===12;
   return `<div class="deckbar">⚾ Hitters <b>${d.h.length}/30</b> · 🔥 Pitchers <b>${d.p.length}/10</b> · 💉 Edges <b>${d.e.length}/12</b></div>
     <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap"><button class="btn primary sm" onclick="bwAutoBuild()">⚙️ Auto-build best</button><button class="btn ghost sm" onclick="bwClearDeck()">🗑️ Clear deck</button></div>
@@ -5000,7 +5027,7 @@ function bwCollTab(){
   const bw=PROFILE.bw;
   const rChip=(v,l)=>`<span class="chip ${_bwFilt.rar==v?'on':''}" onclick="bwFilt('rar','${v}')">${l}</span>`;
   const tChip=(v,l)=>`<span class="chip ${_bwFilt.type==v?'on':''}" onclick="bwFilt('type','${v}')">${l}</span>`;
-  let list=SET1.cards.concat(SET1.edges).filter(c=>bwOwned(c.id)>0);
+  const _cap=bwCapGet();let list=(_cap?[_cap]:[]).concat(SET1.cards,SET1.edges).filter(c=>bwOwned(c.id)>0);
   if(_bwFilt.rar!=='all')list=list.filter(c=>c.rar===+_bwFilt.rar);
   if(_bwFilt.type!=='all')list=list.filter(c=>c.t===_bwFilt.type);
   list.sort((a,b)=>b.rar-a.rar||(b.ov||0)-(a.ov||0));
@@ -5100,14 +5127,18 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
  .gnode.done{opacity:.5;border-color:var(--line)} .gnode.cur{border-color:var(--gold);box-shadow:0 0 10px rgba(189,238,60,.25)} .gnode.boss{border-left:4px solid var(--red)}
  .gnode .gn{font-family:var(--disp);font-weight:700;text-transform:uppercase;font-size:13px;flex:1}
  .gnode .gs{font-family:var(--disp);font-size:10px;color:var(--dim);letter-spacing:.06em}
- .bwb-fan{display:flex;justify-content:center;align-items:flex-end;min-height:166px;position:relative;padding-top:10px;margin-bottom:26px}
- .bwb-slot{transform-origin:bottom center;transition:transform .16s,filter .16s;margin:0 -28px}
+ .bwb-fan{display:flex;justify-content:center;align-items:flex-end;min-height:166px;position:relative;padding-top:10px;margin-bottom:30px}
+ .bwb-slot{transform-origin:bottom center;transition:transform .16s,filter .16s;margin:0 -14px}
  .bwb-fan.you .bwb-slot{cursor:pointer}
  .bwb-fan.you .bwb-slot:hover{transform:translateY(-20px) scale(1.05)!important;z-index:20;filter:brightness(1.12)}
  .bwb-slot.sel{transform:translateY(-24px) scale(1.06)!important;z-index:21}
  .bwb-slot.sel .bwc{outline:2px solid var(--gold);box-shadow:0 0 14px rgba(189,238,60,.4)}
- .bwb-back{width:112px;height:150px;border-radius:7px;border:1px solid var(--line2);background:radial-gradient(circle at 50% 38%,rgba(189,238,60,.10),transparent 60%),repeating-linear-gradient(135deg,#161c0e,#161c0e 6px,#1c2413 6px,#1c2413 12px);display:flex;align-items:center;justify-content:center}
+ .bwb-fan.opp{min-height:96px;padding-top:4px;margin-bottom:10px}
+ .bwb-fan.opp .bwb-slot{margin:0 -20px}
+ .bwb-back{width:108px;height:144px;border-radius:7px;border:1px solid var(--line2);background:radial-gradient(circle at 50% 38%,rgba(189,238,60,.10),transparent 60%),repeating-linear-gradient(135deg,#161c0e,#161c0e 6px,#1c2413 6px,#1c2413 12px);display:flex;align-items:center;justify-content:center}
+ .bwb-fan.opp .bwb-back{width:62px;height:84px}
  .bwb-back span{font-family:var(--disp);font-weight:700;font-size:13px;color:var(--gold);opacity:.55;letter-spacing:.04em}.bwb-back b{color:var(--ink)}
+ .bwb-fan.opp .bwb-back span{font-size:9px}
  .bwb-decks{display:flex;gap:11px;justify-content:center;margin-bottom:16px}
  .bwb-stack{position:relative;width:32px;height:46px;border-radius:5px;background:repeating-linear-gradient(135deg,#1c2413,#1c2413 5px,#222d16 5px,#222d16 10px);border:1px solid var(--line2);box-shadow:2px 2px 0 #0d1108,3px 3px 0 var(--line)}
  .bwb-stack .c{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--disp);font-weight:700;font-size:13px;color:var(--gold)}
@@ -5127,7 +5158,7 @@ function bwbCardHTML(c){
   const top=cc.kind==='irid'?'<div class="bwc-top irid"></div>':cc.kind==='diamond'?'<div class="bwc-top bdiamond"></div>':`<div class="bwc-top" style="background:${cc.col}"></div>`;
   const rlab=gc?`<span class="${gc}">${rm.name}</span>`:`<span style="color:${rm.col}">${rm.name}</span>`;
   const num=gc?`<b class="${gc}">${c.ov}</b>`:`<b style="color:${cc.col}">${c.ov}</b>`;
-  const stat=c.t==='H'?`🔥${c.vsFB} 🪤${c.vsOFF}`:`FB${c.fb} OF${c.off}`;
+  const stat=c.t==='H'?`🔥${c.vsFB} 💨${c.vsOFF}`:`🔥${c.fb} 💨${c.off}`;
   const ab=c.t==='H'?((c.con?'<span class="bwc-ab" style="background:#1d3a1a;color:var(--green)">CON</span>':'')+(c.pwr?'<span class="bwc-ab" style="background:#3a1d16;color:var(--red)">PWR</span>':'')):((c.whiff?'<span class="bwc-ab" style="background:#1a2a3a;color:var(--blue)">WHIFF</span>':'')+(c.soft?'<span class="bwc-ab" style="background:#2a2a14;color:var(--amber)">GB</span>':''));
   return `<div class="bwc" style="width:118px">${top}<div class="bwc-r">${rlab}</div><div class="bwc-n">${c.name}</div><div class="bwc-p">${c.pos} · ${num}</div><div class="bwc-s">${stat}${ab}</div></div>`;
 }
@@ -5206,11 +5237,26 @@ function bwbNext(){
 }
 function bwbSelHit(i){if(!(bwbYouBat()&&BW.phase==='swing'))return;BW.selHitter=BW.you.hand[i];screenBwBattle();}
 function bwbSelEdge(id){const e=BW.you.phand.find(x=>x.id===id);BW.selEdge=(BW.selEdge&&BW.selEdge.id===id)?null:e;screenBwBattle();}
+function bwbChangePitcher(){
+  if(bwbYouBat())return;const s=BW.you;
+  if(s._pcUsed){toast('Pitching change already used this game.');return;}
+  if(!s.pitchers.length)s.pitchers=shuffle(s.allP.slice());
+  let np=s.pitchers.shift();if(np&&s.pitcher&&np.id===s.pitcher.id&&s.pitchers.length){s.pitchers.push(np);np=s.pitchers.shift();}
+  if(np){np._inn=BW.inning;s.pitcher=np;}
+  s._pcUsed=true;BW.selEdge=null;toast(`New arm: ${np?np.name:'reliever'} — a random draw.`);screenBwBattle();
+}
+function bwbRedrawEdges(){
+  const s=BW.you;
+  if(s._edUsed){toast('Edge redraw already used this game.');return;}
+  s.peds=shuffle(s.peds.concat(s.phand));s.phand=[];
+  while(s.phand.length<3&&s.peds.length)s.phand.push(s.peds.shift());
+  s._edUsed=true;BW.selEdge=null;toast('Edge hand redrawn.');screenBwBattle();
+}
 function bwbDia(){const b=BW.bases;return `<div class="bwb-dia"><div class="bwb-bs" style="top:0;left:15px;${b[1]?'':''}${b[1]?'background:var(--gold);border-color:var(--gold)':''}"></div><div class="bwb-bs" style="top:15px;left:30px;${b[0]?'background:var(--gold);border-color:var(--gold)':''}"></div><div class="bwb-bs" style="top:15px;left:0;${b[2]?'background:var(--gold);border-color:var(--gold)':''}"></div><div class="bwb-bs" style="top:30px;left:15px;background:var(--line)"></div></div>`;}
 function bwbStacks(s){const st=(c,l,cls)=>`<div class="bwb-stack ${cls||''}"><span class="c">${c}</span><span class="l">${l}</span></div>`;return `<div class="bwb-decks">${st(s.hitters.length,'Bats')}${st(s.pitchers.length,'Arms')}${st(s.peds.length,'Edges','ped')}</div>`;}
 function bwbFan(cards,faceUp,selId,clickable){
   const n=cards.length;
-  return `<div class="bwb-fan ${clickable?'you':''}">${cards.map((c,i)=>{
+  return `<div class="bwb-fan ${clickable?'you':''} ${faceUp?'':'opp'}">${cards.map((c,i)=>{
     const ang=(i-(n-1)/2)*6,lift=Math.abs(i-(n-1)/2)*7;
     const inner=faceUp?bwbCardHTML(c):'<div class="bwb-back"><span>b<b>WAR</b></span></div>';
     return `<div class="bwb-slot ${selId&&c.id===selId?'sel':''}" style="transform:rotate(${ang}deg) translateY(${lift}px)" ${clickable?`onclick="bwbSelHit(${i})"`:''}>${inner}</div>`;
@@ -5231,7 +5277,7 @@ function screenBwBattle(){
     const r=BW.last,pi=r.pitch==='FB'?{ic:'🔥',l:'FASTBALL',c:'var(--amber)'}:{ic:'💨',l:'OFFSPEED',c:'var(--blue)'};
     field=`<div class="bwb-pop" style="color:${pi.c}"><span class="ic">${pi.ic}</span>${pi.l}</div>
       <div class="bwb-dice"><div class="bwb-die roll" id="bwbd1">?</div><div class="bwb-die roll" id="bwbd2">?</div></div>
-      <div class="bwb-math" id="bwbmath">Roll: <b>${r.roll}</b> + vs${r.pitch==='FB'?'🔥':'🪤'} <b>${r.hv}</b> − ${r.pitch==='FB'?'🔥':'🪤'} <b>${r.pr}</b>${r.hb?` + <b style="color:var(--gold)">${r.hb}</b>`:''}${r.pb?` − <b style="color:var(--red)">${r.pb}</b>`:''} = <span class="tot">${r.total}</span>${r.tags.length?` <span class="muted" style="font-size:11px">[${r.tags.join(' · ')}]</span>`:''}</div>
+      <div class="bwb-math" id="bwbmath">Roll: <b>${r.roll}</b> + vs${r.pitch==='FB'?'🔥':'💨'} <b>${r.hv}</b> − ${r.pitch==='FB'?'🔥':'💨'} <b>${r.pr}</b>${r.hb?` + <b style="color:var(--gold)">${r.hb}</b>`:''}${r.pb?` − <b style="color:var(--red)">${r.pb}</b>`:''} = <span class="tot">${r.total}</span>${r.tags.length?` <span class="muted" style="font-size:11px">[${r.tags.join(' · ')}]</span>`:''}</div>
       <div class="bwb-outc" id="bwboutc" style="color:${r.bases>=3||r.ejected?'var(--gold)':r.bases?'var(--green)':'var(--red)'}">${r.label}</div>
       <div class="muted" id="bwbsub" style="min-height:16px"></div>
       <button class="btn primary" id="bwbnext" style="opacity:0" onclick="bwbNext()">Next ▸</button>`;
@@ -5242,7 +5288,8 @@ function screenBwBattle(){
   } else {
     field=`<div class="sectlbl">You're pitching · ${def.pitcher.name}</div>${bwbCardHTML(def.pitcher)}
       <div class="muted" style="font-size:12px">${off.name} sends a hitter blind. Choose your pitch${BW.you.phand.some(e=>e.side==='P')?' (doctor it with an Edge below)':''}.</div>
-      <div style="display:flex;gap:10px"><button class="btn" style="border-left:4px solid var(--amber)" onclick="bwbCommitPitch('FB')">🔥 Fastball</button><button class="btn" style="border-left:4px solid var(--blue)" onclick="bwbCommitPitch('OFF')">💨 Offspeed</button></div>`;
+      <div style="display:flex;gap:10px"><button class="btn" style="border-left:4px solid var(--amber)" onclick="bwbCommitPitch('FB')">🔥 Fastball</button><button class="btn" style="border-left:4px solid var(--blue)" onclick="bwbCommitPitch('OFF')">💨 Offspeed</button></div>
+      ${BW.you._pcUsed?'':'<button class="btn ghost sm" onclick="bwbChangePitcher()">🔄 New arm · 1 per game</button>'}`;
   }
   // your Edge hand (only the relevant side is actionable this turn)
   const pedSide=yb?'H':'P';const canPed=(yb&&BW.phase==='swing')||(!yb&&BW.phase==='pitch');
@@ -5260,6 +5307,7 @@ function screenBwBattle(){
     <div class="bwb-field">${field}</div>
     ${bwbFan(BW.you.hand,true,BW.selHitter&&BW.selHitter.id,yb&&BW.phase==='swing')}
     ${pedsHTML}
+    ${(BW.you.phand.length&&!BW.you._edUsed&&!BW.over&&BW.phase!=='result')?`<div class="center" style="margin-top:6px"><button class="btn ghost sm" onclick="bwbRedrawEdges()">🔄 Redraw Edges · 1 per game</button></div>`:''}
     <div class="bwb-zlbl" style="margin-top:10px">Your decks</div>
     ${bwbStacks(BW.you)}`);
   _atTitle=true;ensureNavBtns();
@@ -5280,7 +5328,7 @@ function bwGauntFight(){
   if(g.tier>3){screenGauntlet();return;}
   const boss=g.step>=8,cpu=bwCpuDeck(g.tier,g.step);
   const oppName=boss?BW_BOSS[g.tier]:BW_OPP[BW_TIERS[g.tier].k][g.step];
-  bwbStart({h:d.h.map(id=>bwbCard(SET1.byId[id])),p:d.p.map(id=>bwbCard(SET1.byId[id])),e:d.e.map(id=>bwbCard(SET1.byId[id]))},
+  bwbStart({h:d.h.map(bwCardById).filter(Boolean).map(bwbCard),p:d.p.map(bwCardById).filter(Boolean).map(bwbCard),e:d.e.map(bwCardById).filter(Boolean).map(bwbCard)},
            {h:cpu.h.map(bwbCard),p:cpu.p.map(bwbCard),e:cpu.e.map(bwbCard)},{tier:g.tier,step:g.step,boss,oppName});
 }
 function bwGauntWin(){
