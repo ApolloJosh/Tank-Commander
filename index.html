@@ -1884,6 +1884,7 @@ function screenTitle(){
            <div style="min-width:0">
              <div class="disp" style="font-size:12px;color:var(--gold)">GM Level ${plLevel()}</div>
              <div class="small muted">${PROFILE.gamesPlayed||0} franchise${(PROFILE.gamesPlayed||0)===1?'':'s'} · ${PROFILE.xp||0} XP</div>
+             <div class="small" style="color:var(--gold)">${plLevel()>=MAX_LEVEL?'★ MAX LEVEL':Math.max(0,xpForLevel(plLevel()+1)-(PROFILE.xp||0))+' XP to Lv '+(plLevel()+1)}</div>
              <div class="small" style="margin-top:6px;line-height:1.5"><span style="color:var(--amber)">💎 ${bwState().coins}</span><br><span style="color:var(--gold)">🎁 ${PROFILE.bw.packs.length}</span> bWARfare pack${PROFILE.bw.packs.length===1?'':'s'} to open</div>
            </div>
          </div>
@@ -4933,8 +4934,8 @@ function bwOpenPack(tier){
   saveProfile();return out;
 }
 // ---- franchise / level-up rewards ----
-function bwLevelTier(L){return L>=30?'diamond':L>=20?'gold':L>=10?'silver':'bronze';}
-function bwLevelCoins(L){return L>=30?500:L>=20?300:L>=10?200:100;}
+function bwLevelTier(L){return L>=20?'diamond':L>=15?'gold':L>=10?'silver':'bronze';}
+function bwLevelCoins(L){return L>=20?500:L>=15?300:L>=10?200:100;}
 function bwReward(fromL,toL,qual){
   const bw=bwState();qual=clamp(qual||0,0,100);
   let coins=120+Math.round(qual*2.2),packs=[qual>=80?'gold':qual>=50?'silver':'bronze'];   // franchise-completion pack by performance
@@ -5361,7 +5362,7 @@ function bwGauntWin(){
   if(boss){g.rings[tier]=true;const nt=PACK_TIERS[Math.min(3,tier+1)];for(let i=0;i<5;i++)granted.push(nt);g.tier=tier+1;g.step=0;}
   else{granted.push(PACK_TIERS[tier]);g.step=g.step+1;}
   bw.packs=bw.packs.concat(granted);saveProfile();
-  const xpRes=bwAddBattleXP(boss?(30+tier*10):(8+tier*4));   // winning earns GM XP (bosses give more)
+  const xpRes=bwAddBattleXP(boss?(120+tier*20):(30+tier*5));   // winning earns GM XP — generous, and scales with battlefield tier
   return {granted,boss,tier,tierName:BW_TIERS[Math.min(3,tier+(boss?1:0))].name,xp:xpRes};
 }
 function screenGauntlet(){
