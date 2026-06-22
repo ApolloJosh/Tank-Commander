@@ -4609,7 +4609,22 @@ function mergeProfileFromCloud(cloudStr){
   PROFILE.xp=Math.max(lx,cx);
   PROFILE.gamesPlayed=Math.max(PROFILE.gamesPlayed||0,c.gamesPlayed||0);
   PROFILE.createdPlayer=(cx>lx? (c.createdPlayer||PROFILE.createdPlayer) : (PROFILE.createdPlayer||c.createdPlayer))||null;
+  bwMergeFromCloud(c.bw);   // bWARfare collection / deck / coins / gauntlet follow the account
   saveProfile();
+}
+// merge bWARfare state from the cloud so cards + gauntlet progress persist across devices
+function bwMergeFromCloud(cbw){
+  if(!cbw)return;const bw=bwState();
+  const col=Object.assign({},bw.collection||{});
+  Object.keys(cbw.collection||{}).forEach(id=>{col[id]=Math.max(col[id]||0,cbw.collection[id]||0);});   // union, keep max owned
+  bw.collection=col;
+  bw.coins=Math.max(bw.coins||0,cbw.coins||0);
+  if((cbw.packs||[]).length>(bw.packs||[]).length)bw.packs=cbw.packs.slice();   // keep the bigger unopened queue
+  const valid=d=>d&&d.h&&d.h.length===30&&d.p&&d.p.length===10&&d.e&&d.e.length===12;
+  if(valid(cbw.deck)&&!valid(bw.deck))bw.deck=cbw.deck;   // take a built deck if you don't have one here
+  const gp=g=>g?((g.rings||[]).filter(Boolean).length*1000+(g.tier||0)*9+(g.step||0)):0;
+  if(cbw.gaunt&&gp(cbw.gaunt)>gp(bw.gaunt))bw.gaunt=cbw.gaunt;   // furthest gauntlet progress wins
+  bw._retroDone=bw._retroDone||cbw._retroDone;   // don't re-run the level catch-up
 }
 async function reconcileAfterLogin(d){
   mergeProfileFromCloud(d.profile);
@@ -4647,7 +4662,7 @@ function screenAccount(){
       <div class="panel center">
         <div class="pill gold">SIGNED IN</div>
         <h3 style="margin:8px 0 2px">${(a.username||'').replace(/</g,'&lt;')}</h3>
-        <p class="small muted">GM Level ${plLevel()} · your level, created player, and current game sync automatically across devices.</p>
+        <p class="small muted">GM Level ${plLevel()} · your level, created player, current game, and bWARfare cards &amp; gauntlet sync automatically across devices.</p>
         <div style="margin-top:10px"><button class="btn" onclick="cloudSyncNow().then(()=>toast('Synced'))">⟲ Sync now</button>
           <button class="btn ghost" onclick="doLogout()">Log out</button></div>
       </div>`);return;
@@ -5183,7 +5198,7 @@ const bwbOff=()=>BW.half==='top'?BW.you:BW.cpu;
 const bwbDef=()=>BW.half==='top'?BW.cpu:BW.you;
 const bwbYouBat=()=>BW.half==='top';
 function bwbStartHalf(){
-  BW.outs=0;BW.bases=[false,false,false];const d=bwbDef();
+  BW.outs=0;BW._ab=0;BW.bases=[false,false,false];const d=bwbDef();
   if(!d.pitcher||d.pitcher._inn!==BW.inning){if(!d.pitchers.length)d.pitchers=shuffle(d.allP.slice());d.pitcher=d.pitchers.shift();d.pitcher._inn=BW.inning;}
   BW.selHitter=null;BW.selEdge=null;BW.pdEdge=null;
   if(bwbYouBat()){BW.committedPitch=bwbCpuPitch(d.pitcher);BW.pdEdge=bwbCpuPitEdge(d);BW.phase='swing';}else BW.phase='pitch';
@@ -5228,10 +5243,17 @@ function bwbDoAB(h,hE){
   BW.lastMsg=r.ejected?`${h.name} ejected for a corked bat — out.`:r.bases===0?`${h.name} ${r.total<=4?'strikes out':'is retired'}.`:`${who}: ${h.name} ${r.label.toLowerCase()}${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} in`:''}!`;
   screenBwBattle();
 }
-function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;BW.bases=p.nb;if(off.runs>=10){BW.over=true;BW.winner=off;}BW.pending=null;}
+function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;BW.bases=p.nb;BW._ab=(BW._ab||0)+1;BW.pending=null;}
 function bwbNext(){
   if(BW.over)return;
-  if(BW.outs>=3){if(BW.half==='top')BW.half='bottom';else{BW.half='top';BW.inning++;}bwbStartHalf();}
+  if(BW.outs>=3||(BW._ab||0)>=14){   // 3 outs — or a mercy cap so a blowout half can't run forever
+    if(BW.half==='top'){BW.half='bottom';bwbStartHalf();}   // top done → home bats
+    else{   // a full inning is complete — race-to-10, but you must be leading after a full inning
+      const hi=Math.max(BW.you.runs,BW.cpu.runs);
+      if(hi>=10 && BW.you.runs!==BW.cpu.runs){BW.over=true;BW.winner=BW.you.runs>BW.cpu.runs?BW.you:BW.cpu;screenBwBattle();return;}
+      BW.half='top';BW.inning++;bwbStartHalf();
+    }
+  }
   else{BW.selHitter=null;BW.selEdge=null;if(bwbYouBat()){const d=bwbDef();BW.committedPitch=bwbCpuPitch(d.pitcher);BW.pdEdge=bwbCpuPitEdge(d);BW.phase='swing';}else BW.phase='pitch';}
   screenBwBattle();
 }
@@ -5296,7 +5318,7 @@ function screenBwBattle(){
   const pedsHTML=BW.you.phand.length?`<div class="bwb-peds" style="margin-top:8px">${BW.you.phand.map(e=>{const usable=canPed&&e.side===pedSide;return `<span class="bwb-ped ${e.side==='P'?'pit':''} ${usable?'':'dim'} ${BW.selEdge&&BW.selEdge.id===e.id?'sel':''}" ${usable?`onclick="bwbSelEdge('${e.id}')"`:''}>${e.name} · ${e.d}</span>`;}).join('')}</div>`:'';
   const oppMeta=BW.meta?`${BW.meta.boss?'👑 BOSS · ':''}${BW_TIERS[BW.meta.tier].name} ${BW.meta.boss?'':'#'+(BW.meta.step+1)}`:'';
   render(`<div class="topbar"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="topbar-r"><button class="btn ghost sm" onclick="if(confirm('Forfeit this battle?'))screenGauntlet()">✕ Forfeit</button></div></div>
-    <div class="center" style="margin-bottom:6px"><span class="disp" style="letter-spacing:.1em;color:var(--gold);font-weight:700">b<span style="color:var(--ink)">WAR</span>fare</span> <span class="small muted">· ${oppMeta} · first to 10</span></div>
+    <div class="center" style="margin-bottom:6px"><span class="disp" style="letter-spacing:.1em;color:var(--gold);font-weight:700">b<span style="color:var(--ink)">WAR</span>fare</span> <span class="small muted">· ${oppMeta} · race to 10 · win after a full inning</span></div>
     <div class="bwb-score">
       <div class="bwb-sb ${!yb?'bat':''}"><div class="w">${BW.cpu.name}<small>${!yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r" style="color:var(--blue)">${BW.cpu.runs}</div></div>
       <div class="bwb-sb ${yb?'bat':''}"><div class="w">Your Club<small>${yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r">${BW.you.runs}</div></div></div>
