@@ -1856,7 +1856,9 @@ function screenTitle(){
        <nav class="tnav">
          <div class="tnav-lab">New Franchise</div>
          ${navMi('career')}${navMi('hard')}${navMi('survivor')}${navMi('owner')}
+         <div class="tmi" onclick="screenGauntlet()">⚔️ bWARfare <span class="tag hot">Gauntlet</span></div>
          <div class="tnav-lab">Profile</div>
+         <div class="tmi" onclick="screenPlatoon()">Platoon <span class="tag hot">bWARfare</span></div>
          ${createMi}
          <div class="tmi" onclick="screenLeaderboard()">Leaderboard</div>
          ${accountMi}
@@ -4434,12 +4436,20 @@ function xpEndNotice(){
     if(G.owner){seasons=G.year||0;titles=G.champions||0;bonus=Math.round(Math.max(0,ownerNetProfit())/100);}   // Owner Mode XP: years owned, titles, profit
     else if(G.mode==="survivor"){seasons=G.yearsServed||0;titles=G.survTitles||0;bonus=Math.round((G.cumScore||0)/10);}
     else{seasons=(G.history?G.history.length:6);titles=G.champions||0;bonus=Math.round((computeGrade().score||0)/5);}
-    G._xpRes=awardFranchiseXP(seasons,titles,bonus);G._xpAwarded=true;try{saveGame();}catch(e){}}
-  const r=G._xpRes||{};
+    G._xpRes=awardFranchiseXP(seasons,titles,bonus);
+    // bWARfare card rewards: a franchise pack (tier by how you did) + a pack per level gained + Diamond Coins
+    let qual;
+    if(G.owner)qual=clamp(Math.round((G.champions||0)*16+Math.max(0,ownerNetProfit())/40),0,100);
+    else if(G.mode==="survivor")qual=clamp(Math.round((G.cumScore||0)/12+(G.survTitles||0)*14),0,100);
+    else qual=clamp(Math.round(computeGrade().score||0),0,100);
+    G._bwRes=bwReward(G._xpRes.leveledUp?(G._xpRes.to-G._xpRes.from):0,qual);
+    G._xpAwarded=true;try{saveGame();}catch(e){}}
+  const r=G._xpRes||{},bwr=G._bwRes||{};
   return `<div class="panel center" style="border-color:var(--gold)">
     <div class="pill gold">🎖️ GM PROFILE</div>
     <p class="sub" style="margin:6px 0 0">${r.leveledUp?`<b style="color:var(--gold)">LEVEL UP → GM Level ${r.to}!</b> ${unlockNoteFor(r)}`:`You're GM Level ${plLevel()}.`}</p>
     ${PROFILE.gamesPlayed===1?'<div class="pill gold" style="margin-top:6px;display:inline-block">⭐ Create-A-Player unlocked on the main menu!</div>':''}
+    ${bwr.packs?`<p class="small" style="margin:8px 0 0;color:var(--gold)">🎁 bWARfare: earned <b>${bwr.packs} pack${bwr.packs>1?'s':''}</b> + <b>💎 ${bwr.coins} Diamond Coins</b> — open them in <b>Platoon</b>.</p>`:''}
     <div style="max-width:380px;margin:8px auto 0">${xpPanel()}</div></div>`;
 }
 function xpPanel(){
@@ -4787,6 +4797,536 @@ async function submitFeedback(){
     const ov=document.getElementById('saveov');if(ov)ov.remove();
     toast("Thank you — note sent! 🙏");
   }catch(e){toast("Couldn't send — check your connection and try again");}
+}
+
+/* ============================================================
+   bWARfare — card collection (Set 1) + Platoon deck-builder
+   ============================================================ */
+function bwM32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+const BW_FN=["Cannonball","Coyote","Dasher","Cinders","Schoolboy","Oyster","Ducky","Hal","Pete","Rube","Dizzy","Mordecai","Boomer","Slats","Chief","Spider","Gabby","Lefty","Hammer","Tank","Bullet","Goose","Catfish","Sandy","Whitey","Smoky","Ace","Cool","Sliding","Pee Wee","Three Finger","Big Train","Yogi","Duke","Country","Stretch"];
+const BW_LN=["Liebgott","Galvin","Webster","Wagner","Stiglitz","Reiben","Zimmer","Waddell","Childs","Beckley","Mathews","Stengel","Koufax","Gibson","Paige","Ryan","Maddux","Rivera","Bonds","Sosa","Griffey","Aaron","Mays","Banks","Carew","Brett","Ripken","Jeter","Trout","Pujols","Glavine","Carlton","Seaver","Spahn","Feller","Marichal","Drysdale","Bench","Berra","Fisk"];
+const BW_HPOS=["C","1B","2B","3B","SS","LF","CF","RF","DH"];
+// rarity: 0 Common · 1 Good · 2 All-Star · 3 MVP · 4 HOF
+const BW_RAR=[{k:'common',name:'Common',col:'#9aa17f'},{k:'good',name:'Good',col:'#e6c84e'},{k:'allstar',name:'All-Star',col:'#9bd84a'},{k:'mvp',name:'MVP',col:'#7fcaff'},{k:'hof',name:'HOF',col:'#ffe14e'}];
+// reuse the game's EXACT elite gradients for consistency across modes
+const BW_IRID='linear-gradient(90deg,#ff7ab8,#ffd36b,#7bf0a0,#6bd5ff,#c79bff,#ff7ab8)';   // 99 — flowing iridescent (matches .ovr.irid)
+const BW_DIAMOND='linear-gradient(135deg,#dff6ff,#7fd0ff,#bfe9ff,#eaffff)';                // 95-98 — blue diamond (matches .pill.bdiamond)
+function bwMix(c1,c2,t){const L=(a,b)=>Math.round(a+(b-a)*clamp(t,0,1));return `rgb(${L(c1[0],c2[0])},${L(c1[1],c2[1])},${L(c1[2],c2[2])})`;}
+// muted commons → yellow goods → bright green @94, then the game's diamond (95-98) & irid (99) treatments
+function bwColor(c){
+  const rar=c.rar,ov=c.t==='E'?[74,85,92,96,99][rar]:c.ov;
+  if(rar===4||ov>=99)return {kind:'irid'};
+  if(rar===3||ov>=96)return {kind:'diamond'};
+  if(ov>=90){const col=bwMix([176,224,90],[150,255,60],(ov-90)/4);return {kind:'solid',col};}
+  if(ov>=80){const col=bwMix([232,200,80],[200,228,86],(ov-80)/9);return {kind:'solid',col};}
+  const col=bwMix([130,136,108],[196,206,175],(ov-69)/10);return {kind:'solid',col};
+}
+function bwGenSet(){
+  const rng=bwM32(20260622);          // fixed seed → Set 1 is identical for everyone, forever
+  const cards=[],edges=[],byId={};
+  const pad=(n)=>String(n).padStart(3,'0');
+  const nm=()=>BW_FN[Math.floor(rng()*BW_FN.length)]+" "+BW_LN[Math.floor(rng()*BW_LN.length)];
+  const tiers=[
+    {rar:4,lo:99,hi:99,nH:7,nP:3},
+    {rar:3,lo:96,hi:98,nH:18,nP:7},
+    {rar:2,lo:90,hi:95,nH:36,nP:14},
+    {rar:1,lo:80,hi:89,nH:125,nP:45},
+    {rar:0,lo:69,hi:79,nH:180,nP:65}];
+  const abCh=[0.10,0.25,0.45,0.70,1.0];
+  let hN=1,pN=1;
+  const mk=(type,t)=>{
+    const ov=t.lo+Math.floor(rng()*(t.hi-t.lo+1));
+    const base=clamp(Math.round((ov-49)/5),1,10);
+    const sp=t.rar>=3?1:(t.rar===0?Math.floor(rng()*3):Math.floor(rng()*2));
+    const strongFB=rng()<0.5;
+    const vf=clamp(base+(strongFB?sp:-sp),1,10),vo=clamp(base+(strongFB?-sp:sp),1,10);
+    let ab;
+    if(t.rar===4)ab=type==='H'?{con:true,pwr:true}:{whiff:true,soft:true};
+    else ab=type==='H'?{con:rng()<abCh[t.rar],pwr:rng()<abCh[t.rar]}:{whiff:rng()<abCh[t.rar],soft:rng()<abCh[t.rar]};
+    const id='S1'+type+pad(type==='H'?hN++:pN++);
+    return {id,t:type,name:nm(),pos:type==='H'?BW_HPOS[Math.floor(rng()*9)]:(rng()<0.7?'SP':'RP'),ov,rar:t.rar,vf,vo,ab};
+  };
+  tiers.forEach(t=>{for(let i=0;i<t.nH;i++)cards.push(mk('H',t));for(let i=0;i<t.nP;i++)cards.push(mk('P',t));});
+  // ---- 100 Edges (Player Edge Deck), rarity-scaled power ----
+  const ET=[{n:"Sit Dead-Red",side:'H',ax:'fb',b:3},{n:"Guess Offspeed",side:'H',ax:'off',b:3},{n:"Locked In",side:'H',ax:'any',b:2},{n:"Juiced",side:'H',ax:'any',b:1,pwr:true},{n:"Corked Bat",side:'H',ax:'any',b:4,risky:true},{n:"Tunnel Vision",side:'H',ax:'any',b:3},{n:"Paint the Black",side:'P',ax:'any',b:3},{n:"Spitball",side:'P',ax:'off',b:4},{n:"Extra Gas",side:'P',ax:'fb',b:4},{n:"Hit the Spot",side:'P',ax:'any',b:2},{n:"Quick Pitch",side:'P',ax:'any',b:3},{n:"Backfoot Slider",side:'P',ax:'off',b:3}];
+  const eMult=[1,1.3,1.6,2,2.4],eCounts=[55,25,12,6,2];let eN=1;
+  for(let rar=0;rar<5;rar++){for(let i=0;i<eCounts[rar];i++){
+    const tm=ET[Math.floor(rng()*ET.length)],val=Math.max(1,Math.round(tm.b*eMult[rar]));
+    const e={id:'S1E'+pad(eN++),t:'E',name:tm.n,side:tm.side,rar,fb:tm.ax==='fb'?val:0,off:tm.ax==='off'?val:0,any:tm.ax==='any'?val:0,pwrBump:!!tm.pwr,risky:!!tm.risky};
+    e.d=(tm.ax==='fb'?`+${val} vs Fastball`:tm.ax==='off'?`+${val} vs Offspeed`:`+${val} any`)+(tm.pwr?' · +1 base':'')+(tm.risky?' · risky':'');
+    edges.push(e);
+  }}
+  cards.concat(edges).forEach(c=>byId[c.id]=c);
+  return {cards,edges,byId};
+}
+const SET1=bwGenSet();
+// non-HOF rarity weights [common,good,allstar,mvp]; HOF is a separate per-pack roll
+const PACK_W={bronze:[75,22,2.7,0.3],silver:[55,35,8,2],gold:[34,40,20,6],diamond:[15,35,35,15]};
+const HOF_ODDS={bronze:1/10000,silver:1/500,gold:1/100,diamond:1/15};
+const PACK_PRICE={bronze:100,silver:250,gold:600,diamond:1500};
+const PACK_COL={bronze:'#c08552',silver:'#cdd6bf',gold:'var(--amber)',diamond:'#7fd0ff'};
+const PACK_TIERS=['bronze','silver','gold','diamond'];
+// ---- collection state (in PROFILE) ----
+function bwState(){
+  if(!PROFILE.bw){PROFILE.bw={coins:300,collection:{},deck:{h:[],p:[],e:[]},packs:['silver','silver']};bwGrantStarter();saveProfile();}
+  const bw=PROFILE.bw;bw.deck=bw.deck||{h:[],p:[],e:[]};bw.collection=bw.collection||{};bw.packs=bw.packs||[];if(bw.coins==null)bw.coins=300;
+  return bw;
+}
+function bwGrantStarter(){
+  const bw=PROFILE.bw;
+  const cH=SET1.cards.filter(c=>c.t==='H'&&c.rar===0).slice(0,34);
+  const cP=SET1.cards.filter(c=>c.t==='P'&&c.rar===0).slice(0,12);
+  const cE=SET1.edges.filter(c=>c.rar===0).slice(0,14);
+  [...cH,...cP,...cE].forEach(c=>bw.collection[c.id]=(bw.collection[c.id]||0)+1);
+  bw.deck.h=cH.slice(0,30).map(c=>c.id);bw.deck.p=cP.slice(0,10).map(c=>c.id);bw.deck.e=cE.slice(0,12).map(c=>c.id);
+}
+const bwOwned=id=>(PROFILE.bw&&PROFILE.bw.collection[id])||0;
+const bwDistinct=()=>Object.keys((PROFILE.bw&&PROFILE.bw.collection)||{}).length;
+function bwRollRar(w){const tot=w.reduce((s,x)=>s+x,0);let r=Math.random()*tot;for(let i=0;i<w.length;i++){if((r-=w[i])<0)return i;}return 0;}
+function bwPlayerOfRar(rar){return pick(SET1.cards.filter(c=>c.rar===rar));}
+function bwOpenPack(tier){
+  const w=PACK_W[tier]||PACK_W.bronze,out=[];
+  const hofHit=Math.random()<(HOF_ODDS[tier]||0);   // per-pack HOF chance (bronze 1:10000 … diamond 1:15)
+  for(let s=0;s<6;s++){
+    if(hofHit&&s===0){out.push(bwPlayerOfRar(4));continue;}   // guaranteed HOF when it lands
+    out.push(bwPlayerOfRar(bwRollRar(w)));
+  }
+  let er=bwRollRar(w),ep=SET1.edges.filter(c=>c.rar===er);while(!ep.length&&er>0)ep=SET1.edges.filter(c=>c.rar===--er);
+  out.push(pick(ep.length?ep:SET1.edges));   // edge slot, capped at MVP
+  const bw=bwState();out.forEach(c=>{bw.collection[c.id]=(bwOwned(c.id))+1;});
+  saveProfile();return out;
+}
+// ---- franchise / level-up rewards ----
+function bwReward(levelGain,qual){
+  const bw=bwState();qual=clamp(qual||0,0,100);
+  const tier=qual>=80?'gold':qual>=50?'silver':'bronze';
+  const coins=120+Math.round(qual*2.2);
+  const packs=[tier];for(let i=0;i<(levelGain||0);i++)packs.push('silver');
+  bw.coins=(bw.coins||0)+coins;bw.packs=bw.packs.concat(packs);saveProfile();
+  return {coins,packs:packs.length,tier};
+}
+// ---- styles (injected once) ----
+function bwEnsureStyles(){if(document.getElementById('bwcss'))return;const s=document.createElement('style');s.id='bwcss';s.textContent=`
+ .bwgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+ .bwc{background:linear-gradient(180deg,var(--panel2),#11140b);border:1px solid var(--line2);border-top:3px solid var(--line2);border-radius:6px;padding:8px;cursor:pointer;position:relative;transition:transform .1s}
+ .bwc:hover{transform:translateY(-2px);border-color:var(--gold)}
+ .bwc.indeck{outline:2px solid var(--gold)}
+ .bwc.hof{box-shadow:0 0 11px rgba(230,200,78,.45);background:linear-gradient(180deg,#2a2410,#11140b)}
+ .bwc-r{font-family:var(--disp);font-size:8px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+ .bwc-n{font-family:var(--disp);font-size:11px;font-weight:700;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+ .bwc-p{font-family:var(--disp);font-size:10px;color:var(--dim)}
+ .bwc-s{font-size:10px;color:var(--ink);margin-top:3px}
+ .bwc-ab{display:inline-block;font-family:var(--disp);font-size:8px;font-weight:700;padding:1px 4px;border-radius:2px;margin-left:3px}
+ .bwc-x{position:absolute;top:5px;right:6px;font-family:var(--disp);font-size:9px;color:var(--gold)}
+ .bwc-chk{font-family:var(--disp);font-size:8px;color:var(--gold);letter-spacing:.08em;margin-top:3px}
+ .bwtab{font-family:var(--disp);text-transform:uppercase;letter-spacing:.05em;font-size:12px;padding:8px 14px;border:1px solid var(--line2);border-radius:3px;cursor:pointer}
+ .bwtab.on{background:var(--gold);color:#10130b;border-color:var(--gold)}
+ .deckbar{position:sticky;top:0;z-index:5;background:var(--panel);border:1px solid var(--line2);border-radius:4px;padding:8px 12px;display:flex;gap:14px;flex-wrap:wrap;font-family:var(--disp);font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+ .deckbar b{color:var(--gold)}
+ .chip{font-family:var(--disp);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--line2);border-radius:3px;padding:4px 9px;cursor:pointer;color:var(--dim)}
+ .chip.on{background:var(--gold);color:#10130b;border-color:var(--gold)}
+ .packov{position:fixed;inset:0;z-index:80;background:rgba(4,5,1,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;overflow:auto}
+ .packrow{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;max-width:780px}
+ .preveal{animation:bwflip .55s cubic-bezier(.2,1.2,.4,1) both}
+ @keyframes bwflip{0%{transform:rotateY(90deg) scale(.85);opacity:0}100%{opacity:1}}
+ .bwc{border-top:1px solid var(--line2)}
+ .bwc-top{height:4px;border-radius:5px 5px 0 0;margin:-8px -8px 7px}
+ .bwc-top.irid{background:${BW_IRID};background-size:300% 100%;animation:irid 4s linear infinite}
+ .bwc-top.bdiamond{background:${BW_DIAMOND};background-size:200% 200%;animation:shimmer 3s linear infinite}
+ .bwirid{background:${BW_IRID};background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:800;animation:irid 4s linear infinite}
+ .bwdiamond{background:${BW_DIAMOND};background-size:200% 200%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:800;animation:shimmer 3s linear infinite}
+ .hofback{width:118px;height:150px;border-radius:7px;cursor:pointer;background:${BW_IRID};background-size:300% 100%;animation:irid 4s linear infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 22px rgba(255,255,255,.4);text-align:center}
+ .hofback b{font-family:var(--disp);font-weight:700;color:#10130b;font-size:14px;letter-spacing:.08em;text-shadow:0 1px 2px rgba(255,255,255,.6)}
+ .hofback small{font-family:var(--disp);font-size:9px;letter-spacing:.1em;color:#10130b;opacity:.8}
+ .hofpull{animation:hofpop .6s cubic-bezier(.2,1.5,.4,1)}
+ @keyframes hofpop{0%{transform:scale(.4) rotate(-8deg);opacity:0}100%{transform:scale(1)}}`;document.head.appendChild(s);}
+// ---- card mini ----
+function bwAbHTML(c){
+  if(c.t==='H')return (c.ab.con?'<span class="bwc-ab" style="background:#1d3a1a;color:var(--green)">CON</span>':'')+(c.ab.pwr?'<span class="bwc-ab" style="background:#3a1d16;color:var(--red)">PWR</span>':'');
+  if(c.t==='P')return (c.ab.whiff?'<span class="bwc-ab" style="background:#1a2a3a;color:var(--blue)">WHIFF</span>':'')+(c.ab.soft?'<span class="bwc-ab" style="background:#2a2a14;color:var(--amber)">GB</span>':'');
+  return '';
+}
+function bwCardMini(c,inDeck){
+  if(!c)return '';
+  const owned=bwOwned(c.id),rm=BW_RAR[c.rar],cc=bwColor(c);
+  const gradCls=cc.kind==='irid'?'bwirid':cc.kind==='diamond'?'bwdiamond':'';
+  const top=cc.kind==='irid'?'<div class="bwc-top irid"></div>':cc.kind==='diamond'?'<div class="bwc-top bdiamond"></div>':`<div class="bwc-top" style="background:${cc.col}"></div>`;
+  const rlab=gradCls?`<span class="${gradCls}">${rm.name}${c.t==='E'?' · Edge':''}</span>`:`<span style="color:${rm.col}">${rm.name}${c.t==='E'?' · Edge':''}</span>`;
+  const tail=`${owned>1?`<div class="bwc-x">×${owned}</div>`:''}${inDeck?'<div class="bwc-chk">✓ IN DECK</div>':''}`;
+  if(c.t==='E')return `<div class="bwc ${inDeck?'indeck':''} ${c.rar===4?'hof':''}" onclick="bwToggle('${c.id}')">${top}
+    <div class="bwc-r">${rlab}</div><div class="bwc-n">${c.name}</div>
+    <div class="bwc-s">${c.d}</div><div class="bwc-p">${c.side==='H'?'Hitter':'Pitcher'} edge</div>${tail}</div>`;
+  const numHTML=gradCls?`<b class="${gradCls}">${c.ov}</b>`:`<b style="color:${cc.col}">${c.ov}</b>`;
+  return `<div class="bwc ${inDeck?'indeck':''} ${c.rar===4?'hof':''}" onclick="bwToggle('${c.id}')">${top}
+    <div class="bwc-r">${rlab}</div><div class="bwc-n">${c.name}</div>
+    <div class="bwc-p">${c.pos} · ${numHTML}</div>
+    <div class="bwc-s">${c.t==='H'?`🔥${c.vf} 🪤${c.vo}`:`FB${c.vf} OF${c.vo}`}${bwAbHTML(c)}</div>${tail}</div>`;
+}
+// ---- deck toggle ----
+function bwToggle(id){
+  const c=SET1.byId[id],bw=bwState();if(!c)return;
+  if(!bwOwned(id)){toast("You don't own that card yet.");return;}
+  const list=c.t==='E'?bw.deck.e:(c.t==='H'?bw.deck.h:bw.deck.p);
+  const cap=c.t==='E'?12:(c.t==='H'?30:10),i=list.indexOf(id);
+  if(i>=0)list.splice(i,1);
+  else{if(list.length>=cap){toast(`${c.t==='E'?'Edges':c.t==='H'?'Hitters':'Pitchers'} full (${cap}/${cap}).`);return;}list.push(id);}
+  saveProfile();screenPlatoon(_bwTab);
+}
+// ---- auto-build / clear ----
+function bwAutoBuild(){
+  const bw=bwState();
+  const pow=c=>(c.ov||0)+(c.t==='H'?((c.ab.con?2:0)+(c.ab.pwr?2:0)):((c.ab.whiff?2:0)+(c.ab.soft?2:0)));
+  const own=id=>bwOwned(id)>0;
+  bw.deck.h=SET1.cards.filter(c=>c.t==='H'&&own(c.id)).sort((a,b)=>pow(b)-pow(a)).slice(0,30).map(c=>c.id);
+  bw.deck.p=SET1.cards.filter(c=>c.t==='P'&&own(c.id)).sort((a,b)=>pow(b)-pow(a)).slice(0,10).map(c=>c.id);
+  const ep=e=>(e.fb+e.off+e.any)+(e.rar*2)+(e.pwrBump?2:0);
+  bw.deck.e=SET1.edges.filter(c=>own(c.id)).sort((a,b)=>ep(b)-ep(a)).slice(0,12).map(c=>c.id);
+  saveProfile();toast('Auto-built your strongest deck.');screenPlatoon('deck');
+}
+function bwClearDeck(){const bw=bwState();bw.deck={h:[],p:[],e:[]};saveProfile();toast('Deck cleared.');screenPlatoon('deck');}
+// ---- tabs ----
+let _bwTab='deck',_bwFilt={rar:'all',type:'all'};
+function bwDeckTab(){
+  const d=PROFILE.bw.deck;
+  const sec=(ids,label,cap)=>`<div class="sectlbl" style="margin:12px 0 6px">${label} <b style="color:${ids.length===cap?'var(--green)':'var(--gold)'}">${ids.length}/${cap}</b></div>
+    <div class="bwgrid">${ids.map(id=>bwCardMini(SET1.byId[id],true)).join('')||'<span class="muted">None — add from the Collection tab.</span>'}</div>`;
+  const valid=d.h.length===30&&d.p.length===10&&d.e.length===12;
+  return `<div class="deckbar">⚾ Hitters <b>${d.h.length}/30</b> · 🔥 Pitchers <b>${d.p.length}/10</b> · 💉 Edges <b>${d.e.length}/12</b></div>
+    <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap"><button class="btn primary sm" onclick="bwAutoBuild()">⚙️ Auto-build best</button><button class="btn ghost sm" onclick="bwClearDeck()">🗑️ Clear deck</button></div>
+    ${sec(d.h,'⚾ Hitters',30)}${sec(d.p,'🔥 Pitchers',10)}${sec(d.e,'💉 Player Edge Deck',12)}
+    <div class="center" style="margin-top:16px"><button class="btn primary" ${valid?'':'disabled'} onclick="${valid?'screenGauntlet()':''}">${valid?'⚔️ To the Gauntlet':'Complete your deck to battle'}</button></div>`;
+}
+function bwCollTab(){
+  const bw=PROFILE.bw;
+  const rChip=(v,l)=>`<span class="chip ${_bwFilt.rar==v?'on':''}" onclick="bwFilt('rar','${v}')">${l}</span>`;
+  const tChip=(v,l)=>`<span class="chip ${_bwFilt.type==v?'on':''}" onclick="bwFilt('type','${v}')">${l}</span>`;
+  let list=SET1.cards.concat(SET1.edges).filter(c=>bwOwned(c.id)>0);
+  if(_bwFilt.rar!=='all')list=list.filter(c=>c.rar===+_bwFilt.rar);
+  if(_bwFilt.type!=='all')list=list.filter(c=>c.t===_bwFilt.type);
+  list.sort((a,b)=>b.rar-a.rar||(b.ov||0)-(a.ov||0));
+  const totalPlayers=SET1.cards.length,ownedPlayers=SET1.cards.filter(c=>bwOwned(c.id)>0).length;
+  return `<p class="small muted" style="margin:0 0 8px">Set 1 — you've collected <b style="color:var(--gold)">${ownedPlayers}</b> of ${totalPlayers} players and <b style="color:var(--gold)">${SET1.edges.filter(c=>bwOwned(c.id)>0).length}</b> of ${SET1.edges.length} Edges.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${rChip('all','All')}${rChip('4','HOF')}${rChip('3','MVP')}${rChip('2','All-Star')}${rChip('1','Good')}${rChip('0','Common')}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${tChip('all','Everything')}${tChip('H','Hitters')}${tChip('P','Pitchers')}${tChip('E','Edges')}</div>
+    <div class="bwgrid">${list.map(c=>{const inDeck=(PROFILE.bw.deck.h.includes(c.id)||PROFILE.bw.deck.p.includes(c.id)||PROFILE.bw.deck.e.includes(c.id));return bwCardMini(c,inDeck);}).join('')||'<span class="muted">No cards match — open a pack!</span>'}</div>`;
+}
+function bwFilt(k,v){_bwFilt[k]=v;screenPlatoon('collection');}
+function bwPacksTab(){
+  const bw=PROFILE.bw;
+  if(!bw.packs.length)return '<p class="muted">No packs waiting. Earn them in the Gauntlet, by leveling up your GM, finishing a franchise, or buying them in the Store.</p>';
+  return `<div class="bwgrid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${bw.packs.map((t,i)=>`<div style="background:var(--panel2);border:1px solid var(--line2);border-radius:6px;padding:14px;text-align:center">
+    <div class="disp" style="font-weight:700;font-size:14px;color:${PACK_COL[t]||'#c08552'}">${t.toUpperCase()} PACK</div>
+    <div class="small muted">7 cards · 1 guaranteed Edge</div>
+    <button class="btn primary sm" style="margin-top:9px" onclick="bwOpen(${i})">Open ▸</button></div>`).join('')}</div>`;
+}
+function bwStoreTab(){
+  const item=(t,desc)=>`<div style="background:var(--panel2);border:1px solid var(--line2);border-radius:6px;padding:14px;text-align:center">
+    <div class="disp" style="font-weight:700;font-size:14px;color:${PACK_COL[t]}">${t.toUpperCase()} PACK</div>
+    <p class="small muted" style="margin:4px 0 8px">${desc}</p>
+    <button class="btn ${PROFILE.bw.coins>=PACK_PRICE[t]?'primary':''} sm" ${PROFILE.bw.coins>=PACK_PRICE[t]?'':'disabled'} onclick="bwBuy('${t}')">💎 ${PACK_PRICE[t]}</button></div>`;
+  return `<p class="small muted" style="margin:0 0 10px">You have <b style="color:var(--gold)">💎 ${PROFILE.bw.coins} Diamond Coins</b>. Earn more in the Gauntlet, leveling up, and finishing franchises.</p>
+    <div class="bwgrid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${item('bronze','Mostly Commons, a shot at better. HOF 1:10,000.')}${item('silver','All-Stars show up. HOF 1:500.')}${item('gold','Top MVP odds. HOF 1:100.')}${item('diamond','Elite — stacked with All-Stars & MVPs. HOF 1:15.')}</div>`;
+}
+function bwBuy(t){const bw=bwState();if(bw.coins<PACK_PRICE[t]){toast('Not enough Diamond Coins.');return;}bw.coins-=PACK_PRICE[t];bw.packs.push(t);saveProfile();toast(`Bought a ${t} pack — open it in Packs.`);screenPlatoon('packs');}
+function bwOpen(i){const bw=bwState();const tier=bw.packs[i];if(!tier)return;bw.packs.splice(i,1);saveProfile();const cards=bwOpenPack(tier);bwShowPack(cards,tier);}
+function bwShowPack(cards,tier){
+  bwEnsureStyles();
+  const old=document.getElementById('packov');if(old)old.remove();
+  // reveal order: Edge first, then players Common → HOF (best last, for the suspense)
+  const order=cards.slice().sort((a,b)=>{const ae=a.t==='E'?0:1,be=b.t==='E'?0:1;return ae!==be?ae-be:a.rar-b.rar;});
+  window._bwPack=order;
+  const step={bronze:0.30,silver:0.48,gold:0.68}[tier]||0.35;   // s between flips — slower for better packs
+  const slot=(c,i)=>c.rar===4
+    ? `<div class="preveal" id="bwslot${i}" style="animation-delay:${(i*step).toFixed(2)}s"><div class="hofback" onclick="bwFlipHof(${i})"><b>★ HOF ★</b><small>TAP TO REVEAL</small></div></div>`
+    : `<div class="preveal" style="animation-delay:${(i*step).toFixed(2)}s">${bwCardMini(c,false)}</div>`;
+  const ov=document.createElement('div');ov.id='packov';ov.className='packov';
+  ov.innerHTML=`<div class="disp" style="font-weight:700;letter-spacing:.08em;color:${tier==='gold'?'var(--amber)':tier==='silver'?'#cdd6bf':'#c08552'};font-size:20px">${tier.toUpperCase()} PACK</div>
+    <div class="packrow">${order.map(slot).join('')}</div>
+    <button class="btn primary" onclick="document.getElementById('packov').remove();screenPlatoon('collection')">Add to collection ▸</button>`;
+  document.body.appendChild(ov);
+}
+function bwFlipHof(i){const c=(window._bwPack||[])[i],el=document.getElementById('bwslot'+i);if(!el||!c)return;el.className='hofpull';el.innerHTML=bwCardMini(c,false);}
+/* ============================================================
+   bWARfare — GAUNTLET + BATTLE ENGINE
+   ============================================================ */
+const BW_TIERS=[{k:'bronze',name:'Bronze',col:'#c08552',ring:'🥉'},{k:'silver',name:'Silver',col:'#cdd6bf',ring:'🥈'},{k:'gold',name:'Gold',col:'#e6b24a',ring:'🥇'},{k:'diamond',name:'Diamond',col:'#7fd0ff',ring:'💎'}];
+// CPU rarity weights [common,good,allstar,mvp,hof] — [base @ opp1, boss @ step8], interpolated across the 8 opponents
+const CPU_W={bronze:[[80,18,2,0,0],[45,40,13,2,0]],silver:[[45,42,11,2,0],[22,43,28,7,0]],gold:[[18,40,31,10,1],[6,26,42,23,3]],diamond:[[5,26,40,24,5],[0,6,30,44,20]]};
+const BW_OPP={bronze:['Sandlot Scrappers','Backlot Bunters','Rookie Leaguers','Dusty Diamond Crew','Cornfield Nine','Pickup Gamers','Beer League Bashers','Weekend Warriors'],
+ silver:['Double-A Drillers','County Champs','Semi-Pro Sluggers','River Rats','Iron City Nine','Steel Town Sox','Prairie Mashers','Coastliners'],
+ gold:['Big League Bruisers','Metropolis Monarchs','Capital Crushers','All-Star Alliance','Empire Niners','Dynasty Squad','Titan Ballers','Apex Athletics'],
+ diamond:['Cooperstown Club','Legends United','The Immortals','Mt. Rushmore Nine','Galaxy All-Pros','The Untouchables','Mythic Mashers','Pantheon Nine']};
+const BW_BOSS=['The Bronze Baron','The Silver Specter','The Golden Goliath','The Diamond Dynasty'];
+function bwGaunt(){const bw=bwState();if(!bw.gaunt)bw.gaunt={tier:0,step:0,rings:[false,false,false,false]};return bw.gaunt;}
+function bwCpuWeights(tier,step){const w=CPU_W[BW_TIERS[tier].k],b=w[0],bo=w[1],t=step/8;return b.map((v,i)=>v+(bo[i]-v)*t);}
+function bwCpuDeck(tier,step){
+  const w=bwCpuWeights(tier,step);
+  const pT=type=>{let rar=bwRollRar(w),pool=SET1.cards.filter(c=>c.t===type&&c.rar===rar),g=0;while(!pool.length&&g++<6){rar=Math.max(0,rar-1);pool=SET1.cards.filter(c=>c.t===type&&c.rar===rar);}return pick(pool);};
+  const h=[],p=[],e=[];for(let i=0;i<30;i++)h.push(pT('H'));for(let i=0;i<10;i++)p.push(pT('P'));
+  for(let i=0;i<12;i++){let rar=Math.min(3,bwRollRar(w)),pool=SET1.edges.filter(c=>c.rar===rar);while(!pool.length&&rar>0)pool=SET1.edges.filter(c=>c.rar===--rar);e.push(pick(pool.length?pool:SET1.edges));}
+  return {h,p,e};
+}
+// ---- battle styles ----
+function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=document.createElement('style');s.id='bwbcss';s.textContent=`
+ .bwb-score{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+ .bwb-sb{flex:1;min-width:130px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:8px 11px;display:flex;align-items:center;justify-content:space-between}
+ .bwb-sb.bat{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(189,238,60,.25)}
+ .bwb-sb .w{font-family:var(--disp);text-transform:uppercase;font-weight:700;font-size:12px;letter-spacing:.04em}
+ .bwb-sb .w small{display:block;font-size:8px;color:var(--dim);letter-spacing:.12em}
+ .bwb-sb .r{font-family:var(--disp);font-weight:700;font-size:26px;color:var(--gold)}
+ .bwb-state{display:flex;align-items:center;gap:14px;justify-content:center;flex-wrap:wrap;font-family:var(--disp);text-transform:uppercase;font-size:11px;letter-spacing:.08em;color:var(--dim);margin-bottom:8px}
+ .bwb-dia{position:relative;width:42px;height:42px}
+ .bwb-bs{position:absolute;width:12px;height:12px;background:var(--panel2);border:1px solid var(--line2);transform:rotate(45deg)}
+ .bwb-bs.on{background:var(--gold);border-color:var(--gold)}
+ .bwb-o{display:inline-flex;gap:4px}.bwb-od{width:10px;height:10px;border-radius:50%;border:1px solid var(--line2)}.bwb-od.on{background:var(--red);border-color:var(--red)}
+ .bwb-field{background:linear-gradient(180deg,#10160a,#0b0f07);border:1px solid var(--line);border-radius:8px;padding:14px;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;margin-bottom:8px}
+ .bwb-hand{display:flex;gap:7px;overflow-x:auto;padding:6px 2px;width:100%;justify-content:flex-start}
+ .bwb-pick{cursor:pointer;flex-shrink:0;transition:transform .1s;border-radius:7px}
+ .bwb-pick:hover{transform:translateY(-5px)}
+ .bwb-pick.sel{outline:2px solid var(--gold);transform:translateY(-5px)}
+ .bwb-dice{display:flex;gap:10px;justify-content:center}
+ .bwb-die{width:46px;height:46px;border-radius:8px;background:linear-gradient(180deg,#1c2413,#11140b);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:24px;color:var(--gold)}
+ .bwb-die.roll{animation:bwbshake .12s linear infinite;color:var(--dim)}
+ @keyframes bwbshake{0%{transform:translate(0,0)}25%{transform:translate(-2px,1px) rotate(-5deg)}50%{transform:translate(2px,-1px) rotate(5deg)}100%{transform:translate(1px,1px)}}
+ .bwb-pop{font-family:var(--disp);text-transform:uppercase;letter-spacing:.1em;font-weight:700;display:flex;align-items:center;gap:10px;font-size:20px;animation:bwbpop .5s cubic-bezier(.2,1.4,.4,1)}
+ .bwb-pop .ic{font-size:32px}
+ @keyframes bwbpop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+ .bwb-math{font-family:var(--disp);font-size:14px;opacity:0;transition:opacity .3s}.bwb-math .tot{color:var(--gold);font-size:18px}
+ .bwb-outc{font-family:var(--disp);text-transform:uppercase;font-weight:700;font-size:26px;opacity:0;transition:opacity .25s}
+ .bwb-peds{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+ .bwb-ped{font-family:var(--disp);font-size:10.5px;text-transform:uppercase;border:1px solid var(--line2);border-left:3px solid var(--amber);border-radius:3px;padding:5px 8px;background:var(--panel2);cursor:pointer}
+ .bwb-ped.pit{border-left-color:var(--red)} .bwb-ped.sel{outline:2px solid var(--gold)} .bwb-ped.dim{opacity:.4;cursor:not-allowed}
+ .gnode{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line2);border-radius:5px;background:var(--panel2);margin-bottom:6px}
+ .gnode.done{opacity:.5;border-color:var(--line)} .gnode.cur{border-color:var(--gold);box-shadow:0 0 10px rgba(189,238,60,.25)} .gnode.boss{border-left:4px solid var(--red)}
+ .gnode .gn{font-family:var(--disp);font-weight:700;text-transform:uppercase;font-size:13px;flex:1}
+ .gnode .gs{font-family:var(--disp);font-size:10px;color:var(--dim);letter-spacing:.06em}
+ .bwb-fan{display:flex;justify-content:center;align-items:flex-end;min-height:166px;position:relative;padding-top:10px;margin-bottom:26px}
+ .bwb-slot{transform-origin:bottom center;transition:transform .16s,filter .16s;margin:0 -28px}
+ .bwb-fan.you .bwb-slot{cursor:pointer}
+ .bwb-fan.you .bwb-slot:hover{transform:translateY(-20px) scale(1.05)!important;z-index:20;filter:brightness(1.12)}
+ .bwb-slot.sel{transform:translateY(-24px) scale(1.06)!important;z-index:21}
+ .bwb-slot.sel .bwc{outline:2px solid var(--gold);box-shadow:0 0 14px rgba(189,238,60,.4)}
+ .bwb-back{width:112px;height:150px;border-radius:7px;border:1px solid var(--line2);background:radial-gradient(circle at 50% 38%,rgba(189,238,60,.10),transparent 60%),repeating-linear-gradient(135deg,#161c0e,#161c0e 6px,#1c2413 6px,#1c2413 12px);display:flex;align-items:center;justify-content:center}
+ .bwb-back span{font-family:var(--disp);font-weight:700;font-size:13px;color:var(--gold);opacity:.55;letter-spacing:.04em}.bwb-back b{color:var(--ink)}
+ .bwb-decks{display:flex;gap:11px;justify-content:center;margin-bottom:16px}
+ .bwb-stack{position:relative;width:32px;height:46px;border-radius:5px;background:repeating-linear-gradient(135deg,#1c2413,#1c2413 5px,#222d16 5px,#222d16 10px);border:1px solid var(--line2);box-shadow:2px 2px 0 #0d1108,3px 3px 0 var(--line)}
+ .bwb-stack .c{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--disp);font-weight:700;font-size:13px;color:var(--gold)}
+ .bwb-stack.ped .c{color:var(--amber)}
+ .bwb-stack .l{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-family:var(--disp);font-size:8px;color:var(--dim);letter-spacing:.04em}
+ .bwb-zlbl{font-family:var(--disp);text-transform:uppercase;letter-spacing:.1em;font-size:10px;color:var(--dim);text-align:center;margin-bottom:4px}
+ `;document.head.appendChild(s);}
+// ---- normalize a Set 1 card for the engine ----
+function bwbCard(c){
+  if(c.t==='H')return {id:c.id,t:'H',name:c.name,pos:c.pos,ov:c.ov,rar:c.rar,vsFB:c.vf,vsOFF:c.vo,con:!!(c.ab&&c.ab.con),pwr:!!(c.ab&&c.ab.pwr)};
+  if(c.t==='P')return {id:c.id,t:'P',name:c.name,pos:c.pos,ov:c.ov,rar:c.rar,fb:c.vf,off:c.vo,whiff:!!(c.ab&&c.ab.whiff),soft:!!(c.ab&&c.ab.soft)};
+  return {id:c.id,t:'E',name:c.name,side:c.side,fb:c.fb||0,off:c.off||0,any:c.any||0,pwrBump:!!c.pwrBump,risky:!!c.risky,rar:c.rar,d:c.d};
+}
+function bwbCardHTML(c){
+  const cc=bwColor(c),rm=BW_RAR[c.rar];
+  const gc=cc.kind==='irid'?'bwirid':cc.kind==='diamond'?'bwdiamond':'';
+  const top=cc.kind==='irid'?'<div class="bwc-top irid"></div>':cc.kind==='diamond'?'<div class="bwc-top bdiamond"></div>':`<div class="bwc-top" style="background:${cc.col}"></div>`;
+  const rlab=gc?`<span class="${gc}">${rm.name}</span>`:`<span style="color:${rm.col}">${rm.name}</span>`;
+  const num=gc?`<b class="${gc}">${c.ov}</b>`:`<b style="color:${cc.col}">${c.ov}</b>`;
+  const stat=c.t==='H'?`🔥${c.vsFB} 🪤${c.vsOFF}`:`FB${c.fb} OF${c.off}`;
+  const ab=c.t==='H'?((c.con?'<span class="bwc-ab" style="background:#1d3a1a;color:var(--green)">CON</span>':'')+(c.pwr?'<span class="bwc-ab" style="background:#3a1d16;color:var(--red)">PWR</span>':'')):((c.whiff?'<span class="bwc-ab" style="background:#1a2a3a;color:var(--blue)">WHIFF</span>':'')+(c.soft?'<span class="bwc-ab" style="background:#2a2a14;color:var(--amber)">GB</span>':''));
+  return `<div class="bwc" style="width:118px">${top}<div class="bwc-r">${rlab}</div><div class="bwc-n">${c.name}</div><div class="bwc-p">${c.pos} · ${num}</div><div class="bwc-s">${stat}${ab}</div></div>`;
+}
+// ---- battle state ----
+let BW=null;
+if(typeof window!=="undefined"&&!window._bwTimers)window._bwTimers=[];
+function clearTimers(){if(typeof window==="undefined")return;(window._bwTimers||[]).forEach(t=>{clearTimeout(t);clearInterval(t);});window._bwTimers=[];}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const x=a[i];a[i]=a[j];a[j]=x;}return a;}
+function rint(a,b){return a+Math.floor(Math.random()*(b-a+1));}
+function bwbMkSide(name,deck){return {name,allH:deck.h.slice(),allP:deck.p.slice(),hitters:shuffle(deck.h.slice()),pitchers:shuffle(deck.p.slice()),peds:shuffle(deck.e.slice()),hand:[],phand:[],pitcher:null,runs:0};}
+function bwbRefill(s){
+  if(!s.hitters.length)s.hitters=shuffle(s.allH.slice());
+  while(s.hand.length<5&&s.hitters.length)s.hand.push(s.hitters.shift());
+  while(s.phand.length<3&&s.peds.length)s.phand.push(s.peds.shift());   // edges finite per battle
+}
+function bwbStart(youDeck,cpuDeck,meta){
+  clearTimers();
+  BW={you:bwbMkSide('Your Club',youDeck),cpu:bwbMkSide(meta.oppName||'Rivals',cpuDeck),inning:1,half:'top',outs:0,bases:[false,false,false],phase:'pitch',committedPitch:null,pdEdge:null,selHitter:null,selEdge:null,last:null,pending:null,over:false,winner:null,meta,_rewarded:false};
+  bwbRefill(BW.you);bwbRefill(BW.cpu);bwbStartHalf();screenBwBattle();
+}
+const bwbOff=()=>BW.half==='top'?BW.you:BW.cpu;
+const bwbDef=()=>BW.half==='top'?BW.cpu:BW.you;
+const bwbYouBat=()=>BW.half==='top';
+function bwbStartHalf(){
+  BW.outs=0;BW.bases=[false,false,false];const d=bwbDef();
+  if(!d.pitcher||d.pitcher._inn!==BW.inning){if(!d.pitchers.length)d.pitchers=shuffle(d.allP.slice());d.pitcher=d.pitchers.shift();d.pitcher._inn=BW.inning;}
+  BW.selHitter=null;BW.selEdge=null;BW.pdEdge=null;
+  if(bwbYouBat()){BW.committedPitch=bwbCpuPitch(d.pitcher);BW.pdEdge=bwbCpuPitEdge(d);BW.phase='swing';}else BW.phase='pitch';
+}
+function bwbCpuPitch(p){const lean=p.fb>=p.off?'FB':'OFF';return Math.random()<0.62?lean:(lean==='FB'?'OFF':'FB');}
+function bwbCpuPitEdge(t){const u=t.phand.filter(e=>e.side==='P');if(u.length&&Math.random()<0.3){t.phand=t.phand.filter(x=>x.id!==u[0].id);return u[0];}return null;}
+function bwbCpuHitter(t){return t.hand.slice().sort((a,b)=>(b.vsFB+b.vsOFF+(b.pwr?2:0)+(b.con?2:0))-(a.vsFB+a.vsOFF+(a.pwr?2:0)+(a.con?2:0)))[0];}
+function bwbCpuHitEdge(t){const u=t.phand.filter(e=>e.side==='H');return (u.length&&Math.random()<0.32)?u[0]:null;}
+function bwbLadder(total,h,p,hE){
+  const soft=p.soft?1:0,outMax=7-(h.con?1:0)+(p.whiff?1:0);
+  let b=total<=outMax?0:total<=9+soft?1:total<=11+soft?2:total<=13+soft?3:4;
+  if(b>=1&&b<4&&(h.pwr||(hE&&hE.pwrBump)))b++;return b;
+}
+function bwbResolve(h,pitch,hE,pE,p){
+  const d1=rint(1,6),d2=rint(1,6),roll=d1+d2,hv=pitch==='FB'?h.vsFB:h.vsOFF,pr=pitch==='FB'?p.fb:p.off;
+  let hb=hE?hE.any+(pitch==='FB'?hE.fb:hE.off):0,pb=pE?pE.any+(pitch==='FB'?pE.fb:pE.off):0;
+  const total=roll+hv-pr+hb-pb;let bases=bwbLadder(total,h,p,hE);
+  const ejected=hE&&hE.risky&&Math.random()<0.18;
+  const tags=[];if(h.con)tags.push('CON');if(p.whiff)tags.push('WHIFF');if(p.soft)tags.push('GB');if(h.pwr||(hE&&hE.pwrBump))tags.push('PWR');
+  return {d1,d2,roll,hv,pr,hb,pb,total,pitch,bases,label:ejected?'EJECTED':['OUT','SINGLE','DOUBLE','TRIPLE','HOME RUN'][bases],ejected,tags,h,p};
+}
+function bwbRunCalc(bases,st){const[on1,on2,on3]=st;let runs=0,nb=[false,false,false];
+  if(bases===1){runs+=(on2?1:0)+(on3?1:0);nb[0]=true;nb[1]=on1;}
+  else if(bases===2){runs+=(on2?1:0)+(on3?1:0);nb[1]=true;nb[2]=on1;}
+  else if(bases===3){runs+=(on1?1:0)+(on2?1:0)+(on3?1:0);nb[2]=true;}
+  else{runs+=1+(on1?1:0)+(on2?1:0)+(on3?1:0);}
+  return {runs,nb};
+}
+function bwbCommitPitch(pitch){
+  let pE=null;if(BW.selEdge&&BW.selEdge.side==='P'){pE=BW.selEdge;BW.you.phand=BW.you.phand.filter(x=>x.id!==pE.id);}
+  BW.committedPitch=pitch;BW.pdEdge=pE;BW.selEdge=null;BW.phase='swing';
+  const off=bwbOff();bwbDoAB(bwbCpuHitter(off),bwbCpuHitEdge(off));
+}
+function bwbSwing(){if(!BW.selHitter)return;bwbDoAB(BW.selHitter,BW.selEdge&&BW.selEdge.side==='H'?BW.selEdge:null);}
+function bwbDoAB(h,hE){
+  const off=bwbOff(),def=bwbDef(),r=bwbResolve(h,BW.committedPitch,hE,BW.pdEdge,def.pitcher);
+  let pend={outs:0,runs:0,nb:BW.bases.slice()};
+  if(r.ejected||r.bases===0)pend.outs=1;else{const rc=bwbRunCalc(r.bases,BW.bases);pend.runs=rc.runs;pend.nb=rc.nb;}
+  off.hand=off.hand.filter(x=>x.id!==h.id);if(hE)off.phand=off.phand.filter(e=>e.id!==hE.id);bwbRefill(off);
+  BW.last=r;BW.pending=pend;BW.phase='result';
+  const who=off===BW.you?'You':BW.cpu.name;
+  BW.lastMsg=r.ejected?`${h.name} ejected for a corked bat — out.`:r.bases===0?`${h.name} ${r.total<=4?'strikes out':'is retired'}.`:`${who}: ${h.name} ${r.label.toLowerCase()}${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} in`:''}!`;
+  screenBwBattle();
+}
+function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;BW.bases=p.nb;if(off.runs>=10){BW.over=true;BW.winner=off;}BW.pending=null;}
+function bwbNext(){
+  if(BW.over)return;
+  if(BW.outs>=3){if(BW.half==='top')BW.half='bottom';else{BW.half='top';BW.inning++;}bwbStartHalf();}
+  else{BW.selHitter=null;BW.selEdge=null;if(bwbYouBat()){const d=bwbDef();BW.committedPitch=bwbCpuPitch(d.pitcher);BW.pdEdge=bwbCpuPitEdge(d);BW.phase='swing';}else BW.phase='pitch';}
+  screenBwBattle();
+}
+function bwbSelHit(i){if(!(bwbYouBat()&&BW.phase==='swing'))return;BW.selHitter=BW.you.hand[i];screenBwBattle();}
+function bwbSelEdge(id){const e=BW.you.phand.find(x=>x.id===id);BW.selEdge=(BW.selEdge&&BW.selEdge.id===id)?null:e;screenBwBattle();}
+function bwbDia(){const b=BW.bases;return `<div class="bwb-dia"><div class="bwb-bs" style="top:0;left:15px;${b[1]?'':''}${b[1]?'background:var(--gold);border-color:var(--gold)':''}"></div><div class="bwb-bs" style="top:15px;left:30px;${b[0]?'background:var(--gold);border-color:var(--gold)':''}"></div><div class="bwb-bs" style="top:15px;left:0;${b[2]?'background:var(--gold);border-color:var(--gold)':''}"></div><div class="bwb-bs" style="top:30px;left:15px;background:var(--line)"></div></div>`;}
+function bwbStacks(s){const st=(c,l,cls)=>`<div class="bwb-stack ${cls||''}"><span class="c">${c}</span><span class="l">${l}</span></div>`;return `<div class="bwb-decks">${st(s.hitters.length,'Bats')}${st(s.pitchers.length,'Arms')}${st(s.peds.length,'Edges','ped')}</div>`;}
+function bwbFan(cards,faceUp,selId,clickable){
+  const n=cards.length;
+  return `<div class="bwb-fan ${clickable?'you':''}">${cards.map((c,i)=>{
+    const ang=(i-(n-1)/2)*6,lift=Math.abs(i-(n-1)/2)*7;
+    const inner=faceUp?bwbCardHTML(c):'<div class="bwb-back"><span>b<b>WAR</b></span></div>';
+    return `<div class="bwb-slot ${selId&&c.id===selId?'sel':''}" style="transform:rotate(${ang}deg) translateY(${lift}px)" ${clickable?`onclick="bwbSelHit(${i})"`:''}>${inner}</div>`;
+  }).join('')}</div>`;
+}
+function screenBwBattle(){
+  clearTimers();bwEnsureStyles();bwbEnsureStyles();
+  const yb=bwbYouBat(),def=bwbDef(),off=bwbOff();
+  let field='';
+  if(BW.over){
+    const won=BW.winner===BW.you;
+    if(won&&BW.meta&&!BW._rewarded){BW._rewarded=true;BW._reward=bwGauntWin();}
+    field=`<div class="bwb-pop" style="color:${won?'var(--gold)':'var(--red)'};font-size:26px">${won?'🏆 VICTORY':'DEFEAT'}</div>
+      <div class="muted">Final — Your Club ${BW.you.runs}, ${BW.cpu.name} ${BW.cpu.runs}</div>
+      ${won&&BW._reward?`<div style="margin-top:6px;color:var(--gold)" class="disp">🎁 Earned ${BW._reward.granted.length} ${BW._reward.boss?BW._reward.tierName+' ':''}pack${BW._reward.granted.length>1?'s':''}!</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:10px">${won?`<button class="btn primary" onclick="screenGauntlet()">Continue ▸</button>`:`<button class="btn primary" onclick="bwGauntFight()">↻ Retry</button><button class="btn ghost" onclick="screenGauntlet()">Back</button>`}</div>`;
+  } else if(BW.phase==='result'){
+    const r=BW.last,pi=r.pitch==='FB'?{ic:'🔥',l:'FASTBALL',c:'var(--amber)'}:{ic:'💨',l:'OFFSPEED',c:'var(--blue)'};
+    field=`<div class="bwb-pop" style="color:${pi.c}"><span class="ic">${pi.ic}</span>${pi.l}</div>
+      <div class="bwb-dice"><div class="bwb-die roll" id="bwbd1">?</div><div class="bwb-die roll" id="bwbd2">?</div></div>
+      <div class="bwb-math" id="bwbmath">Roll: <b>${r.roll}</b> + vs${r.pitch==='FB'?'🔥':'🪤'} <b>${r.hv}</b> − ${r.pitch==='FB'?'🔥':'🪤'} <b>${r.pr}</b>${r.hb?` + <b style="color:var(--gold)">${r.hb}</b>`:''}${r.pb?` − <b style="color:var(--red)">${r.pb}</b>`:''} = <span class="tot">${r.total}</span>${r.tags.length?` <span class="muted" style="font-size:11px">[${r.tags.join(' · ')}]</span>`:''}</div>
+      <div class="bwb-outc" id="bwboutc" style="color:${r.bases>=3||r.ejected?'var(--gold)':r.bases?'var(--green)':'var(--red)'}">${r.label}</div>
+      <div class="muted" id="bwbsub" style="min-height:16px"></div>
+      <button class="btn primary" id="bwbnext" style="opacity:0" onclick="bwbNext()">Next ▸</button>`;
+  } else if(yb){
+    field=`<div class="sectlbl">On the mound · ${def.name}</div>${bwbCardHTML(def.pitcher)}
+      <div class="muted" style="font-size:12px">Pitch committed — <b>hidden</b>. Pick a bat from your hand below${BW.you.phand.some(e=>e.side==='H')?', spend an Edge if you dare':''}.</div>
+      <button class="btn primary" ${BW.selHitter?'':'disabled'} onclick="bwbSwing()">${BW.selHitter?`Send ${BW.selHitter.name} ▸`:'Pick a hitter…'}</button>`;
+  } else {
+    field=`<div class="sectlbl">You're pitching · ${def.pitcher.name}</div>${bwbCardHTML(def.pitcher)}
+      <div class="muted" style="font-size:12px">${off.name} sends a hitter blind. Choose your pitch${BW.you.phand.some(e=>e.side==='P')?' (doctor it with an Edge below)':''}.</div>
+      <div style="display:flex;gap:10px"><button class="btn" style="border-left:4px solid var(--amber)" onclick="bwbCommitPitch('FB')">🔥 Fastball</button><button class="btn" style="border-left:4px solid var(--blue)" onclick="bwbCommitPitch('OFF')">💨 Offspeed</button></div>`;
+  }
+  // your Edge hand (only the relevant side is actionable this turn)
+  const pedSide=yb?'H':'P';const canPed=(yb&&BW.phase==='swing')||(!yb&&BW.phase==='pitch');
+  const pedsHTML=BW.you.phand.length?`<div class="bwb-peds" style="margin-top:8px">${BW.you.phand.map(e=>{const usable=canPed&&e.side===pedSide;return `<span class="bwb-ped ${e.side==='P'?'pit':''} ${usable?'':'dim'} ${BW.selEdge&&BW.selEdge.id===e.id?'sel':''}" ${usable?`onclick="bwbSelEdge('${e.id}')"`:''}>${e.name} · ${e.d}</span>`;}).join('')}</div>`:'';
+  const oppMeta=BW.meta?`${BW.meta.boss?'👑 BOSS · ':''}${BW_TIERS[BW.meta.tier].name} ${BW.meta.boss?'':'#'+(BW.meta.step+1)}`:'';
+  render(`<div class="topbar"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="topbar-r"><button class="btn ghost sm" onclick="if(confirm('Forfeit this battle?'))screenGauntlet()">✕ Forfeit</button></div></div>
+    <div class="center" style="margin-bottom:6px"><span class="disp" style="letter-spacing:.1em;color:var(--gold);font-weight:700">b<span style="color:var(--ink)">WAR</span>fare</span> <span class="small muted">· ${oppMeta} · first to 10</span></div>
+    <div class="bwb-score">
+      <div class="bwb-sb ${!yb?'bat':''}"><div class="w">${BW.cpu.name}<small>${!yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r" style="color:var(--blue)">${BW.cpu.runs}</div></div>
+      <div class="bwb-sb ${yb?'bat':''}"><div class="w">Your Club<small>${yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r">${BW.you.runs}</div></div></div>
+    <div class="bwb-zlbl">${BW.cpu.name} · ${BW.cpu.hand.length} in hand</div>
+    ${bwbStacks(BW.cpu)}
+    ${bwbFan(BW.cpu.hand,false,null,false)}
+    <div class="bwb-state">${bwbDia()}<span>${yb?'▲ Top':'▼ Bot'} ${BW.inning}</span><span>Outs <span class="bwb-o">${[0,1,2].map(i=>`<span class="bwb-od ${i<BW.outs?'on':''}"></span>`).join('')}</span></span></div>
+    <div class="bwb-field">${field}</div>
+    ${bwbFan(BW.you.hand,true,BW.selHitter&&BW.selHitter.id,yb&&BW.phase==='swing')}
+    ${pedsHTML}
+    <div class="bwb-zlbl" style="margin-top:10px">Your decks</div>
+    ${bwbStacks(BW.you)}`);
+  _atTitle=true;ensureNavBtns();
+  if(BW.phase==='result'&&!BW.over)bwbAnimate();
+}
+function bwbAnimate(){
+  const r=BW.last;
+  const t0=setTimeout(()=>{let tick=setInterval(()=>{const a=document.getElementById('bwbd1'),b=document.getElementById('bwbd2');if(a)a.textContent=rint(1,6);if(b)b.textContent=rint(1,6);},80);window._bwTimers.push(tick);
+    const settle=setTimeout(()=>{clearInterval(tick);const a=document.getElementById('bwbd1'),b=document.getElementById('bwbd2');if(a){a.textContent=r.d1;a.classList.remove('roll');}if(b){b.textContent=r.d2;b.classList.remove('roll');}},850);window._bwTimers.push(settle);},650);
+  const tM=setTimeout(()=>{const m=document.getElementById('bwbmath');if(m)m.style.opacity=1;},1650);
+  const tO=setTimeout(()=>{bwbApply();const o=document.getElementById('bwboutc');if(o)o.style.opacity=1;const sub=document.getElementById('bwbsub');if(sub)sub.textContent=BW.lastMsg;const nb=document.getElementById('bwbnext');if(nb){nb.style.opacity=1;nb.textContent=BW.over?'See result ▸':BW.outs>=3?'Change sides ▸':'Next batter ▸';}if(BW.over)screenBwBattle();},2050);
+  window._bwTimers.push(t0,tM,tO);
+}
+// ---- gauntlet flow ----
+function bwGauntFight(){
+  const g=bwGaunt(),d=PROFILE.bw.deck;
+  if(d.h.length!==30||d.p.length!==10||d.e.length!==12){toast('Finish your 30/10/12 deck first.');screenPlatoon('deck');return;}
+  if(g.tier>3){screenGauntlet();return;}
+  const boss=g.step>=8,cpu=bwCpuDeck(g.tier,g.step);
+  const oppName=boss?BW_BOSS[g.tier]:BW_OPP[BW_TIERS[g.tier].k][g.step];
+  bwbStart({h:d.h.map(id=>bwbCard(SET1.byId[id])),p:d.p.map(id=>bwbCard(SET1.byId[id])),e:d.e.map(id=>bwbCard(SET1.byId[id]))},
+           {h:cpu.h.map(bwbCard),p:cpu.p.map(bwbCard),e:cpu.e.map(bwbCard)},{tier:g.tier,step:g.step,boss,oppName});
+}
+function bwGauntWin(){
+  const g=bwGaunt(),bw=bwState(),boss=BW.meta.boss,tier=BW.meta.tier;let granted=[];
+  if(boss){g.rings[tier]=true;const nt=PACK_TIERS[Math.min(3,tier+1)];for(let i=0;i<5;i++)granted.push(nt);g.tier=tier+1;g.step=0;}
+  else{granted.push(PACK_TIERS[tier]);g.step=g.step+1;}
+  bw.packs=bw.packs.concat(granted);saveProfile();
+  return {granted,boss,tier,tierName:BW_TIERS[Math.min(3,tier+(boss?1:0))].name};
+}
+function screenGauntlet(){
+  bwState();bwEnsureStyles();bwbEnsureStyles();const g=bwGaunt();
+  const d=PROFILE.bw.deck,valid=d.h.length===30&&d.p.length===10&&d.e.length===12;
+  const champion=g.tier>3;
+  const ringRow=BW_TIERS.map((t,i)=>`<span style="font-size:22px;${g.rings[i]?'':'filter:grayscale(1);opacity:.35'}">${t.ring}</span>`).join(' ');
+  let ladder='';
+  if(!champion){
+    const T=BW_TIERS[g.tier];
+    for(let s=0;s<=8;s++){
+      const done=s<g.step,cur=s===g.step,boss=s===8;
+      const name=boss?BW_BOSS[g.tier]:BW_OPP[T.k][s];
+      ladder+=`<div class="gnode ${done?'done':''} ${cur?'cur':''} ${boss?'boss':''}"><span class="gn" style="${boss?'color:var(--red)':''}">${boss?'👑 ':''}${name}</span><span class="gs">${done?'✓ beaten':cur?'▶ next':boss?'BOSS':'opp #'+(s+1)}</span></div>`;
+    }
+  }
+  render(`${topBar(`<button class="btn ghost sm" onclick="screenPlatoon('deck')">🃏 Deck</button>`)}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">⚔️ bWARfare GAUNTLET</div>
+      <p class="sub" style="margin-top:6px">Climb four battlefields — beat 8 opponents, then the boss, to win each ring. Every win earns packs; bosses pay out big.</p>
+      <div style="margin-top:8px">${ringRow}</div></div>
+    ${champion?`<div class="panel center"><div class="disp" style="font-size:22px;color:var(--gold)">🏆 GRAND CHAMPION</div><p class="sub">You've claimed all four rings and toppled the Diamond Dynasty. Legendary.</p></div>`:
+      `<div class="panel"><div class="row" style="align-items:center;justify-content:space-between"><h3 style="margin:0">${BW_TIERS[g.tier].ring} ${BW_TIERS[g.tier].name} Battlefield</h3>
+        <span class="small muted">Reward: ${g.step>=8?'beat the boss → 5 '+(PACK_TIERS[Math.min(3,g.tier+1)])+' packs':'win → 1 '+PACK_TIERS[g.tier]+' pack'}</span></div>
+        <div style="margin-top:10px">${ladder}</div>
+        <div class="center" style="margin-top:12px">${valid?`<button class="btn primary" onclick="bwGauntFight()">⚔️ Battle ${g.step>=8?BW_BOSS[g.tier]:BW_OPP[BW_TIERS[g.tier].k][g.step]} ▸</button>`:`<button class="btn" disabled>Build a full deck first</button> <button class="btn ghost" onclick="screenPlatoon('deck')">Go to Deck</button>`}</div></div>`}`);
+  _atTitle=true;ensureNavBtns();
+}
+
+function screenPlatoon(tab){
+  bwState();bwEnsureStyles();_bwTab=tab||_bwTab||'deck';
+  const bw=PROFILE.bw;
+  const tb=(k,l)=>`<span class="bwtab ${_bwTab===k?'on':''}" onclick="screenPlatoon('${k}')">${l}</span>`;
+  const body=_bwTab==='collection'?bwCollTab():_bwTab==='packs'?bwPacksTab():_bwTab==='store'?bwStoreTab():bwDeckTab();
+  render(`${topBar(`<span class="pill gold">💎 ${bw.coins}</span>`)}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">⚔️ THE PLATOON · bWARfare</div>
+      <p class="sub" style="margin-top:6px">Collect Set 1, build your <b>30 hitters · 10 pitchers · 12 Edges</b> deck, then take it to battle. Earn packs by leveling up and finishing franchises.</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tb('deck','🃏 Deck')}${tb('collection','📚 Collection')}${tb('packs','🎁 Packs'+(bw.packs.length?` (${bw.packs.length})`:''))}${tb('store','🏪 Store')}</div>
+    ${body}`);
+  _atTitle=true;ensureNavBtns();
 }
 
 /* boot */
