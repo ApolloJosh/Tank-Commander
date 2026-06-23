@@ -32,6 +32,7 @@
     font-family:'Barlow',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     line-height:1.45;font-size:15px}
   .disp,h1,h2,h3{font-family:var(--disp);text-transform:uppercase;letter-spacing:.04em}
+  html,body{overflow-x:hidden}
   #app{max-width:1060px;margin:0 auto;
     padding:calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(70px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
   input,textarea,select{-webkit-user-select:text;user-select:text}
@@ -4756,50 +4757,48 @@ if(typeof document!=="undefined"&&document.addEventListener){
    ============================================================ */
 const WELCOME_KEY="tankCommander_welcomed_v9";   // bumped for v9 so returning players see the Owner Mode + Hard Mode news once
 const NEWPILL='<span class="pill gold" style="font-size:9px;padding:0 5px;vertical-align:middle;margin-left:3px">NEW</span>';
+function bwExCard(c){
+  if(!c)return '';
+  const rm=BW_RAR[c.rar],cc=bwColor(c),gradCls=cc.kind==='irid'?'bwirid':cc.kind==='diamond'?'bwdiamond':'';
+  const top=cc.kind==='irid'?'<div class="bwc-top irid"></div>':cc.kind==='diamond'?'<div class="bwc-top bdiamond"></div>':`<div class="bwc-top" style="background:${cc.col}"></div>`;
+  const rlab=gradCls?`<span class="${gradCls}">${rm.name}</span>`:`<span style="color:${rm.col}">${rm.name}</span>`;
+  const numHTML=gradCls?`<b class="${gradCls}">${c.ov}</b>`:`<b style="color:${cc.col}">${c.ov}</b>`;
+  return `<div class="bwc ${c.rar===4?'hof':''}" style="cursor:default;width:84px;flex:0 0 auto">${top}
+    <div class="bwc-r">${rlab}</div><div class="bwc-n">${c.name}</div>
+    <div class="bwc-p">${c.pos} · ${numHTML}</div>
+    <div class="bwc-s">🔥${c.vf} 💨${c.vo}${bwAbHTML(c)}</div></div>`;
+}
+function bwWelcomeCardRow(){
+  const ex=[0,1,2,3,4].map(R=>SET1.cards.filter(c=>c.t==='H'&&c.rar===R).sort((a,b)=>b.ov-a.ov)[0]).filter(Boolean);
+  return `<div style="display:flex;gap:6px;align-items:stretch;justify-content:center;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 2px;margin:8px 0">${ex.map(bwExCard).join('')}</div>`;
+}
 function screenWelcome(){
+  bwEnsureStyles();
   render(`<div class="hero" style="padding-top:8px">
       <div class="pill" style="background:#1f3a1c;color:#9fe1cb">⚾ BETA</div>
-      <h1 style="font-size:34px;margin:8px 0 4px">Welcome to the<br>Baseball Tank Simulator</h1>
-      <p class="sub" style="max-width:600px;margin:0 auto">Hi — and welcome to the beta. You're the new <b>General Manager</b> of a washed-up ballclub. Your job: tear it down, lose on purpose to land premium <b>draft picks</b>, develop young talent, swing trades, and build a champion from the dirt up — all across a living, 30-team league split into two leagues and six divisions, where every rating, salary, and season plays out for real.</p>
+      <h1 style="font-size:30px;margin:8px 0 4px">Baseball Tank Simulator</h1>
+      <p class="sub" style="max-width:540px;margin:0 auto">Take over a washed-up ballclub as <b>General Manager</b> — tank for picks, develop talent, swing trades, and build a champion across a living 30-team league.</p>
     </div>
     <div class="panel" style="border-color:var(--gold);background:linear-gradient(180deg,rgba(201,162,39,0.10),transparent)">
+      <div class="center"><div class="pill gold">⚔️ bWARfare · NEW</div>
+        <h2 class="disp" style="margin:8px 0 2px;font-size:21px">Collect the set. Build a deck. Duel rivals.</h2>
+        <p class="sub" style="max-width:500px;margin:4px auto 0">Every player is a collectible card — <b>Common all the way up to HOF</b>. Pull packs, build your squad, and battle. <b>Collect them all and duel rivals in PvP!</b></p></div>
+      ${bwWelcomeCardRow()}
+      <div class="center" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--dim)">
+        <span>🎴 500-card set</span><span>·</span><span>🃏 30 / 10 / 12 deck</span><span>·</span><span>⚔️ Gauntlet</span><span>·</span><span>🌐 Rivals PvP</span></div>
+      <div class="center" style="margin-top:10px"><button class="btn" onclick="(function(){try{localStorage.setItem(WELCOME_KEY,'1');}catch(e){};screenPlatoon();})()">Open Platoon ▸</button></div>
+    </div>
+    <div class="center" style="margin:8px 0 14px"><button class="btn primary" style="font-size:17px;padding:14px 28px" onclick="(function(){try{localStorage.setItem(WELCOME_KEY,'1');}catch(e){};screenTitle();})()">I'm ready for the job →</button>
+      <p class="small muted" style="margin:8px auto 0;max-width:460px">This is a beta — when you finish a run you can leave a note for the creator with anything to fix, balance, or add.</p></div>
+    <div class="panel" style="border-color:var(--gold);background:linear-gradient(180deg,rgba(201,162,39,0.06),transparent)">
       <h3 style="margin-top:0">🆕 New in v9</h3>
       <div class="panel2" style="border:1px solid var(--gold);border-radius:10px;padding:11px;margin-bottom:8px">
         <div class="disp" style="font-weight:700;font-size:15px;color:var(--gold)">💼 Owner Mode <span class="pill" style="padding:0 6px;background:#24351c;color:var(--gold);border:1px solid var(--line2);font-size:9px">ALPHA</span></div>
-        <p class="small muted" style="margin:4px 0 0">A whole new way to play. Spend <b>$4 billion</b> to <b>buy a ballclub and build the stadium</b>, fund facilities, and hire your front office — then sit in the owner's box. <b>Steer your GM</b> with mandates and budgets, <b>veto his big trades</b> (including at the deadline), and run the money: set <b>ticket, concession &amp; merch prices</b>, land <b>sponsorships</b>, and grow the franchise's value. Win titles, then <b>sell for the biggest profit</b> — or build a 50-year dynasty. <i>It's an alpha, so expect rough edges — feedback welcome.</i></p></div>
+        <p class="small muted" style="margin:4px 0 0">A whole new way to play. Spend <b>$4 billion</b> to <b>buy a ballclub and build the stadium</b>, fund facilities, and hire your front office — then sit in the owner's box. <b>Steer your GM</b> with mandates and budgets, <b>veto his big trades</b>, and run the money: set <b>ticket, concession &amp; merch prices</b>, land <b>sponsorships</b>, and grow the franchise's value. Win titles, then <b>sell for the biggest profit</b> — or build a dynasty.</p></div>
       <div class="panel2" style="border:1px solid #c0392b;border-radius:10px;padding:11px">
         <div style="font-weight:800;color:#ff8a6b">🔥 Hard Mode — 6-Year Sprint</div>
-        <p class="small muted" style="margin:4px 0 0">For veterans of the classic run: a <b>tougher league</b>, <b>realistic injuries</b> you manage at <b>extra in-season roster breaks</b> (with a real <b>Injured List</b>), a <b>deeper 5-round draft</b>, and <b>stricter grading</b> — with its own separate leaderboard. Pick it right under the 6-Year Sprint.</p></div>
-    </div>
-    <div class="panel"><h3 style="margin-top:0">🎮 Ways to play</h3>
-      <div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:8px">
-        <div style="font-weight:800;color:var(--gold)">⚡ 6-Year Sprint</div>
-        <p class="small muted" style="margin:4px 0 0">The classic challenge. You get <b>six seasons</b> to flip a tanking team into a contender — then the front office grades your whole run out of 100. About 15 minutes a playthrough.</p></div>
-      <div class="panel2" style="border:1px solid var(--gold);border-radius:10px;padding:11px">
-        <div style="font-weight:800;color:var(--gold)">🪑 Career Mode ${NEWPILL}</div>
-        <p class="small muted" style="margin:4px 0 0">Endless. Keep the owner happy and <b>survive as long as you can</b> through the cycle of contention and rebuilds. Now featuring a <b>📣 Fan Favor meter</b>${NEWPILL} the fans control, and <b>🎙️ mid-season media press conferences</b>${NEWPILL} where what you say to reporters moves both meters. Your score climbs every year until you're fired — or retire a legend.</p></div>
-    </div>
-    <div class="panel" style="border-color:var(--gold)"><h3 style="margin-top:0">⚔️ NEW: bWARfare ${NEWPILL}</h3>
-      <p class="small muted" style="margin:4px 0 8px">A collectible card battle built right on top of your franchise — collect a 500-card set, build a deck, and climb a gauntlet of opponents and bosses for rings.</p>
-      <div class="small" style="line-height:1.55">
-        <div style="margin:5px 0"><b>🎴 Collect cards</b> — every player is a card, Common → HOF (with the same flowing diamond &amp; rainbow elites you see on 95+ OVRs). <b>Leveling up your GM</b> by playing franchises earns you <b>packs + 💎 Diamond Coins</b> every level.</div>
-        <div style="margin:5px 0"><b>🏪 Store &amp; packs</b> — spend Diamond Coins on <b>Bronze / Silver / Gold / Diamond</b> packs; the higher the tier, the better the odds at MVPs and HOFs.</div>
-        <div style="margin:5px 0"><b>🃏 Build your deck</b> — head to <b>Platoon</b> and assemble <b>30 hitters, 10 pitchers, and 12 Edge cards</b>. Your <b>Create-A-Player</b> rides along as his own card that levels up with him.</div>
-        <div style="margin:5px 0"><b>⚔️ The Gauntlet</b> — duel through 8 opponents and a boss across four battlefields (Bronze → Diamond). Every win pays packs; the <b>Diamond boss</b> needs a stacked deck of HOFs &amp; MVPs. Each at-bat resolves on one dice roll — your card&#39;s matchup vs theirs.</div>
-      </div>
-      <div class="center" style="margin-top:8px"><button class="btn" onclick="(function(){try{localStorage.setItem(WELCOME_KEY,'1');}catch(e){};screenPlatoon();})()">Open Platoon ▸</button></div></div>
-    <div class="panel"><h3 style="margin-top:0">✨ What else is new</h3>
-      <div class="small" style="line-height:1.5">
-        <div style="margin:5px 0"><b>⭐ Create-A-Player</b> ${NEWPILL} — earn XP every franchise to level up your GM profile and design a custom prospect who joins your farm in <i>every</i> new game.</div>
-        <div style="margin:5px 0"><b>👤 Accounts &amp; cloud save</b> ${NEWPILL} — make a free account (just a username and password) to carry your GM level and current game across devices.</div>
-        <div style="margin:5px 0"><b>💾 Save &amp; backup</b> — the game autosaves on your device automatically; the <b>💾 button</b> hands you a backup code to move or restore a save anytime.</div>
-        <div style="margin:5px 0"><b>🏆 Leaderboard</b> — post your final score and climb the global rankings (the 6-Year and Career boards are kept separate).</div>
-      </div>
-    </div>
-    <div class="panel center" style="border-color:#6f4fa0">
-      <p class="small muted" style="margin:0 0 8px">This is a <b>beta</b>, so it's rough in spots. When you finish a run you'll get the chance to <b>leave a note for the creator</b> — tell me what to fix, balance, or add.</p>
-    </div>
-    <div class="center" style="margin:6px 0 20px"><button class="btn primary" style="font-size:17px;padding:14px 28px" onclick="(function(){try{localStorage.setItem(WELCOME_KEY,'1');}catch(e){};screenTitle();})()">I'm ready for the job →</button></div>`);
+        <p class="small muted" style="margin:4px 0 0">For veterans: a <b>tougher league</b>, <b>realistic injuries</b> with a real <b>Injured List</b>, a <b>deeper 5-round draft</b>, and <b>stricter grading</b> — with its own separate leaderboard. Pick it right under the 6-Year Sprint.</p></div>
+    </div>`);
 }
 /* ---- feedback ---- */
 function feedbackEnabled(){return !!AUTH_API;}
@@ -4869,9 +4868,16 @@ function bwGenSet(){
   const mk=(type,t)=>{
     const ov=t.lo+Math.floor(rng()*(t.hi-t.lo+1));
     const base=clamp(Math.round((ov-49)/5),1,10);
-    const sp=t.rar>=3?1:(t.rar===0?Math.floor(rng()*3):Math.floor(rng()*2));
+    // FB/OFF specialization — wider spread so more cards lean hard one way (e.g. 10 vs FB / 4 vs OFF).
+    // vf+vo always equals 2*base, so a specialist and a balanced card of the same OVR are equal in total.
+    // (Same number of rng() draws as before, so every card's name / OVR / position / ability is unchanged.)
+    let spread = t.rar>=3 ? 1
+               : t.rar===0 ? (function(){const r=rng();return r<0.30?0:r<0.52?1:r<0.78?2:r<0.93?3:4;})()
+               : (function(){const r=rng();return r<0.34?0:r<0.62?1:r<0.86?2:3;})();
     const strongFB=rng()<0.5;
-    const vf=clamp(base+(strongFB?sp:-sp),1,10),vo=clamp(base+(strongFB?-sp:sp),1,10);
+    spread=Math.min(spread, base-1, 10-base);   // keep both ratings within 1..10 with the sum intact
+    const dir=strongFB?1:-1;
+    const vf=clamp(base+dir*spread,1,10),vo=clamp(base-dir*spread,1,10);
     let ab;
     if(t.rar===4)ab=type==='H'?{con:true,pwr:true}:{whiff:true,soft:true};
     else ab=type==='H'?{con:rng()<abCh[t.rar],pwr:rng()<abCh[t.rar]}:{whiff:rng()<abCh[t.rar],soft:rng()<abCh[t.rar]};
@@ -4956,6 +4962,10 @@ function bwRetroGrant(){   // one-time catch-up: existing GM levels earn their l
 }
 // ---- styles (injected once) ----
 function bwEnsureStyles(){if(document.getElementById('bwcss'))return;const s=document.createElement('style');s.id='bwcss';s.textContent=`
+ table.bwstat{border-collapse:collapse;width:100%;font-size:12px;min-width:480px}
+ table.bwstat th{font-family:var(--disp);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);text-align:right;padding:5px 7px;border-bottom:1px solid var(--line2);white-space:nowrap}
+ table.bwstat td{text-align:right;padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
+ table.bwstat tbody tr:hover{background:var(--panel2)}
  .bwgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
  .bwc{background:linear-gradient(180deg,var(--panel2),#11140b);border:1px solid var(--line2);border-top:3px solid var(--line2);border-radius:6px;padding:8px;cursor:pointer;position:relative;transition:transform .1s}
  .bwc:hover{transform:translateY(-2px);border-color:var(--gold)}
@@ -5042,7 +5052,7 @@ function bwDeckTab(){
     <div class="bwgrid">${ids.map(id=>bwCardMini(bwCardById(id),true)).join('')||'<span class="muted">None — add from the Collection tab.</span>'}</div>`;
   const valid=d.h.length===30&&d.p.length===10&&d.e.length===12;
   return `<div class="deckbar">⚾ Hitters <b>${d.h.length}/30</b> · 🔥 Pitchers <b>${d.p.length}/10</b> · 💉 Edges <b>${d.e.length}/12</b> · 🏅 Deck OVR <b style="color:var(--gold)">${bwDeckRatingIds(d)||'—'}</b></div>
-    <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap"><button class="btn primary sm" onclick="bwAutoBuild()">⚙️ Auto-build best</button><button class="btn ghost sm" onclick="bwClearDeck()">🗑️ Clear deck</button></div>
+    <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap"><button class="btn primary sm" onclick="bwAutoBuild()">⚙️ Auto-build best</button><button class="btn ghost sm" onclick="bwClearDeck()">🗑️ Clear deck</button><button class="btn ghost sm" onclick="screenBwStats()">📊 Card Stats</button></div>
     ${sec(d.h,'⚾ Hitters',30)}${sec(d.p,'🔥 Pitchers',10)}${sec(d.e,'💉 Player Edge Deck',12)}
     <div class="center" style="margin-top:16px"><button class="btn primary" ${valid?'':'disabled'} onclick="${valid?'screenGauntlet()':''}">${valid?'⚔️ To the Gauntlet':'Complete your deck to battle'}</button></div>`;
 }
@@ -5168,6 +5178,23 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
  .bwb-stack.ped .c{color:var(--amber)}
  .bwb-stack .l{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-family:var(--disp);font-size:8px;color:var(--dim);letter-spacing:.04em}
  .bwb-zlbl{font-family:var(--disp);text-transform:uppercase;letter-spacing:.1em;font-size:10px;color:var(--dim);text-align:center;margin-bottom:4px}
+ @media(max-width:560px){
+  .bwb-fan{min-height:150px;margin-bottom:18px}
+  .bwb-fan .bwc{width:88px!important}
+  .bwb-slot{margin:0 -22px}
+  .bwb-fan.you .bwb-slot:hover{transform:translateY(-16px) scale(1.04)!important}
+  .bwb-slot.sel{transform:translateY(-18px) scale(1.05)!important}
+  .bwb-back{width:88px;height:118px}
+  .bwb-fan.opp{min-height:84px}
+  .bwb-fan.opp .bwb-slot{margin:0 -26px}
+  .bwb-fan.opp .bwb-back{width:56px;height:76px}
+  .bwb-sb{min-width:0;flex:1 1 44%;padding:7px 9px}
+  .bwb-sb .r{font-size:22px}
+  .bwb-die{width:40px;height:40px;font-size:20px}
+  .bwb-outc{font-size:22px}
+  .bwb-field{padding:11px;min-height:140px}
+  .bwb-state{gap:10px}
+ }
  `;document.head.appendChild(s);}
 // ---- normalize a Set 1 card for the engine ----
 function bwbCard(c){
@@ -5193,21 +5220,23 @@ function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor
 function rint(a,b){return a+Math.floor(Math.random()*(b-a+1));}
 function bwbMkSide(name,deck){return {name,allH:deck.h.slice(),allP:deck.p.slice(),hitters:shuffle(deck.h.slice()),pitchers:shuffle(deck.p.slice()),peds:shuffle(deck.e.slice()),hand:[],phand:[],pitcher:null,runs:0};}
 function bwbRefill(s){
-  if(!s.hitters.length)s.hitters=shuffle(s.allH.slice());
-  while(s.hand.length<5&&s.hitters.length)s.hand.push(s.hitters.shift());
+  // never reshuffle a card that's already sitting in the hand back into the draw pile
+  if(!s.hitters.length)s.hitters=shuffle(s.allH.filter(c=>!s.hand.some(x=>x.id===c.id)));
+  while(s.hand.length<5&&s.hitters.length){const c=s.hitters.shift();if(s.hand.some(x=>x.id===c.id))continue;s.hand.push(c);}
+  if(s.hand.length<5){s.hitters=shuffle(s.allH.filter(c=>!s.hand.some(x=>x.id===c.id)));while(s.hand.length<5&&s.hitters.length)s.hand.push(s.hitters.shift());}
   while(s.phand.length<3&&s.peds.length)s.phand.push(s.peds.shift());   // edges finite per battle
 }
 function bwbStart(youDeck,cpuDeck,meta){
   clearTimers();
-  BW={you:bwbMkSide(bwTeam().name,youDeck),cpu:bwbMkSide(meta.oppName||'Rivals',cpuDeck),inning:1,half:'top',outs:0,bases:[false,false,false],phase:'pitch',committedPitch:null,pdEdge:null,selHitter:null,selEdge:null,last:null,pending:null,over:false,winner:null,meta,_rewarded:false};
+  BW={you:bwbMkSide(bwTeam().name,youDeck),cpu:bwbMkSide(meta.oppName||'Rivals',cpuDeck),inning:1,half:'top',outs:0,bases:[null,null,null],phase:'pitch',committedPitch:null,pdEdge:null,selHitter:null,selEdge:null,last:null,pending:null,over:false,winner:null,meta,_rewarded:false};
   bwbRefill(BW.you);bwbRefill(BW.cpu);bwbStartHalf();screenBwBattle();
 }
 const bwbOff=()=>BW.half==='top'?BW.you:BW.cpu;
 const bwbDef=()=>BW.half==='top'?BW.cpu:BW.you;
 const bwbYouBat=()=>BW.half==='top';
 function bwbStartHalf(){
-  BW.outs=0;BW._ab=0;BW.bases=[false,false,false];const d=bwbDef();
-  if(!d.pitcher||d.pitcher._inn!==BW.inning){if(!d.pitchers.length)d.pitchers=shuffle(d.allP.slice());d.pitcher=d.pitchers.shift();d.pitcher._inn=BW.inning;d.pitcher._runsInn=0;}
+  BW.outs=0;BW._ab=0;BW.bases=[null,null,null];const d=bwbDef();
+  if(!d.pitcher||d.pitcher._inn!==BW.inning){if(!d.pitchers.length)d.pitchers=shuffle(d.allP.filter(p=>!d.pitcher||p.id!==d.pitcher.id));if(!d.pitchers.length)d.pitchers=shuffle(d.allP.slice());d.pitcher=d.pitchers.shift();d.pitcher._inn=BW.inning;d.pitcher._runsInn=0;}
   BW.selHitter=null;BW.selEdge=null;BW.pdEdge=null;
   if(bwbYouBat()){BW.committedPitch=bwbCpuPitch(d.pitcher);BW.pdEdge=bwbCpuPitEdge(d);BW.phase='swing';}else BW.phase='pitch';
 }
@@ -5225,15 +5254,27 @@ function bwbResolve(h,pitch,hE,pE,p){
   let hb=hE?hE.any+(pitch==='FB'?hE.fb:hE.off):0,pb=pE?pE.any+(pitch==='FB'?pE.fb:pE.off):0;
   const total=roll+hv-pr+hb-pb;let bases=bwbLadder(total,h,p,hE);
   const ejected=hE&&hE.risky&&Math.random()<0.18;
+  // walks: the pitcher misses the zone on a low natural roll (2d6). Skill nudges it:
+  // a WHIFF (control) arm erases the roll-3 walk; a CON (disciplined) hitter draws one on a 4.
+  let walk=false;
+  if(!ejected){if(roll===2)walk=true;else if(roll===3&&!p.whiff)walk=true;else if(roll===4&&h.con)walk=true;}
   const tags=[];if(h.con)tags.push('CON');if(p.whiff)tags.push('WHIFF');if(p.soft)tags.push('GB');if(h.pwr||(hE&&hE.pwrBump))tags.push('PWR');
-  return {d1,d2,roll,hv,pr,hb,pb,total,pitch,bases,label:ejected?'EJECTED':['OUT','SINGLE','DOUBLE','TRIPLE','HOME RUN'][bases],ejected,tags,h,p};
+  return {d1,d2,roll,hv,pr,hb,pb,total,pitch,bases,walk,label:walk?'WALK':ejected?'EJECTED':['OUT','SINGLE','DOUBLE','TRIPLE','HOME RUN'][bases],ejected,tags,h,p};
 }
-function bwbRunCalc(bases,st){const[on1,on2,on3]=st;let runs=0,nb=[false,false,false];
-  if(bases===1){runs+=(on2?1:0)+(on3?1:0);nb[0]=true;nb[1]=on1;}
-  else if(bases===2){runs+=(on2?1:0)+(on3?1:0);nb[1]=true;nb[2]=on1;}
-  else if(bases===3){runs+=(on1?1:0)+(on2?1:0)+(on3?1:0);nb[2]=true;}
-  else{runs+=1+(on1?1:0)+(on2?1:0)+(on3?1:0);}
-  return {runs,nb};
+function bwbRunCalc(bases,st,bat){const[r1,r2,r3]=st;let nb=[null,null,null],sc=[];
+  if(bases===1){if(r2)sc.push(r2);if(r3)sc.push(r3);nb[0]=bat;nb[1]=r1;}
+  else if(bases===2){if(r2)sc.push(r2);if(r3)sc.push(r3);nb[1]=bat;nb[2]=r1;}
+  else if(bases===3){if(r1)sc.push(r1);if(r2)sc.push(r2);if(r3)sc.push(r3);nb[2]=bat;}
+  else{if(r1)sc.push(r1);if(r2)sc.push(r2);if(r3)sc.push(r3);sc.push(bat);}   // HR: all runners + batter score
+  return {runs:sc.length,nb,scorers:sc};
+}
+function bwbWalkCalc(st,bat){const[r1,r2,r3]=st;let nb=[null,null,null],sc=[];
+  nb[0]=bat;                                   // batter takes first
+  if(r1){ nb[1]=r1;                            // runner on first is forced to second
+    if(r2){ nb[2]=r2; if(r3)sc.push(r3); }     // second forced to third; if loaded, third forced home
+    else { nb[2]=r3; }                         // second open: third holds
+  } else { nb[1]=r2; nb[2]=r3; }               // first open: nobody forced
+  return {runs:sc.length,nb,scorers:sc};
 }
 function bwbCommitPitch(pitch){
   let pE=null;if(BW.selEdge&&BW.selEdge.side==='P'){pE=BW.selEdge;BW.you.phand=BW.you.phand.filter(x=>x.id!==pE.id);}
@@ -5243,15 +5284,53 @@ function bwbCommitPitch(pitch){
 function bwbSwing(){if(!BW.selHitter)return;bwbDoAB(BW.selHitter,BW.selEdge&&BW.selEdge.side==='H'?BW.selEdge:null);}
 function bwbDoAB(h,hE){
   const off=bwbOff(),def=bwbDef(),r=bwbResolve(h,BW.committedPitch,hE,BW.pdEdge,def.pitcher);
-  let pend={outs:0,runs:0,nb:BW.bases.slice()};
-  if(r.ejected||r.bases===0)pend.outs=1;else{const rc=bwbRunCalc(r.bases,BW.bases);pend.runs=rc.runs;pend.nb=rc.nb;}
+  let pend={outs:0,runs:0,nb:BW.bases.slice(),scorers:[],batter:h,bases:r.bases,ejected:!!r.ejected,isK:false,walk:!!r.walk,pitcher:def.pitcher};
+  if(r.walk){const wc=bwbWalkCalc(BW.bases,h);pend.runs=wc.runs;pend.nb=wc.nb;pend.scorers=wc.scorers;pend.bases=0;}
+  else if(r.ejected||r.bases===0){pend.outs=1;pend.isK=(!r.ejected&&r.total<=4);}
+  else{const rc=bwbRunCalc(r.bases,BW.bases,h);pend.runs=rc.runs;pend.nb=rc.nb;pend.scorers=rc.scorers;}
   off.hand=off.hand.filter(x=>x.id!==h.id);if(hE)off.phand=off.phand.filter(e=>e.id!==hE.id);bwbRefill(off);
   BW.last=r;BW.pending=pend;BW.phase='result';
   const who=off===BW.you?'You':BW.cpu.name;
-  BW.lastMsg=r.ejected?`${h.name} ejected for a corked bat — out.`:r.bases===0?`${h.name} ${r.total<=4?'strikes out':'is retired'}.`:`${who}: ${h.name} ${r.label.toLowerCase()}${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} in`:''}!`;
+  BW.lastMsg=r.walk?`${who}: ${h.name} walks${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} forced in`:''}.`:r.ejected?`${h.name} ejected for a corked bat — out.`:r.bases===0?`${h.name} ${r.total<=4?'strikes out':'is retired'}.`:`${who}: ${h.name} ${r.label.toLowerCase()}${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} in`:''}!`;
   screenBwBattle();
 }
-function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;const def=bwbDef();if(def.pitcher)def.pitcher._runsInn=(def.pitcher._runsInn||0)+p.runs;BW.bases=p.nb;BW._ab=(BW._ab||0)+1;BW.pending=null;}
+function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;const def=bwbDef();if(def.pitcher)def.pitcher._runsInn=(def.pitcher._runsInn||0)+p.runs;BW.bases=p.nb;BW._ab=(BW._ab||0)+1;bwbRecordStats(p,off,def);if(p.runs>0&&!BW.over&&bwbWalkoffCheck()){BW.over=true;BW.winner=BW.cpu;}BW.pending=null;}
+function bwCardStat(id,mode){
+  const bw=bwState();if(!bw.cardStats)bw.cardStats={};
+  if(!bw.cardStats[id])bw.cardStats[id]={};
+  if(!bw.cardStats[id][mode])bw.cardStats[id][mode]={ab:0,h:0,b2:0,b3:0,hr:0,r:0,rbi:0,bb:0,outs:0,ha:0,ra:0,k:0,bba:0};
+  return bw.cardStats[id][mode];
+}
+// accumulate per-card stats for the PLAYER's cards only (gauntlet + rivals tracked separately)
+function bwbRecordStats(p,off,def){
+  if(!BW.meta||!p)return;
+  const mode=BW.meta.rivals?'rivals':'gaunt';
+  if(off===BW.you){
+    if(p.batter&&p.batter.id){
+      const s=bwCardStat(p.batter.id,mode);
+      if(p.walk){s.bb=(s.bb||0)+1;}
+      else{s.ab++;if(p.bases>=1&&!p.ejected){s.h++;if(p.bases===2)s.b2++;else if(p.bases===3)s.b3++;else if(p.bases===4)s.hr++;}}
+      s.rbi+=p.runs;
+    }
+    (p.scorers||[]).forEach(c=>{if(c&&c.id){bwCardStat(c.id,mode).r++;}});
+  }
+  if(def===BW.you&&p.pitcher&&p.pitcher.id){
+    const s=bwCardStat(p.pitcher.id,mode);
+    if(p.walk){s.bba=(s.bba||0)+1;}
+    else{s.outs+=p.outs;if(p.bases>=1&&!p.ejected)s.ha++;if(p.isK)s.k++;}
+    s.ra+=p.runs;
+  }
+}
+function bwbWalkoffCheck(){
+  // the home team (CPU) bats in the bottom half — they can end it the instant they go ahead
+  if(BW.half!=='bottom'||BW.cpu.runs<=BW.you.runs)return false;
+  const lead=BW.cpu.runs-BW.you.runs;
+  if(BW.inning>=9)return true;                 // bottom of the 9th (or extras): any lead is a walk-off
+  if(BW.inning>=7&&lead>=8)return true;         // or they cross the mercy margin mid-inning
+  if(BW.inning>=5&&lead>=10)return true;
+  if(BW.inning>=3&&lead>=15)return true;
+  return false;
+}
 function bwbMercy(){
   // win conditions evaluated at the end of a completed inning (BW.inning = innings completed)
   if(BW.you.runs===BW.cpu.runs)return false;
@@ -5332,8 +5411,8 @@ function screenBwBattle(){
     const r=BW.last,pi=r.pitch==='FB'?{ic:'🔥',l:'FASTBALL',c:'var(--amber)'}:{ic:'💨',l:'OFFSPEED',c:'var(--blue)'};
     field=`<div class="bwb-pop" style="color:${pi.c}"><span class="ic">${pi.ic}</span>${pi.l}</div>
       <div class="bwb-dice"><div class="bwb-die roll" id="bwbd1">?</div><div class="bwb-die roll" id="bwbd2">?</div></div>
-      <div class="bwb-math" id="bwbmath">Roll: <b>${r.roll}</b> + vs${r.pitch==='FB'?'🔥':'💨'} <b>${r.hv}</b> − ${r.pitch==='FB'?'🔥':'💨'} <b>${r.pr}</b>${r.hb?` + <b style="color:var(--gold)">${r.hb}</b>`:''}${r.pb?` − <b style="color:var(--red)">${r.pb}</b>`:''} = <span class="tot">${r.total}</span>${r.tags.length?` <span class="muted" style="font-size:11px">[${r.tags.join(' · ')}]</span>`:''}</div>
-      <div class="bwb-outc" id="bwboutc" style="color:${r.bases>=3||r.ejected?'var(--gold)':r.bases?'var(--green)':'var(--red)'}">${r.label}</div>
+      <div class="bwb-math" id="bwbmath">${r.walk?`Natural roll <b>${r.roll}</b> — pitcher misses the zone · <span class="tot">ball four</span>`:`Roll: <b>${r.roll}</b> + vs${r.pitch==='FB'?'🔥':'💨'} <b>${r.hv}</b> − ${r.pitch==='FB'?'🔥':'💨'} <b>${r.pr}</b>${r.hb?` + <b style="color:var(--gold)">${r.hb}</b>`:''}${r.pb?` − <b style="color:var(--red)">${r.pb}</b>`:''} = <span class="tot">${r.total}</span>${r.tags.length?` <span class="muted" style="font-size:11px">[${r.tags.join(' · ')}]</span>`:''}`}</div>
+      <div class="bwb-outc" id="bwboutc" style="color:${r.walk?'var(--amber)':r.bases>=3||r.ejected?'var(--gold)':r.bases?'var(--green)':'var(--red)'}">${r.label}</div>
       <div class="muted" id="bwbsub" style="min-height:16px"></div>
       <button class="btn primary" id="bwbnext" style="opacity:0" onclick="bwbNext()">Next ▸</button>`;
   } else if(yb){
@@ -5401,6 +5480,48 @@ function bwLogAdd(won){
   if(!bw.log)bw.log=[];
   bw.log.unshift({opp:BW.cpu.name,logo:m.oppLogo||'\ud83c\udfaf',mode:m.rivals?'rivals':(m.boss?'boss':'gauntlet'),you:BW.you.runs,them:BW.cpu.runs,won:!!won,inn:BW.inning,ts:Date.now()});
   bw.log=bw.log.slice(0,15);saveProfile();
+}
+let _bwStatMode='gaunt';
+function bwFmtAvg(n){if(!isFinite(n))return '.000';let str=n.toFixed(3);return n<1?str.replace(/^0/,''):str;}
+function bwFmtIP(outs){return Math.floor(outs/3)+'.'+(outs%3);}
+function bwFmtERA(ra,outs){if(!outs)return ra>0?'∞':'0.00';return (ra*27/outs).toFixed(2);}
+function bwStatMode(m){_bwStatMode=m;screenBwStats();}
+function screenBwStats(){
+  bwState();bwEnsureStyles();
+  const mode=_bwStatMode,all=PROFILE.bw.cardStats||{};
+  const hit=[],pit=[];
+  Object.keys(all).forEach(id=>{
+    const st=all[id]&&all[id][mode];if(!st)return;
+    const card=bwCardById(id);if(!card)return;
+    if(card.t==='H'){if(st.ab>0)hit.push({card,st});}
+    else if(card.t==='P'){if(st.outs>0||st.ha>0||st.ra>0)pit.push({card,st});}
+  });
+  hit.sort((a,b)=>b.st.h-a.st.h||b.st.hr-a.st.hr);
+  pit.sort((a,b)=>b.st.outs-a.st.outs);
+  const tag=(m,l)=>`<button class="btn ${mode===m?'primary':'ghost'} sm" onclick="bwStatMode('${m}')">${l}</button>`;
+  const nm=c=>`<span style="white-space:nowrap">${String(c.name).replace(/</g,'&lt;')}</span>`;
+  let hitTbl;
+  if(hit.length){
+    const rows=hit.map(({card,st})=>{
+      const bb=st.bb||0,singles=st.h-st.b2-st.b3-st.hr,tb=singles+st.b2*2+st.b3*3+st.hr*4,pa=st.ab+bb;
+      const avg=st.ab?st.h/st.ab:0,obp=pa?(st.h+bb)/pa:0,slg=st.ab?tb/st.ab:0,ops=obp+slg;
+      return `<tr><td style="text-align:left">${nm(card)}</td><td>${st.ab}</td><td>${st.h}</td><td>${st.b2}</td><td>${st.b3}</td><td>${st.hr}</td><td>${st.r}</td><td>${st.rbi}</td><td>${bb}</td><td>${bwFmtAvg(avg)}</td><td>${bwFmtAvg(obp)}</td><td>${bwFmtAvg(slg)}</td><td>${bwFmtAvg(ops)}</td></tr>`;
+    }).join('');
+    hitTbl=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="bwstat"><thead><tr><th style="text-align:left">Hitter</th><th>AB</th><th>H</th><th>2B</th><th>3B</th><th>HR</th><th>R</th><th>RBI</th><th>BB</th><th>AVG</th><th>OBP</th><th>SLG</th><th>OPS</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  } else hitTbl='<p class="muted" style="padding:10px">No hitter at-bats logged in this mode yet.</p>';
+  let pitTbl;
+  if(pit.length){
+    const rows=pit.map(({card,st})=>{const bba=st.bba||0,whip=st.outs?((st.ha+bba)*3/st.outs):0;
+      return `<tr><td style="text-align:left">${nm(card)}</td><td>${bwFmtIP(st.outs)}</td><td>${st.ha}</td><td>${st.ra}</td><td>${bba}</td><td>${st.k}</td><td>${bwFmtERA(st.ra,st.outs)}</td><td>${st.outs?whip.toFixed(2):'—'}</td></tr>`;}).join('');
+    pitTbl=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="bwstat"><thead><tr><th style="text-align:left">Pitcher</th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th><th>ERA</th><th>WHIP</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  } else pitTbl='<p class="muted" style="padding:10px">No pitcher innings logged in this mode yet.</p>';
+  render(`${topBar(`<button class="btn ghost sm" onclick="screenPlatoon('deck')">🃏 Deck</button> <button class="btn ghost sm" onclick="screenGauntlet()">⚔️ Gauntlet</button>`)}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">📊 CARD STATS</div>
+      <p class="sub" style="margin-top:6px">Lifetime stat lines for every card you've played, split by battle mode.</p>
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">${tag('gaunt','⚔️ Gauntlet')}${tag('rivals','🌐 Rivals')}</div></div>
+    <div class="panel"><div class="sectlbl" style="margin-bottom:6px">⚾ Hitters</div>${hitTbl}</div>
+    <div class="panel"><div class="sectlbl" style="margin-bottom:6px">🔥 Pitchers</div>${pitTbl}</div>`);
+  _atTitle=true;ensureNavBtns();
 }
 function screenBwLog(){
   bwState();bwEnsureStyles();
@@ -5476,10 +5597,11 @@ function showBwRules(){
     <p><b>Your deck.</b> 30 hitters, 10 pitchers, and a 12-card Player Edge Deck.</p>
     <p><b>The at-bat.</b> The pitcher commits 🔥 Fastball or 💨 Offspeed (hidden). You send a hitter and may spend one Edge. Then:<br><b>Roll 2 dice + your hitter\'s vs-(pitch thrown) − the pitcher\'s rating in that pitch + Edge bonuses.</b></p>
     <p><b>The ladder.</b> ≤7 out · 8–9 single · 10–11 double · 12–13 triple · 14+ home run.</p>
+    <p><b>Walks.</b> When the two dice come up low — a natural <b>2 or 3</b> — the pitcher misses the zone and the batter takes a <b>walk</b> (a disciplined <b style="color:var(--green)">CON</b> hitter also walks on a 4; a <b style="color:var(--blue)">WHIFF</b> arm erases the 3). Walks force in runs only with the bases loaded, and count toward OBP but not batting average.</p>
     <p><b>Abilities shift the ladder.</b><br>Hitter <b style="color:var(--green)">CON</b>: the out line drops by 1 (7–9 is a single). <b style="color:var(--red)">PWR</b>: +1 base on any hit.<br>Pitcher <b style="color:var(--blue)">WHIFF</b>: the out line rises by 1 (only a 9 singles). <b style="color:var(--amber)">GB</b>: every extra-base hit drops a base and homers need 15+.</p>
     <p><b>Base running.</b> A single scores runners from 2nd and 3rd; a double clears the corners; triples and homers clear the bases.</p>
     <p><b>Once per game</b> you may make <b>one pitching change</b> (a random new arm) and <b>one Edge redraw</b> (a fresh hand of Edges).</p>
-    <p><b>Flow.</b> Three outs flip sides; a fresh pitcher takes the mound each inning. The CPU will burn its one bullpen call the instant its pitcher gives up <b>6+ runs in an inning</b>.</p>
+    <p><b>Flow.</b> Three outs flip sides; a fresh pitcher takes the mound each inning. The home team bats last, so if they take the lead in the <b>bottom of the 9th (or extras)</b> — or cross the mercy margin — it's a <b>walk-off</b> and the game ends on the spot. The CPU will burn its one bullpen call the instant its pitcher gives up <b>6+ runs in an inning</b>.</p>
     <p><b>The Gauntlet &amp; rewards.</b> Climb four battlefields (Bronze → Diamond), each 8 opponents + a boss. Beating an opponent earns a pack; beating a boss earns <b>5 next-tier packs + a ring</b>. <b>Every win grants GM XP</b> (bosses give more).</p>`);
 }
 function showGameRules(){
