@@ -5321,11 +5321,12 @@ function screenBwBattle(){
   let field='';
   if(BW.over){
     const won=BW.winner===BW.you,riv=BW.meta&&BW.meta.rivals;
-    if(BW.meta&&!BW._rewarded){BW._rewarded=true;bwLogAdd(won);if(riv)bwReportDefense(won);if(won)BW._reward=riv?bwRivalsWin():bwGauntWin();else if(riv)bwRivalsLoss();}
+    if(BW.meta&&!BW._rewarded){BW._rewarded=true;bwLogAdd(won);if(riv)bwReportDefense(won);if(won)BW._reward=riv?bwRivalsWin():bwGauntWin();else if(riv)BW._reward=bwRivalsLoss();}
     field=`<div class="bwb-pop" style="color:${won?'var(--gold)':'var(--red)'};font-size:26px">${won?'🏆 VICTORY':'DEFEAT'}</div>
-      <div class="muted">Final — Your Club ${BW.you.runs}, ${BW.cpu.name} ${BW.cpu.runs}</div>
+      <div class="muted">Final — ${bwTeam().logo} ${BW.you.name} ${BW.you.runs}, ${BW.cpu.name} ${BW.cpu.runs}</div>
       ${won&&BW._reward?`<div style="margin-top:6px;color:var(--gold)" class="disp">🎁 Earned ${BW._reward.granted.length} ${BW._reward.boss?BW._reward.tierName+' ':''}pack${BW._reward.granted.length>1?'s':''}!</div>
       <div style="margin-top:3px;color:var(--gold)" class="disp">🎖️ +${BW._reward.xp.xp} GM XP${BW._reward.xp.leveled?` · LEVEL UP → ${BW._reward.xp.to}!`:''}</div>`:''}
+      ${!won&&riv&&BW._reward?`<div style="margin-top:6px;color:var(--amber)" class="disp">💎 +${BW._reward.coins} · 🎖️ +${BW._reward.xp.xp} GM XP${BW._reward.xp.leveled?` · LEVEL UP → ${BW._reward.xp.to}!`:''}</div><div class="small muted">Tough loss — still some coin and XP for showing up.</div>`:''}
       <div style="display:flex;gap:8px;margin-top:10px">${won?`<button class="btn primary" onclick="${riv?'screenRivals()':'screenGauntlet()'}">Continue ▸</button>`:`<button class="btn primary" onclick="${riv?'screenRivals()':'bwGauntFight()'}">${riv?'↻ Find another':'↻ Retry'}</button><button class="btn ghost" onclick="${riv?'screenRivals()':'screenGauntlet()'}">Back</button>`}</div>`;
   } else if(BW.phase==='result'){
     const r=BW.last,pi=r.pitch==='FB'?{ic:'🔥',l:'FASTBALL',c:'var(--amber)'}:{ic:'💨',l:'OFFSPEED',c:'var(--blue)'};
@@ -5661,14 +5662,14 @@ function bwRivalsFight(){
 }
 function bwRivalsWin(){
   const bw=bwState(),rv=bw.rivals||(bw.rivals={wins:0,losses:0,rating:0,milestone:0});
-  rv.wins++;rv.rating+=25;const xpRes=bwAddBattleXP(25);bw.coins=(bw.coins||0)+50;
+  rv.wins++;rv.rating+=25;const xpRes=bwAddBattleXP(25);bw.coins=(bw.coins||0)+15;
   let packs=[];
   while(rv.rating>=(rv.milestone+1)*200){rv.milestone++;packs.push(rv.rating>=600?'diamond':rv.rating>=400?'gold':rv.rating>=200?'silver':'bronze');}
   if(packs.length)bw.packs=bw.packs.concat(packs);
   saveProfile();
-  return {rivals:true,granted:packs,coins:50,xp:xpRes,rating:rv.rating};
+  return {rivals:true,granted:packs,coins:15,xp:xpRes,rating:rv.rating};
 }
-function bwRivalsLoss(){const bw=bwState(),rv=bw.rivals||(bw.rivals={wins:0,losses:0,rating:0,milestone:0});rv.losses++;rv.rating=Math.max(0,rv.rating-12);saveProfile();}
+function bwRivalsLoss(){const bw=bwState(),rv=bw.rivals||(bw.rivals={wins:0,losses:0,rating:0,milestone:0});rv.losses++;rv.rating=Math.max(0,rv.rating-12);const xpRes=bwAddBattleXP(8);bw.coins=(bw.coins||0)+5;saveProfile();return {rivals:true,granted:[],coins:5,xp:xpRes,rating:rv.rating,loss:true};}
 
 const BW_LOGOS=['\u26be','\u26a1','\ud83d\udd25','\ud83d\udca5','\u2694\ufe0f','\ud83d\udee1\ufe0f','\ud83c\udfaf','\ud83d\ude80','\ud83d\udc09','\ud83e\udd85','\ud83d\udc3a','\ud83e\udd8a','\ud83d\udc3b','\ud83d\udc2f','\ud83e\udd81','\ud83d\udc18','\ud83e\udd2c','\ud83d\udc7d','\ud83e\udd16','\ud83d\udc80','\ud83d\udc51','\u2b50','\ud83c\udf1f','\u2604\ufe0f','\ud83c\udf0a','\ud83c\udf2a\ufe0f','\u2744\ufe0f','\ud83c\udf0b','\ud83c\udfdf\ufe0f','\u269e'];
 function bwSaveTeamName(v){const t=bwTeam();t.name=(v||'').slice(0,24)||'My Club';saveProfile();}
