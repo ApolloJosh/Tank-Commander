@@ -1857,6 +1857,7 @@ function screenTitle(){
          <div class="tnav-lab">New Franchise</div>
          ${navMi('career')}${navMi('hard')}${navMi('survivor')}${navMi('owner')}
          <div class="tmi" onclick="screenGauntlet()">⚔️ bWARfare <span class="tag hot">Gauntlet</span></div>
+         <div class="tmi" onclick="screenRivals()">🌐 Rivals <span class="tag hot">PvP</span></div>
          <div class="tnav-lab">Profile</div>
          <div class="tmi" onclick="screenPlatoon()">Platoon <span class="tag hot">bWARfare</span></div>
          ${createMi}
@@ -1885,7 +1886,8 @@ function screenTitle(){
              <div class="disp" style="font-size:12px;color:var(--gold)">GM Level ${plLevel()}</div>
              <div class="small muted">${PROFILE.gamesPlayed||0} franchise${(PROFILE.gamesPlayed||0)===1?'':'s'} · ${PROFILE.xp||0} XP</div>
              <div class="small" style="color:var(--gold)">${plLevel()>=MAX_LEVEL?'★ MAX LEVEL':Math.max(0,xpForLevel(plLevel()+1)-(PROFILE.xp||0))+' XP to Lv '+(plLevel()+1)}</div>
-             <div class="small" style="margin-top:6px;line-height:1.5"><span style="color:var(--amber)">💎 ${bwState().coins}</span><br><span style="color:var(--gold)">🎁 ${PROFILE.bw.packs.length}</span> bWARfare pack${PROFILE.bw.packs.length===1?'':'s'} to open</div>
+             <div class="small" style="margin-top:3px"><span class="muted">Deck OVR</span> <b style="color:var(--gold)">${bwDeckRatingIds(PROFILE.bw.deck)||'—'}</b></div>
+             <div class="small" style="margin-top:6px;line-height:1.6"><span style="color:var(--amber)">💎 ${bwState().coins}</span>${PROFILE.bw.packs.length?`<br><span title="Open packs" style="cursor:pointer;color:var(--gold)" onclick="screenPlatoon('packs')">🎁 ${PROFILE.bw.packs.length}</span>`:''}</div>
            </div>
          </div>
        </aside>
@@ -4650,6 +4652,7 @@ async function cloudSyncNow(){
     const now=Date.now();
     await authCall("/sync",{token:a.token,profile:JSON.stringify(PROFILE),save:localStorage.getItem(SAVE)||null,updated:now});
     localStorage.setItem(SAVE_AT,String(now));
+    bwPublishGhost();   // keep your rivals ghost deck fresh
   }catch(e){ if(/signed in|401/i.test(e.message)){setAuth(null);} }
   finally{_syncing=false;}
 }
@@ -5036,7 +5039,7 @@ function bwDeckTab(){
   const sec=(ids,label,cap)=>`<div class="sectlbl" style="margin:12px 0 6px">${label} <b style="color:${ids.length===cap?'var(--green)':'var(--gold)'}">${ids.length}/${cap}</b></div>
     <div class="bwgrid">${ids.map(id=>bwCardMini(bwCardById(id),true)).join('')||'<span class="muted">None — add from the Collection tab.</span>'}</div>`;
   const valid=d.h.length===30&&d.p.length===10&&d.e.length===12;
-  return `<div class="deckbar">⚾ Hitters <b>${d.h.length}/30</b> · 🔥 Pitchers <b>${d.p.length}/10</b> · 💉 Edges <b>${d.e.length}/12</b></div>
+  return `<div class="deckbar">⚾ Hitters <b>${d.h.length}/30</b> · 🔥 Pitchers <b>${d.p.length}/10</b> · 💉 Edges <b>${d.e.length}/12</b> · 🏅 Deck OVR <b style="color:var(--gold)">${bwDeckRatingIds(d)||'—'}</b></div>
     <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap"><button class="btn primary sm" onclick="bwAutoBuild()">⚙️ Auto-build best</button><button class="btn ghost sm" onclick="bwClearDeck()">🗑️ Clear deck</button></div>
     ${sec(d.h,'⚾ Hitters',30)}${sec(d.p,'🔥 Pitchers',10)}${sec(d.e,'💉 Player Edge Deck',12)}
     <div class="center" style="margin-top:16px"><button class="btn primary" ${valid?'':'disabled'} onclick="${valid?'screenGauntlet()':''}">${valid?'⚔️ To the Gauntlet':'Complete your deck to battle'}</button></div>`;
@@ -5194,7 +5197,7 @@ function bwbRefill(s){
 }
 function bwbStart(youDeck,cpuDeck,meta){
   clearTimers();
-  BW={you:bwbMkSide('Your Club',youDeck),cpu:bwbMkSide(meta.oppName||'Rivals',cpuDeck),inning:1,half:'top',outs:0,bases:[false,false,false],phase:'pitch',committedPitch:null,pdEdge:null,selHitter:null,selEdge:null,last:null,pending:null,over:false,winner:null,meta,_rewarded:false};
+  BW={you:bwbMkSide(bwTeam().name,youDeck),cpu:bwbMkSide(meta.oppName||'Rivals',cpuDeck),inning:1,half:'top',outs:0,bases:[false,false,false],phase:'pitch',committedPitch:null,pdEdge:null,selHitter:null,selEdge:null,last:null,pending:null,over:false,winner:null,meta,_rewarded:false};
   bwbRefill(BW.you);bwbRefill(BW.cpu);bwbStartHalf();screenBwBattle();
 }
 const bwbOff=()=>BW.half==='top'?BW.you:BW.cpu;
@@ -5292,13 +5295,13 @@ function screenBwBattle(){
   const yb=bwbYouBat(),def=bwbDef(),off=bwbOff();
   let field='';
   if(BW.over){
-    const won=BW.winner===BW.you;
-    if(won&&BW.meta&&!BW._rewarded){BW._rewarded=true;BW._reward=bwGauntWin();}
+    const won=BW.winner===BW.you,riv=BW.meta&&BW.meta.rivals;
+    if(BW.meta&&!BW._rewarded){BW._rewarded=true;if(won)BW._reward=riv?bwRivalsWin():bwGauntWin();else if(riv)bwRivalsLoss();}
     field=`<div class="bwb-pop" style="color:${won?'var(--gold)':'var(--red)'};font-size:26px">${won?'🏆 VICTORY':'DEFEAT'}</div>
       <div class="muted">Final — Your Club ${BW.you.runs}, ${BW.cpu.name} ${BW.cpu.runs}</div>
       ${won&&BW._reward?`<div style="margin-top:6px;color:var(--gold)" class="disp">🎁 Earned ${BW._reward.granted.length} ${BW._reward.boss?BW._reward.tierName+' ':''}pack${BW._reward.granted.length>1?'s':''}!</div>
       <div style="margin-top:3px;color:var(--gold)" class="disp">🎖️ +${BW._reward.xp.xp} GM XP${BW._reward.xp.leveled?` · LEVEL UP → ${BW._reward.xp.to}!`:''}</div>`:''}
-      <div style="display:flex;gap:8px;margin-top:10px">${won?`<button class="btn primary" onclick="screenGauntlet()">Continue ▸</button>`:`<button class="btn primary" onclick="bwGauntFight()">↻ Retry</button><button class="btn ghost" onclick="screenGauntlet()">Back</button>`}</div>`;
+      <div style="display:flex;gap:8px;margin-top:10px">${won?`<button class="btn primary" onclick="${riv?'screenRivals()':'screenGauntlet()'}">Continue ▸</button>`:`<button class="btn primary" onclick="${riv?'screenRivals()':'bwGauntFight()'}">${riv?'↻ Find another':'↻ Retry'}</button><button class="btn ghost" onclick="${riv?'screenRivals()':'screenGauntlet()'}">Back</button>`}</div>`;
   } else if(BW.phase==='result'){
     const r=BW.last,pi=r.pitch==='FB'?{ic:'🔥',l:'FASTBALL',c:'var(--amber)'}:{ic:'💨',l:'OFFSPEED',c:'var(--blue)'};
     field=`<div class="bwb-pop" style="color:${pi.c}"><span class="ic">${pi.ic}</span>${pi.l}</div>
@@ -5320,12 +5323,12 @@ function screenBwBattle(){
   // your Edge hand (only the relevant side is actionable this turn)
   const pedSide=yb?'H':'P';const canPed=(yb&&BW.phase==='swing')||(!yb&&BW.phase==='pitch');
   const pedsHTML=BW.you.phand.length?`<div class="bwb-peds" style="margin-top:8px">${BW.you.phand.map(e=>{const usable=canPed&&e.side===pedSide;return `<span class="bwb-ped ${e.side==='P'?'pit':''} ${usable?'':'dim'} ${BW.selEdge&&BW.selEdge.id===e.id?'sel':''}" ${usable?`onclick="bwbSelEdge('${e.id}')"`:''}>${e.name} · ${e.d}</span>`;}).join('')}</div>`:'';
-  const oppMeta=BW.meta?`${BW.meta.boss?'👑 BOSS · ':''}${BW_TIERS[BW.meta.tier].name} ${BW.meta.boss?'':'#'+(BW.meta.step+1)}`:'';
+  const oppMeta=BW.meta?(BW.meta.rivals?`🌐 Rivals · GM Lv ${BW.meta.oppLevel||'?'}`:`${BW.meta.boss?'👑 BOSS · ':''}${BW_TIERS[BW.meta.tier].name} ${BW.meta.boss?'':'#'+(BW.meta.step+1)}`):'';
   render(`<div class="topbar"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="topbar-r"><button class="btn ghost sm" onclick="showBwRules()">📖 Rules</button> <button class="btn ghost sm" onclick="if(confirm('Forfeit this battle?'))screenGauntlet()">✕ Forfeit</button></div></div>
     <div class="center" style="margin-bottom:6px"><span class="disp" style="letter-spacing:.1em;color:var(--gold);font-weight:700">b<span style="color:var(--ink)">WAR</span>fare</span> <span class="small muted">· ${oppMeta} · race to 10 · win after a full inning</span></div>
     <div class="bwb-score">
       <div class="bwb-sb ${!yb?'bat':''}"><div class="w">${BW.cpu.name}<small>${!yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r" style="color:var(--blue)">${BW.cpu.runs}</div></div>
-      <div class="bwb-sb ${yb?'bat':''}"><div class="w">Your Club<small>${yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r">${BW.you.runs}</div></div></div>
+      <div class="bwb-sb ${yb?'bat':''}"><div class="w">${bwTeam().logo} ${BW.you.name}<small>${yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r">${BW.you.runs}</div></div></div>
     <div class="bwb-zlbl">${BW.cpu.name} · ${BW.cpu.hand.length} in hand</div>
     ${bwbStacks(BW.cpu)}
     ${bwbFan(BW.cpu.hand,false,null,false)}
@@ -5354,8 +5357,9 @@ function bwGauntFight(){
   if(g.tier>3){screenGauntlet();return;}
   const boss=g.step>=8,cpu=bwCpuDeck(g.tier,g.step);
   const oppName=boss?BW_BOSS[g.tier]:BW_OPP[BW_TIERS[g.tier].k][g.step];
-  bwbStart({h:d.h.map(bwCardById).filter(Boolean).map(bwbCard),p:d.p.map(bwCardById).filter(Boolean).map(bwbCard),e:d.e.map(bwCardById).filter(Boolean).map(bwbCard)},
-           {h:cpu.h.map(bwbCard),p:cpu.p.map(bwbCard),e:cpu.e.map(bwbCard)},{tier:g.tier,step:g.step,boss,oppName});
+  const youCards={h:d.h.map(bwCardById).filter(Boolean).map(bwbCard),p:d.p.map(bwCardById).filter(Boolean).map(bwbCard),e:d.e.map(bwCardById).filter(Boolean).map(bwbCard)};
+  const oppCards={h:cpu.h.map(bwbCard),p:cpu.p.map(bwbCard),e:cpu.e.map(bwbCard)};
+  bwPreMatch(youCards,oppCards,{tier:g.tier,step:g.step,boss,oppName},{teamName:oppName,teamLogo:boss?'\ud83d\udc51':BW_TIERS[g.tier].ring});
 }
 function bwGauntWin(){
   const g=bwGaunt(),bw=bwState(),boss=BW.meta.boss,tier=BW.meta.tier;let granted=[];
@@ -5379,7 +5383,7 @@ function screenGauntlet(){
       ladder+=`<div class="gnode ${done?'done':''} ${cur?'cur':''} ${boss?'boss':''}"><span class="gn" style="${boss?'color:var(--red)':''}">${boss?'👑 ':''}${name}</span><span class="gs">${done?'✓ beaten':cur?'▶ next':boss?'BOSS':'opp #'+(s+1)}</span></div>`;
     }
   }
-  render(`${topBar(`<button class="btn ghost sm" onclick="screenPlatoon('deck')">🃏 Deck</button>`)}
+  render(`${topBar(`<button class="btn ghost sm" onclick="screenRivals()">🌐 Rivals</button> <button class="btn ghost sm" onclick="screenPlatoon('deck')">🃏 Deck</button>`)}
     <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">⚔️ bWARfare GAUNTLET</div>
       <p class="sub" style="margin-top:6px">Climb four battlefields — beat 8 opponents, then the boss, to win each ring. Every win earns packs; bosses pay out big.</p>
       <div style="margin-top:8px">${ringRow}</div></div>
@@ -5451,15 +5455,140 @@ function bwAddBattleXP(amt){
   if(packs.length){bw.coins=(bw.coins||0)+coins;bw.packs=bw.packs.concat(packs);saveProfile();}
   return {xp:amt,leveled:after>before,to:after,packs:packs.length,coins};
 }
+// ---- team identity + deck rating ----
+function bwTeam(){const bw=bwState();if(!bw.team)bw.team={name:((typeof authState==='function'&&authState()&&authState().username))||'My Club',logo:'\u26be'};if(!bw.team.name)bw.team.name='My Club';if(!bw.team.logo)bw.team.logo='\u26be';return bw.team;}
+function bwDeckRatingCards(d){if(!d)return 0;const ps=(d.h||[]).concat(d.p||[]).filter(c=>c&&typeof c.ov==='number');if(!ps.length)return 0;return Math.round(ps.reduce((s,c)=>s+c.ov,0)/ps.length);}
+function bwDeckRatingIds(deck){if(!deck)return 0;const h=(deck.h||[]).map(bwCardById).filter(Boolean),p=(deck.p||[]).map(bwCardById).filter(Boolean);return bwDeckRatingCards({h,p});}
+// ---- pre-match marquee (gauntlet or rivals) ----
+let _pendingMatch=null;
+function bwPreMatch(youCards,oppCards,meta,oppInfo){
+  _pendingMatch={you:youCards,opp:oppCards,meta};
+  bwEnsureStyles();bwbEnsureStyles();
+  const t=bwTeam(),rv=PROFILE.bw.rivals||{rating:0,wins:0,losses:0},rivals=!!meta.rivals;
+  const yR=bwDeckRatingCards(youCards),oR=bwDeckRatingCards(oppCards);
+  const oName=oppInfo.teamName||oppInfo.name||'Rival',oLogo=oppInfo.teamLogo||'\ud83c\udfaf';
+  const side=(logo,name,deckR,extra)=>`<div style="flex:1;min-width:130px;text-align:center">
+    <div style="font-size:46px;line-height:1">${logo}</div>
+    <div class="disp" style="font-weight:700;font-size:15px;margin-top:4px;word-break:break-word">${String(name).replace(/</g,'&lt;')}</div>
+    <div class="small" style="margin-top:5px">Deck OVR <b style="color:var(--gold)">${deckR}</b></div>${extra||''}</div>`;
+  const youExtra=`<div class="small muted">Rivals ${rv.rating} \u00b7 ${rv.wins}W\u2013${rv.losses}L</div>`;
+  const oppExtra=rivals?`<div class="small muted">Rivals ${oppInfo.rating||0} \u00b7 ${oppInfo.wins||0}W\u2013${oppInfo.losses||0}L</div>`:`<div class="small muted">${meta.boss?'\ud83d\udc51 Boss':BW_TIERS[meta.tier].name+' #'+(meta.step+1)}</div>`;
+  render(`${topBar('')}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">${rivals?'\ud83c\udf10 RIVALS MATCH':'\u2694\ufe0f GAUNTLET MATCH'}</div>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:center">
+        ${side(t.logo,t.name,yR,youExtra)}
+        <div class="disp" style="font-size:24px;color:var(--gold);align-self:center">VS</div>
+        ${side(oLogo,oName,oR,oppExtra)}
+      </div>
+      <div class="center" style="margin-top:20px"><button class="btn primary" style="font-size:16px;padding:12px 28px" onclick="bwStartPending()">Play Ball \u25b8</button>
+        <button class="btn ghost" onclick="${rivals?'screenRivals()':'screenGauntlet()'}">Back</button></div></div>`);
+  _atTitle=true;ensureNavBtns();
+}
+function bwStartPending(){const m=_pendingMatch;if(!m)return;bwbStart(m.you,m.opp,m.meta);}
+// ---- bWARfare RIVALS (async ghost PvP) ----
+function bwGhostDeck(){
+  const d=PROFILE.bw&&PROFILE.bw.deck;
+  if(!(d&&d.h&&d.h.length===30&&d.p&&d.p.length===10&&d.e&&d.e.length===12))return null;
+  const r=ids=>ids.map(bwCardById).filter(Boolean);
+  const h=r(d.h),p=r(d.p),e=r(d.e);
+  if(h.length!==30||p.length!==10||e.length!==12)return null;
+  return {h,p,e};
+}
+let _ghostPubAt=0;
+async function bwPublishGhost(force){
+  if(!authEnabled()||!authState())return;
+  const deck=bwGhostDeck();if(!deck)return;
+  const now=Date.now();if(!force&&now-_ghostPubAt<60000)return;_ghostPubAt=now;
+  const t=bwTeam(),rv=PROFILE.bw.rivals||{rating:0,wins:0,losses:0};
+  try{await authCall('/bw/publish',{token:authState().token,deck,level:plLevel(),teamName:t.name,teamLogo:t.logo,rating:rv.rating,wins:rv.wins,losses:rv.losses});}catch(e){}
+}
+async function bwFetchOpponent(){
+  if(!authEnabled()||!authState())return {error:'login'};
+  try{const r=await authCall('/bw/opponent',{token:authState().token,level:plLevel()});return {opponent:r.opponent||null};}
+  catch(e){return {error:(e&&e.message)||'network'};}
+}
+let _rivalOpp=null;
+async function screenRivals(){
+  bwState();bwEnsureStyles();bwbEnsureStyles();
+  const d=PROFILE.bw.deck,valid=d.h.length===30&&d.p.length===10&&d.e.length===12;
+  const rv=PROFILE.bw.rivals||(PROFILE.bw.rivals={wins:0,losses:0,rating:0,milestone:0});
+  if(!authEnabled()||!authState()){
+    render(`${topBar(`<button class="btn ghost sm" onclick="screenGauntlet()">⚔️ Gauntlet</button>`)}
+      <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🌐 RIVALS · GHOST PvP</div>
+        <p class="sub" style="margin-top:6px">Battle other players' <b>real decks</b> (we pilot them for you). <b>Log in</b> to publish your deck and face rivals near your level.</p>
+        <button class="btn primary" style="margin-top:8px" onclick="screenAccount()">Log in / Sign up</button></div>`);
+    _atTitle=true;ensureNavBtns();return;
+  }
+  render(`${topBar(`<button class="btn ghost sm" onclick="screenGauntlet()">⚔️ Gauntlet</button>`)}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🌐 RIVALS · GHOST PvP</div>
+      <p class="sub" style="margin-top:6px">Face another player's real deck — we pilot it. Win for rating, GM XP, and Diamond Coins.</p>
+      <div class="disp" style="margin-top:8px">Rating <b style="color:var(--gold)">${rv.rating}</b> · ${rv.wins}W–${rv.losses}L</div></div>
+    <div class="panel center" id="rivbody"><p class="muted">Finding an opponent…</p></div>`);
+  _atTitle=true;ensureNavBtns();
+  await bwPublishGhost(true);
+  const res=await bwFetchOpponent();
+  const el=document.getElementById('rivbody');if(!el)return;
+  if(res.error){const notDeployed=/not found|404/i.test(res.error);el.innerHTML=`<p class="muted">${notDeployed?"Rivals isn't live on the server yet — the latest backend needs to be deployed.":'Couldn\'t reach the rivals server: '+res.error}</p><button class="btn" onclick="screenRivals()">↻ Retry</button>`;return;}
+  if(!res.opponent){el.innerHTML=`<p class="muted">No rivals available yet — once more players publish a deck, they'll appear here.${valid?'':' (Build a full deck to join the pool.)'}</p><button class="btn" onclick="screenRivals()">↻ Refresh</button>`;return;}
+  _rivalOpp=res.opponent;
+  el.innerHTML=`<div class="disp" style="font-size:16px;color:var(--blue)">${(res.opponent.name||'Rival').replace(/</g,'&lt;')}</div><div class="small muted">GM Level ${res.opponent.level} · their built deck</div>
+    <div class="center" style="margin-top:12px">${valid?`<button class="btn primary" onclick="bwRivalsFight()">⚔️ Battle ▸</button>`:`<button class="btn" disabled>Build a full deck</button> <button class="btn ghost" onclick="screenPlatoon('deck')">Go to Deck</button>`}
+      <button class="btn ghost" onclick="screenRivals()">↻ New rival</button></div>`;
+}
+function bwRivalsFight(){
+  const o=_rivalOpp,d=PROFILE.bw.deck;if(!o)return;
+  if(d.h.length!==30||d.p.length!==10||d.e.length!==12){toast('Finish your deck first.');return;}
+  const youCards={h:d.h.map(bwCardById).filter(Boolean).map(bwbCard),p:d.p.map(bwCardById).filter(Boolean).map(bwbCard),e:d.e.map(bwCardById).filter(Boolean).map(bwbCard)};
+  const oppCards={h:o.deck.h.map(bwbCard),p:o.deck.p.map(bwbCard),e:o.deck.e.map(bwbCard)};
+  bwPreMatch(youCards,oppCards,{rivals:true,oppName:(o.teamName||o.name),oppLevel:o.level},{teamName:(o.teamName||o.name),teamLogo:o.teamLogo||'\ud83c\udfaf',rating:o.rating,wins:o.wins,losses:o.losses});
+}
+function bwRivalsWin(){
+  const bw=bwState(),rv=bw.rivals||(bw.rivals={wins:0,losses:0,rating:0,milestone:0});
+  rv.wins++;rv.rating+=25;const xpRes=bwAddBattleXP(25);bw.coins=(bw.coins||0)+50;
+  let packs=[];
+  while(rv.rating>=(rv.milestone+1)*200){rv.milestone++;packs.push(rv.rating>=600?'diamond':rv.rating>=400?'gold':rv.rating>=200?'silver':'bronze');}
+  if(packs.length)bw.packs=bw.packs.concat(packs);
+  saveProfile();
+  return {rivals:true,granted:packs,coins:50,xp:xpRes,rating:rv.rating};
+}
+function bwRivalsLoss(){const bw=bwState(),rv=bw.rivals||(bw.rivals={wins:0,losses:0,rating:0,milestone:0});rv.losses++;rv.rating=Math.max(0,rv.rating-12);saveProfile();}
+
+const BW_LOGOS=['\u26be','\u26a1','\ud83d\udd25','\ud83d\udca5','\u2694\ufe0f','\ud83d\udee1\ufe0f','\ud83c\udfaf','\ud83d\ude80','\ud83d\udc09','\ud83e\udd85','\ud83d\udc3a','\ud83e\udd8a','\ud83d\udc3b','\ud83d\udc2f','\ud83e\udd81','\ud83d\udc18','\ud83e\udd2c','\ud83d\udc7d','\ud83e\udd16','\ud83d\udc80','\ud83d\udc51','\u2b50','\ud83c\udf1f','\u2604\ufe0f','\ud83c\udf0a','\ud83c\udf2a\ufe0f','\u2744\ufe0f','\ud83c\udf0b','\ud83c\udfdf\ufe0f','\u269e'];
+function bwSaveTeamName(v){const t=bwTeam();t.name=(v||'').slice(0,24)||'My Club';saveProfile();}
+function bwSetTeamLogo(e){const t=bwTeam();t.logo=e;saveProfile();screenPlatoon('team');}
+function bwTeamTab(){
+  const t=bwTeam(),rv=PROFILE.bw.rivals||{rating:0,wins:0,losses:0};
+  const dr=bwDeckRatingIds(PROFILE.bw.deck)||'—',gp=(rv.wins+rv.losses);
+  const wl=gp?Math.round(rv.wins/gp*100):0;
+  const logos=BW_LOGOS.map(e=>`<span onclick="bwSetTeamLogo('${e}')" style="font-size:26px;cursor:pointer;padding:6px;border-radius:6px;border:1px solid ${e===t.logo?'var(--gold)':'var(--line)'};background:${e===t.logo?'var(--panel2)':'transparent'};line-height:1;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px">${e}</span>`).join('');
+  return `<div class="panel" style="border-color:var(--gold)">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="font-size:54px;line-height:1">${t.logo}</div>
+      <div style="min-width:0;flex:1">
+        <div class="disp" style="font-size:20px;color:var(--gold);word-break:break-word">${t.name.replace(/</g,'&lt;')}</div>
+        <div class="small muted">Your bWARfare club identity — shown to rivals and before every match.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+      <div style="flex:1;min-width:90px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;text-align:center"><div class="small muted">Deck OVR</div><div class="disp" style="font-size:22px;color:var(--gold)">${dr}</div></div>
+      <div style="flex:1;min-width:90px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;text-align:center"><div class="small muted">Rivals Rating</div><div class="disp" style="font-size:22px;color:var(--amber)">${rv.rating}</div></div>
+      <div style="flex:1;min-width:90px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;text-align:center"><div class="small muted">Rivals Record</div><div class="disp" style="font-size:22px">${rv.wins}\u2013${rv.losses}</div><div class="small muted">${gp?wl+'% win':'no games'}</div></div>
+    </div>
+    <div class="sectlbl" style="margin:16px 0 6px">Team Name</div>
+    <input maxlength="24" value="${t.name.replace(/"/g,'&quot;')}" oninput="bwSaveTeamName(this.value)" style="width:100%;max-width:320px" placeholder="My Club">
+    <div class="sectlbl" style="margin:16px 0 6px">Team Logo</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${logos}</div>
+  </div>`;
+}
 function screenPlatoon(tab){
   bwState();bwEnsureStyles();_bwTab=tab||_bwTab||'deck';
   const bw=PROFILE.bw;
   const tb=(k,l)=>`<span class="bwtab ${_bwTab===k?'on':''}" onclick="screenPlatoon('${k}')">${l}</span>`;
-  const body=_bwTab==='collection'?bwCollTab():_bwTab==='packs'?bwPacksTab():_bwTab==='store'?bwStoreTab():bwDeckTab();
+  const body=_bwTab==='collection'?bwCollTab():_bwTab==='packs'?bwPacksTab():_bwTab==='store'?bwStoreTab():_bwTab==='team'?bwTeamTab():bwDeckTab();
   render(`${topBar(`<span class="pill gold">💎 ${bw.coins}</span>`)}
     <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">⚔️ THE PLATOON · bWARfare</div>
       <p class="sub" style="margin-top:6px">Collect Set 1, build your <b>30 hitters · 10 pitchers · 12 Edges</b> deck, then take it to battle. Earn packs by leveling up and finishing franchises.</p></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tb('deck','🃏 Deck')}${tb('collection','📚 Collection')}${tb('packs','🎁 Packs'+(bw.packs.length?` (${bw.packs.length})`:''))}${tb('store','🏪 Store')}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tb('deck','🃏 Deck')}${tb('collection','📚 Collection')}${tb('packs','🎁 Packs'+(bw.packs.length?` (${bw.packs.length})`:''))}${tb('store','🏪 Store')}${tb('team','🏟️ Team')}</div>
     ${body}`);
   _atTitle=true;ensureNavBtns();
 }
