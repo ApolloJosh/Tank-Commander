@@ -1888,6 +1888,7 @@ function screenTitle(){
              <div class="small" style="color:var(--gold)">${plLevel()>=MAX_LEVEL?'★ MAX LEVEL':Math.max(0,xpForLevel(plLevel()+1)-(PROFILE.xp||0))+' XP to Lv '+(plLevel()+1)}</div>
              <div class="small" style="margin-top:3px"><span class="muted">Deck OVR</span> <b style="color:var(--gold)">${bwDeckRatingIds(PROFILE.bw.deck)||'—'}</b></div>
              <div class="small" style="margin-top:6px;line-height:1.6"><span style="color:var(--amber)">💎 ${bwState().coins}</span>${PROFILE.bw.packs.length?`<br><span title="Open packs" style="cursor:pointer;color:var(--gold)" onclick="screenPlatoon('packs')">🎁 ${PROFILE.bw.packs.length}</span>`:''}</div>
+             <div id="bwDefBox"></div>
            </div>
          </div>
        </aside>
@@ -1897,6 +1898,7 @@ function screenTitle(){
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
   _atTitle=true;ensureNavBtns();
+  try{bwLoadDefenses();}catch(e){}
 }
 function runsPanel(){
   if(!(authEnabled()&&authState()))return '';
@@ -5205,7 +5207,7 @@ const bwbDef=()=>BW.half==='top'?BW.cpu:BW.you;
 const bwbYouBat=()=>BW.half==='top';
 function bwbStartHalf(){
   BW.outs=0;BW._ab=0;BW.bases=[false,false,false];const d=bwbDef();
-  if(!d.pitcher||d.pitcher._inn!==BW.inning){if(!d.pitchers.length)d.pitchers=shuffle(d.allP.slice());d.pitcher=d.pitchers.shift();d.pitcher._inn=BW.inning;}
+  if(!d.pitcher||d.pitcher._inn!==BW.inning){if(!d.pitchers.length)d.pitchers=shuffle(d.allP.slice());d.pitcher=d.pitchers.shift();d.pitcher._inn=BW.inning;d.pitcher._runsInn=0;}
   BW.selHitter=null;BW.selEdge=null;BW.pdEdge=null;
   if(bwbYouBat()){BW.committedPitch=bwbCpuPitch(d.pitcher);BW.pdEdge=bwbCpuPitEdge(d);BW.phase='swing';}else BW.phase='pitch';
 }
@@ -5249,18 +5251,41 @@ function bwbDoAB(h,hE){
   BW.lastMsg=r.ejected?`${h.name} ejected for a corked bat — out.`:r.bases===0?`${h.name} ${r.total<=4?'strikes out':'is retired'}.`:`${who}: ${h.name} ${r.label.toLowerCase()}${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} in`:''}!`;
   screenBwBattle();
 }
-function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;BW.bases=p.nb;BW._ab=(BW._ab||0)+1;BW.pending=null;}
+function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;const def=bwbDef();if(def.pitcher)def.pitcher._runsInn=(def.pitcher._runsInn||0)+p.runs;BW.bases=p.nb;BW._ab=(BW._ab||0)+1;BW.pending=null;}
+function bwbMercy(){
+  // win conditions evaluated at the end of a completed inning (BW.inning = innings completed)
+  if(BW.you.runs===BW.cpu.runs)return false;
+  const inn=BW.inning,lead=Math.abs(BW.you.runs-BW.cpu.runs);
+  if(inn>=7&&lead>=8)return true;
+  if(inn>=5&&lead>=10)return true;
+  if(inn>=3&&lead>=15)return true;
+  if(inn>=9)return true; // regulation: 9 complete innings, someone ahead
+  return false;
+}
+function bwbCpuMaybeSwap(){
+  // CPU defends in the top half (you bat). It burns its one bullpen call the moment its pitcher
+  // has been tagged for 6+ runs in this inning.
+  if(BW.half!=='top')return false;
+  const s=BW.cpu;
+  if(s._pcUsed||!s.pitcher||(s.pitcher._runsInn||0)<6)return false;
+  if(!s.pitchers.length)s.pitchers=shuffle(s.allP.slice());
+  let np=s.pitchers.shift();
+  if(np&&s.pitcher&&np.id===s.pitcher.id&&s.pitchers.length){s.pitchers.push(np);np=s.pitchers.shift();}
+  if(np){np._inn=BW.inning;np._runsInn=0;s.pitcher=np;}
+  s._pcUsed=true;
+  toast(`${BW.cpu.name} goes to the bullpen — ${np?np.name:'a reliever'} takes over.`);
+  return true;
+}
 function bwbNext(){
   if(BW.over)return;
   if(BW.outs>=3||(BW._ab||0)>=14){   // 3 outs — or a mercy cap so a blowout half can't run forever
     if(BW.half==='top'){BW.half='bottom';bwbStartHalf();}   // top done → home bats
-    else{   // a full inning is complete — race-to-10, but you must be leading after a full inning
-      const hi=Math.max(BW.you.runs,BW.cpu.runs);
-      if(hi>=10 && BW.you.runs!==BW.cpu.runs){BW.over=true;BW.winner=BW.you.runs>BW.cpu.runs?BW.you:BW.cpu;screenBwBattle();return;}
+    else{   // a full inning is complete — check the mercy / regulation win conditions
+      if(bwbMercy()){BW.over=true;BW.winner=BW.you.runs>BW.cpu.runs?BW.you:BW.cpu;screenBwBattle();return;}
       BW.half='top';BW.inning++;bwbStartHalf();
     }
   }
-  else{BW.selHitter=null;BW.selEdge=null;if(bwbYouBat()){const d=bwbDef();BW.committedPitch=bwbCpuPitch(d.pitcher);BW.pdEdge=bwbCpuPitEdge(d);BW.phase='swing';}else BW.phase='pitch';}
+  else{BW.selHitter=null;BW.selEdge=null;if(bwbYouBat()){bwbCpuMaybeSwap();const d=bwbDef();BW.committedPitch=bwbCpuPitch(d.pitcher);BW.pdEdge=bwbCpuPitEdge(d);BW.phase='swing';}else BW.phase='pitch';}
   screenBwBattle();
 }
 function bwbSelHit(i){if(!(bwbYouBat()&&BW.phase==='swing'))return;BW.selHitter=BW.you.hand[i];screenBwBattle();}
@@ -5296,7 +5321,7 @@ function screenBwBattle(){
   let field='';
   if(BW.over){
     const won=BW.winner===BW.you,riv=BW.meta&&BW.meta.rivals;
-    if(BW.meta&&!BW._rewarded){BW._rewarded=true;if(won)BW._reward=riv?bwRivalsWin():bwGauntWin();else if(riv)bwRivalsLoss();}
+    if(BW.meta&&!BW._rewarded){BW._rewarded=true;bwLogAdd(won);if(riv)bwReportDefense(won);if(won)BW._reward=riv?bwRivalsWin():bwGauntWin();else if(riv)bwRivalsLoss();}
     field=`<div class="bwb-pop" style="color:${won?'var(--gold)':'var(--red)'};font-size:26px">${won?'🏆 VICTORY':'DEFEAT'}</div>
       <div class="muted">Final — Your Club ${BW.you.runs}, ${BW.cpu.name} ${BW.cpu.runs}</div>
       ${won&&BW._reward?`<div style="margin-top:6px;color:var(--gold)" class="disp">🎁 Earned ${BW._reward.granted.length} ${BW._reward.boss?BW._reward.tierName+' ':''}pack${BW._reward.granted.length>1?'s':''}!</div>
@@ -5325,7 +5350,7 @@ function screenBwBattle(){
   const pedsHTML=BW.you.phand.length?`<div class="bwb-peds" style="margin-top:8px">${BW.you.phand.map(e=>{const usable=canPed&&e.side===pedSide;return `<span class="bwb-ped ${e.side==='P'?'pit':''} ${usable?'':'dim'} ${BW.selEdge&&BW.selEdge.id===e.id?'sel':''}" ${usable?`onclick="bwbSelEdge('${e.id}')"`:''}>${e.name} · ${e.d}</span>`;}).join('')}</div>`:'';
   const oppMeta=BW.meta?(BW.meta.rivals?`🌐 Rivals · GM Lv ${BW.meta.oppLevel||'?'}`:`${BW.meta.boss?'👑 BOSS · ':''}${BW_TIERS[BW.meta.tier].name} ${BW.meta.boss?'':'#'+(BW.meta.step+1)}`):'';
   render(`<div class="topbar"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="topbar-r"><button class="btn ghost sm" onclick="showBwRules()">📖 Rules</button> <button class="btn ghost sm" onclick="if(confirm('Forfeit this battle?'))screenGauntlet()">✕ Forfeit</button></div></div>
-    <div class="center" style="margin-bottom:6px"><span class="disp" style="letter-spacing:.1em;color:var(--gold);font-weight:700">b<span style="color:var(--ink)">WAR</span>fare</span> <span class="small muted">· ${oppMeta} · race to 10 · win after a full inning</span></div>
+    <div class="center" style="margin-bottom:6px"><span class="disp" style="letter-spacing:.1em;color:var(--gold);font-weight:700">b<span style="color:var(--ink)">WAR</span>fare</span> <span class="small muted">· ${oppMeta} · mercy-rule innings</span></div>
     <div class="bwb-score">
       <div class="bwb-sb ${!yb?'bat':''}"><div class="w">${BW.cpu.name}<small>${!yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r" style="color:var(--blue)">${BW.cpu.runs}</div></div>
       <div class="bwb-sb ${yb?'bat':''}"><div class="w">${bwTeam().logo} ${BW.you.name}<small>${yb?'▲ AT BAT':'PITCHING'}</small></div><div class="r">${BW.you.runs}</div></div></div>
@@ -5359,7 +5384,7 @@ function bwGauntFight(){
   const oppName=boss?BW_BOSS[g.tier]:BW_OPP[BW_TIERS[g.tier].k][g.step];
   const youCards={h:d.h.map(bwCardById).filter(Boolean).map(bwbCard),p:d.p.map(bwCardById).filter(Boolean).map(bwbCard),e:d.e.map(bwCardById).filter(Boolean).map(bwbCard)};
   const oppCards={h:cpu.h.map(bwbCard),p:cpu.p.map(bwbCard),e:cpu.e.map(bwbCard)};
-  bwPreMatch(youCards,oppCards,{tier:g.tier,step:g.step,boss,oppName},{teamName:oppName,teamLogo:boss?'\ud83d\udc51':BW_TIERS[g.tier].ring});
+  bwPreMatch(youCards,oppCards,{tier:g.tier,step:g.step,boss,oppName,oppLogo:boss?'\ud83d\udc51':BW_TIERS[g.tier].ring},{teamName:oppName,teamLogo:boss?'\ud83d\udc51':BW_TIERS[g.tier].ring});
 }
 function bwGauntWin(){
   const g=bwGaunt(),bw=bwState(),boss=BW.meta.boss,tier=BW.meta.tier;let granted=[];
@@ -5368,6 +5393,30 @@ function bwGauntWin(){
   bw.packs=bw.packs.concat(granted);saveProfile();
   const xpRes=bwAddBattleXP(boss?(120+tier*20):(30+tier*5));   // winning earns GM XP — generous, and scales with battlefield tier
   return {granted,boss,tier,tierName:BW_TIERS[Math.min(3,tier+(boss?1:0))].name,xp:xpRes};
+}
+function bwAgo(t){const d=Date.now()-t,m=Math.floor(d/60000);if(m<1)return'just now';if(m<60)return m+'m ago';const h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago';}
+function bwLogAdd(won){
+  const m=BW.meta||{},bw=bwState();
+  if(!bw.log)bw.log=[];
+  bw.log.unshift({opp:BW.cpu.name,logo:m.oppLogo||'\ud83c\udfaf',mode:m.rivals?'rivals':(m.boss?'boss':'gauntlet'),you:BW.you.runs,them:BW.cpu.runs,won:!!won,inn:BW.inning,ts:Date.now()});
+  bw.log=bw.log.slice(0,15);saveProfile();
+}
+function screenBwLog(){
+  bwState();bwEnsureStyles();
+  const log=PROFILE.bw.log||[];
+  const wins=log.filter(e=>e.won).length;
+  const rows=log.length?log.map(e=>{
+    const mlab=e.mode==='rivals'?'\ud83c\udf10 Rivals':e.mode==='boss'?'\ud83d\udc51 Boss':'\u2694\ufe0f Gauntlet';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid var(--line)">
+      <span style="font-size:20px">${e.logo}</span>
+      <span style="flex:1;min-width:0"><b style="word-break:break-word">${String(e.opp).replace(/</g,'&lt;')}</b><br><span class="small muted">${mlab} \u00b7 ${bwAgo(e.ts)}</span></span>
+      <span class="disp" style="font-size:15px;color:${e.won?'var(--green)':'var(--red)'};text-align:right">${e.won?'W':'L'}<br><span style="color:var(--ink);font-size:13px">${e.you}\u2013${e.them}</span></span>
+    </div>`;}).join(''):'<p class="muted center" style="padding:18px">No games yet — head to the Gauntlet or Rivals to start your record.</p>';
+  render(`${topBar(`<button class="btn ghost sm" onclick="screenGauntlet()">\u2694\ufe0f Gauntlet</button> <button class="btn ghost sm" onclick="screenRivals()">\ud83c\udf10 Rivals</button>`)}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">\ud83d\udcdc GAME LOG</div>
+      <p class="sub" style="margin-top:6px">Your last ${Math.min(15,log.length||0)||15} battles${log.length?` \u00b7 <b style="color:var(--gold)">${wins}\u2013${log.length-wins}</b> in this stretch`:''}.</p></div>
+    <div class="panel" style="padding:0;overflow:hidden">${rows}</div>`);
+  _atTitle=true;ensureNavBtns();
 }
 function screenGauntlet(){
   bwState();bwEnsureStyles();bwbEnsureStyles();const g=bwGaunt();
@@ -5383,7 +5432,7 @@ function screenGauntlet(){
       ladder+=`<div class="gnode ${done?'done':''} ${cur?'cur':''} ${boss?'boss':''}"><span class="gn" style="${boss?'color:var(--red)':''}">${boss?'👑 ':''}${name}</span><span class="gs">${done?'✓ beaten':cur?'▶ next':boss?'BOSS':'opp #'+(s+1)}</span></div>`;
     }
   }
-  render(`${topBar(`<button class="btn ghost sm" onclick="screenRivals()">🌐 Rivals</button> <button class="btn ghost sm" onclick="screenPlatoon('deck')">🃏 Deck</button>`)}
+  render(`${topBar(`<button class="btn ghost sm" onclick="screenRivals()">🌐 Rivals</button> <button class="btn ghost sm" onclick="screenBwLog()">📜 Log</button> <button class="btn ghost sm" onclick="screenPlatoon('deck')">🃏 Deck</button>`)}
     <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">⚔️ bWARfare GAUNTLET</div>
       <p class="sub" style="margin-top:6px">Climb four battlefields — beat 8 opponents, then the boss, to win each ring. Every win earns packs; bosses pay out big.</p>
       <div style="margin-top:8px">${ringRow}</div></div>
@@ -5422,14 +5471,14 @@ function _rulesOverlay(title,html,wide){
 }
 function showBwRules(){
   _rulesOverlay('📖 bWARfare — How to play',`
-    <p><b>Goal.</b> Race to 10 runs — but a game only ends after a <b>full inning</b> with someone ahead. Reach 10 in the top and your opponent still bats the bottom to answer; ties go to extra innings.</p>
+    <p><b>Goal.</b> Outscore your opponent. A game ends by <b>mercy rule</b> at the end of a completed inning when you lead by <b>15 after 3+ innings</b>, <b>10 after 5+</b>, or <b>8 after 7+</b>. Otherwise it's a standard <b>9-inning</b> game; a tie after 9 goes to extra innings until someone leads after a full inning.</p>
     <p><b>Your deck.</b> 30 hitters, 10 pitchers, and a 12-card Player Edge Deck.</p>
     <p><b>The at-bat.</b> The pitcher commits 🔥 Fastball or 💨 Offspeed (hidden). You send a hitter and may spend one Edge. Then:<br><b>Roll 2 dice + your hitter\'s vs-(pitch thrown) − the pitcher\'s rating in that pitch + Edge bonuses.</b></p>
     <p><b>The ladder.</b> ≤7 out · 8–9 single · 10–11 double · 12–13 triple · 14+ home run.</p>
     <p><b>Abilities shift the ladder.</b><br>Hitter <b style="color:var(--green)">CON</b>: the out line drops by 1 (7–9 is a single). <b style="color:var(--red)">PWR</b>: +1 base on any hit.<br>Pitcher <b style="color:var(--blue)">WHIFF</b>: the out line rises by 1 (only a 9 singles). <b style="color:var(--amber)">GB</b>: every extra-base hit drops a base and homers need 15+.</p>
     <p><b>Base running.</b> A single scores runners from 2nd and 3rd; a double clears the corners; triples and homers clear the bases.</p>
     <p><b>Once per game</b> you may make <b>one pitching change</b> (a random new arm) and <b>one Edge redraw</b> (a fresh hand of Edges).</p>
-    <p><b>Flow.</b> Three outs flip sides; a fresh pitcher takes the mound each inning.</p>
+    <p><b>Flow.</b> Three outs flip sides; a fresh pitcher takes the mound each inning. The CPU will burn its one bullpen call the instant its pitcher gives up <b>6+ runs in an inning</b>.</p>
     <p><b>The Gauntlet &amp; rewards.</b> Climb four battlefields (Bronze → Diamond), each 8 opponents + a boss. Beating an opponent earns a pack; beating a boss earns <b>5 next-tier packs + a ring</b>. <b>Every win grants GM XP</b> (bosses give more).</p>`);
 }
 function showGameRules(){
@@ -5495,12 +5544,80 @@ function bwGhostDeck(){
   return {h,p,e};
 }
 let _ghostPubAt=0;
+async function bwReportDefense(won){
+  const m=BW.meta||{};
+  if(!m.rivals||!m.oppUser||!authEnabled()||!authState())return;
+  try{await authCall('/bw/report',{token:authState().token,defender:m.oppUser,attackerName:bwTeam().name,attackerLogo:bwTeam().logo,defenderWon:!won,defScore:BW.cpu.runs,attScore:BW.you.runs});}catch(e){}
+}
+let _lbSort='rating';
+async function screenBwLeaderboard(){
+  bwState();bwEnsureStyles();
+  render(`${topBar(`<button class="btn ghost sm" onclick="screenRivals()">🌐 Rivals</button> <button class="btn ghost sm" onclick="screenGauntlet()">⚔️ Gauntlet</button>`)}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🏆 RIVALS LEADERBOARD</div>
+      <p class="sub" style="margin-top:6px">Every player who's published a deck. Sort by rating, deck OVR, or record.</p></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn lbsortbtn ${_lbSort==='rating'?'primary':'ghost'} sm" data-k="rating" onclick="bwLbSort('rating')">⭐ Rivals Rating</button>
+      <button class="btn lbsortbtn ${_lbSort==='deck'?'primary':'ghost'} sm" data-k="deck" onclick="bwLbSort('deck')">🏅 Deck OVR</button>
+      <button class="btn lbsortbtn ${_lbSort==='record'?'primary':'ghost'} sm" data-k="record" onclick="bwLbSort('record')">📊 Best Record</button></div>
+    <div class="panel" id="lbbody" style="padding:0;overflow:hidden"><p class="muted center" style="padding:18px">Loading leaderboard…</p></div>`);
+  _atTitle=true;ensureNavBtns();
+  if(!authEnabled()){document.getElementById('lbbody').innerHTML='<p class="muted center" style="padding:18px">Online play isn\'t switched on for this build yet.</p>';return;}
+  let board=[];
+  try{const resp=await fetch(AUTH_API+'/bw/leaderboard');if(!resp.ok)throw new Error('Server error '+resp.status);const r=await resp.json();board=(r&&r.board)||[];}catch(e){const b=document.getElementById('lbbody');if(b)b.innerHTML=`<p class="muted center" style="padding:18px">Couldn't load the leaderboard${/not found|404|Server error 404/i.test(e&&e.message||'')?" — the latest backend needs to be deployed.":'.'}</p>`;return;}
+  _lbBoard=board;bwLbRender();
+}
+let _lbBoard=[];
+function bwLbSort(k){
+  _lbSort=k;
+  // update the active state on the three sort buttons in place
+  document.querySelectorAll('#app .lbsortbtn').forEach(b=>{
+    const on=b.getAttribute('data-k')===k;b.classList.toggle('primary',on);b.classList.toggle('ghost',!on);
+  });
+  bwLbRender();
+}
+function bwLbRender(){
+  const body=document.getElementById('lbbody');if(!body)return;
+  let arr=_lbBoard.slice();
+  if(_lbSort==='deck')arr.sort((a,b)=>b.deckRating-a.deckRating||b.rating-a.rating);
+  else if(_lbSort==='record')arr.sort((a,b)=>(b.wins-b.losses)-(a.wins-a.losses)||b.wins-a.wins||b.rating-a.rating);
+  else arr.sort((a,b)=>b.rating-a.rating||b.deckRating-a.deckRating);
+  const me=(authState()&&authState().username||'').toLowerCase();
+  if(!arr.length){body.innerHTML='<p class="muted center" style="padding:18px">No published decks yet — be the first to publish from the Rivals screen.</p>';return;}
+  body.innerHTML=arr.slice(0,100).map((e,i)=>{
+    const mine=(e.gm||'').toLowerCase()===me;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);${mine?'background:var(--panel2)':''}">
+      <span class="disp" style="width:24px;text-align:right;color:${i<3?'var(--gold)':'var(--dim)'}">${i+1}</span>
+      <span style="font-size:18px">${e.logo}</span>
+      <span style="flex:1;min-width:0"><b style="word-break:break-word">${String(e.name).replace(/</g,'&lt;')}</b>${mine?' <span class="small" style="color:var(--gold)">· you</span>':''}<br><span class="small muted">Lv ${e.level} · 🏅 ${e.deckRating} OVR</span></span>
+      <span style="text-align:right"><b class="disp" style="color:var(--gold)">${e.rating}</b><br><span class="small muted">${e.wins}–${e.losses}</span></span>
+    </div>`;}).join('');
+}
+let _bwDef=null,_bwDefAt=0;
+async function bwLoadDefenses(force){
+  if(!authEnabled()||!authState())return;
+  if(_bwDef)bwRenderDefBox();
+  const now=Date.now();if(!force&&now-_bwDefAt<30000)return;_bwDefAt=now;
+  try{const r=await authCall('/bw/defenses',{token:authState().token});_bwDef=r;bwRenderDefBox();}catch(e){}
+}
+function bwRenderDefBox(){
+  const box=document.getElementById('bwDefBox');if(!box||!_bwDef)return;
+  const list=_bwDef.defenses||[];
+  if(!list.length){box.innerHTML='';return;}
+  const held=list.filter(d=>d.held).length;
+  const rows=list.slice(0,4).map(d=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;padding:2px 0">
+    <span>${d.logo}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${String(d.attacker).replace(/</g,'&lt;')}</span>
+    <span style="color:${d.held?'var(--green)':'var(--red)'}">${d.held?'held':'lost'} ${d.defScore}–${d.attScore}</span></div>`).join('');
+  box.innerHTML=`<div style="margin-top:8px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:8px">
+    <div class="small" style="color:var(--gold);font-weight:600;margin-bottom:3px">🛡️ While you were away${_bwDef.fresh?` <span style="color:var(--amber)">· ${_bwDef.fresh} new</span>`:''}</div>
+    ${rows}
+    <div class="small muted" style="margin-top:3px">Your deck held ${held}–${list.length-held} on defense.</div></div>`;
+}
 async function bwPublishGhost(force){
   if(!authEnabled()||!authState())return;
   const deck=bwGhostDeck();if(!deck)return;
   const now=Date.now();if(!force&&now-_ghostPubAt<60000)return;_ghostPubAt=now;
   const t=bwTeam(),rv=PROFILE.bw.rivals||{rating:0,wins:0,losses:0};
-  try{await authCall('/bw/publish',{token:authState().token,deck,level:plLevel(),teamName:t.name,teamLogo:t.logo,rating:rv.rating,wins:rv.wins,losses:rv.losses});}catch(e){}
+  try{await authCall('/bw/publish',{token:authState().token,deck,level:plLevel(),teamName:t.name,teamLogo:t.logo,rating:rv.rating,wins:rv.wins,losses:rv.losses,deckRating:bwDeckRatingIds(PROFILE.bw.deck)});}catch(e){}
 }
 async function bwFetchOpponent(){
   if(!authEnabled()||!authState())return {error:'login'};
@@ -5513,13 +5630,13 @@ async function screenRivals(){
   const d=PROFILE.bw.deck,valid=d.h.length===30&&d.p.length===10&&d.e.length===12;
   const rv=PROFILE.bw.rivals||(PROFILE.bw.rivals={wins:0,losses:0,rating:0,milestone:0});
   if(!authEnabled()||!authState()){
-    render(`${topBar(`<button class="btn ghost sm" onclick="screenGauntlet()">⚔️ Gauntlet</button>`)}
+    render(`${topBar(`<button class="btn ghost sm" onclick="screenGauntlet()">⚔️ Gauntlet</button> <button class="btn ghost sm" onclick="screenBwLeaderboard()">🏆 Leaders</button> <button class="btn ghost sm" onclick="screenBwLog()">📜 Log</button>`)}
       <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🌐 RIVALS · GHOST PvP</div>
         <p class="sub" style="margin-top:6px">Battle other players' <b>real decks</b> (we pilot them for you). <b>Log in</b> to publish your deck and face rivals near your level.</p>
         <button class="btn primary" style="margin-top:8px" onclick="screenAccount()">Log in / Sign up</button></div>`);
     _atTitle=true;ensureNavBtns();return;
   }
-  render(`${topBar(`<button class="btn ghost sm" onclick="screenGauntlet()">⚔️ Gauntlet</button>`)}
+  render(`${topBar(`<button class="btn ghost sm" onclick="screenGauntlet()">⚔️ Gauntlet</button> <button class="btn ghost sm" onclick="screenBwLeaderboard()">🏆 Leaders</button> <button class="btn ghost sm" onclick="screenBwLog()">📜 Log</button>`)}
     <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🌐 RIVALS · GHOST PvP</div>
       <p class="sub" style="margin-top:6px">Face another player's real deck — we pilot it. Win for rating, GM XP, and Diamond Coins.</p>
       <div class="disp" style="margin-top:8px">Rating <b style="color:var(--gold)">${rv.rating}</b> · ${rv.wins}W–${rv.losses}L</div></div>
@@ -5540,7 +5657,7 @@ function bwRivalsFight(){
   if(d.h.length!==30||d.p.length!==10||d.e.length!==12){toast('Finish your deck first.');return;}
   const youCards={h:d.h.map(bwCardById).filter(Boolean).map(bwbCard),p:d.p.map(bwCardById).filter(Boolean).map(bwbCard),e:d.e.map(bwCardById).filter(Boolean).map(bwbCard)};
   const oppCards={h:o.deck.h.map(bwbCard),p:o.deck.p.map(bwbCard),e:o.deck.e.map(bwbCard)};
-  bwPreMatch(youCards,oppCards,{rivals:true,oppName:(o.teamName||o.name),oppLevel:o.level},{teamName:(o.teamName||o.name),teamLogo:o.teamLogo||'\ud83c\udfaf',rating:o.rating,wins:o.wins,losses:o.losses});
+  bwPreMatch(youCards,oppCards,{rivals:true,oppName:(o.teamName||o.name),oppLevel:o.level,oppLogo:o.teamLogo||'\ud83c\udfaf',oppUser:o.username},{teamName:(o.teamName||o.name),teamLogo:o.teamLogo||'\ud83c\udfaf',rating:o.rating,wins:o.wins,losses:o.losses});
 }
 function bwRivalsWin(){
   const bw=bwState(),rv=bw.rivals||(bw.rivals={wins:0,losses:0,rating:0,milestone:0});
