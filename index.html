@@ -5052,7 +5052,7 @@ function bwDeckTab(){
     <div class="bwgrid">${ids.map(id=>bwCardMini(bwCardById(id),true)).join('')||'<span class="muted">None — add from the Collection tab.</span>'}</div>`;
   const valid=d.h.length===30&&d.p.length===10&&d.e.length===12;
   return `<div class="deckbar">⚾ Hitters <b>${d.h.length}/30</b> · 🔥 Pitchers <b>${d.p.length}/10</b> · 💉 Edges <b>${d.e.length}/12</b> · 🏅 Deck OVR <b style="color:var(--gold)">${bwDeckRatingIds(d)||'—'}</b></div>
-    <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap"><button class="btn primary sm" onclick="bwAutoBuild()">⚙️ Auto-build best</button><button class="btn ghost sm" onclick="bwClearDeck()">🗑️ Clear deck</button><button class="btn ghost sm" onclick="screenBwStats()">📊 Card Stats</button></div>
+    <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap"><button class="btn primary sm" onclick="bwAutoBuild()">⚙️ Auto-build best</button><button class="btn ghost sm" onclick="bwClearDeck()">🗑️ Clear deck</button><button class="btn ghost sm" onclick="screenPlatoon('stats')">📊 Card Stats</button></div>
     ${sec(d.h,'⚾ Hitters',30)}${sec(d.p,'🔥 Pitchers',10)}${sec(d.e,'💉 Player Edge Deck',12)}
     <div class="center" style="margin-top:16px"><button class="btn primary" ${valid?'':'disabled'} onclick="${valid?'screenGauntlet()':''}">${valid?'⚔️ To the Gauntlet':'Complete your deck to battle'}</button></div>`;
 }
@@ -5404,7 +5404,7 @@ function screenBwBattle(){
     field=`<div class="bwb-pop" style="color:${won?'var(--gold)':'var(--red)'};font-size:26px">${won?'🏆 VICTORY':'DEFEAT'}</div>
       <div class="muted">Final — ${bwTeam().logo} ${BW.you.name} ${BW.you.runs}, ${BW.cpu.name} ${BW.cpu.runs}</div>
       ${won&&BW._reward?`<div style="margin-top:6px;color:var(--gold)" class="disp">🎁 Earned ${BW._reward.granted.length} ${BW._reward.boss?BW._reward.tierName+' ':''}pack${BW._reward.granted.length>1?'s':''}!</div>
-      <div style="margin-top:3px;color:var(--gold)" class="disp">🎖️ +${BW._reward.xp.xp} GM XP${BW._reward.xp.leveled?` · LEVEL UP → ${BW._reward.xp.to}!`:''}</div>`:''}
+      <div style="margin-top:3px;color:var(--gold)" class="disp">${BW._reward.coins?`💎 +${BW._reward.coins} · `:''}🎖️ +${BW._reward.xp.xp} GM XP${BW._reward.xp.leveled?` · LEVEL UP → ${BW._reward.xp.to}!`:''}</div>`:''}
       ${!won&&riv&&BW._reward?`<div style="margin-top:6px;color:var(--amber)" class="disp">💎 +${BW._reward.coins} · 🎖️ +${BW._reward.xp.xp} GM XP${BW._reward.xp.leveled?` · LEVEL UP → ${BW._reward.xp.to}!`:''}</div><div class="small muted">Tough loss — still some coin and XP for showing up.</div>`:''}
       <div style="display:flex;gap:8px;margin-top:10px">${won?`<button class="btn primary" onclick="${riv?'screenRivals()':'screenGauntlet()'}">Continue ▸</button>`:`<button class="btn primary" onclick="${riv?'screenRivals()':'bwGauntFight()'}">${riv?'↻ Find another':'↻ Retry'}</button><button class="btn ghost" onclick="${riv?'screenRivals()':'screenGauntlet()'}">Back</button>`}</div>`;
   } else if(BW.phase==='result'){
@@ -5467,12 +5467,15 @@ function bwGauntFight(){
   bwPreMatch(youCards,oppCards,{tier:g.tier,step:g.step,boss,oppName,oppLogo:boss?'\ud83d\udc51':BW_TIERS[g.tier].ring},{teamName:oppName,teamLogo:boss?'\ud83d\udc51':BW_TIERS[g.tier].ring});
 }
 function bwGauntWin(){
-  const g=bwGaunt(),bw=bwState(),boss=BW.meta.boss,tier=BW.meta.tier;let granted=[];
-  if(boss){g.rings[tier]=true;const nt=PACK_TIERS[Math.min(3,tier+1)];for(let i=0;i<5;i++)granted.push(nt);g.tier=tier+1;g.step=0;}
-  else{granted.push(PACK_TIERS[tier]);g.step=g.step+1;}
+  const g=bwGaunt(),bw=bwState(),boss=BW.meta.boss,tier=BW.meta.tier,step=BW.meta.step||0;let granted=[];
+  // Diamond Coins: regular opponents pay 2→10 (scaling across the whole gauntlet); bosses pay a big bonus.
+  let coins;
+  if(boss){g.rings[tier]=true;const nt=PACK_TIERS[Math.min(3,tier+1)];for(let i=0;i<5;i++)granted.push(nt);g.tier=tier+1;g.step=0;coins=50+tier*25;}
+  else{granted.push(PACK_TIERS[tier]);g.step=g.step+1;coins=Math.min(10,2+tier*2+Math.round(step/7*2));}
+  bw.coins=(bw.coins||0)+coins;
   bw.packs=bw.packs.concat(granted);saveProfile();
   const xpRes=bwAddBattleXP(boss?(120+tier*20):(30+tier*5));   // winning earns GM XP — generous, and scales with battlefield tier
-  return {granted,boss,tier,tierName:BW_TIERS[Math.min(3,tier+(boss?1:0))].name,xp:xpRes};
+  return {granted,boss,tier,coins,tierName:BW_TIERS[Math.min(3,tier+(boss?1:0))].name,xp:xpRes};
 }
 function bwAgo(t){const d=Date.now()-t,m=Math.floor(d/60000);if(m<1)return'just now';if(m<60)return m+'m ago';const h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago';}
 function bwLogAdd(won){
@@ -5485,9 +5488,10 @@ let _bwStatMode='gaunt';
 function bwFmtAvg(n){if(!isFinite(n))return '.000';let str=n.toFixed(3);return n<1?str.replace(/^0/,''):str;}
 function bwFmtIP(outs){return Math.floor(outs/3)+'.'+(outs%3);}
 function bwFmtERA(ra,outs){if(!outs)return ra>0?'∞':'0.00';return (ra*27/outs).toFixed(2);}
-function bwStatMode(m){_bwStatMode=m;screenBwStats();}
-function screenBwStats(){
-  bwState();bwEnsureStyles();
+function bwStatMode(m){_bwStatMode=m;screenPlatoon('stats');}
+function screenBwStats(){screenPlatoon('stats');}   // back-compat alias → opens the Stats tab
+function bwStatsTab(){
+  bwEnsureStyles();
   const mode=_bwStatMode,all=PROFILE.bw.cardStats||{};
   const hit=[],pit=[];
   Object.keys(all).forEach(id=>{
@@ -5515,13 +5519,10 @@ function screenBwStats(){
       return `<tr><td style="text-align:left">${nm(card)}</td><td>${bwFmtIP(st.outs)}</td><td>${st.ha}</td><td>${st.ra}</td><td>${bba}</td><td>${st.k}</td><td>${bwFmtERA(st.ra,st.outs)}</td><td>${st.outs?whip.toFixed(2):'—'}</td></tr>`;}).join('');
     pitTbl=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="bwstat"><thead><tr><th style="text-align:left">Pitcher</th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th><th>ERA</th><th>WHIP</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   } else pitTbl='<p class="muted" style="padding:10px">No pitcher innings logged in this mode yet.</p>';
-  render(`${topBar(`<button class="btn ghost sm" onclick="screenPlatoon('deck')">🃏 Deck</button> <button class="btn ghost sm" onclick="screenGauntlet()">⚔️ Gauntlet</button>`)}
-    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">📊 CARD STATS</div>
-      <p class="sub" style="margin-top:6px">Lifetime stat lines for every card you've played, split by battle mode.</p>
-      <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">${tag('gaunt','⚔️ Gauntlet')}${tag('rivals','🌐 Rivals')}</div></div>
+  return `<div class="center" style="margin-bottom:10px"><p class="small muted" style="margin:0 0 6px">Lifetime stat lines for every card you've played, split by battle mode.</p>
+      <div style="display:flex;gap:6px;justify-content:center">${tag('gaunt','⚔️ Gauntlet')}${tag('rivals','🌐 Rivals')}</div></div>
     <div class="panel"><div class="sectlbl" style="margin-bottom:6px">⚾ Hitters</div>${hitTbl}</div>
-    <div class="panel"><div class="sectlbl" style="margin-bottom:6px">🔥 Pitchers</div>${pitTbl}</div>`);
-  _atTitle=true;ensureNavBtns();
+    <div class="panel"><div class="sectlbl" style="margin-bottom:6px">🔥 Pitchers</div>${pitTbl}</div>`;
 }
 function screenBwLog(){
   bwState();bwEnsureStyles();
@@ -5824,11 +5825,11 @@ function screenPlatoon(tab){
   bwState();bwEnsureStyles();_bwTab=tab||_bwTab||'deck';
   const bw=PROFILE.bw;
   const tb=(k,l)=>`<span class="bwtab ${_bwTab===k?'on':''}" onclick="screenPlatoon('${k}')">${l}</span>`;
-  const body=_bwTab==='collection'?bwCollTab():_bwTab==='packs'?bwPacksTab():_bwTab==='store'?bwStoreTab():_bwTab==='team'?bwTeamTab():bwDeckTab();
+  const body=_bwTab==='collection'?bwCollTab():_bwTab==='packs'?bwPacksTab():_bwTab==='store'?bwStoreTab():_bwTab==='team'?bwTeamTab():_bwTab==='stats'?bwStatsTab():bwDeckTab();
   render(`${topBar(`<span class="pill gold">💎 ${bw.coins}</span>`)}
     <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">⚔️ THE PLATOON · bWARfare</div>
       <p class="sub" style="margin-top:6px">Collect Set 1, build your <b>30 hitters · 10 pitchers · 12 Edges</b> deck, then take it to battle. Earn packs by leveling up and finishing franchises.</p></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tb('deck','🃏 Deck')}${tb('collection','📚 Collection')}${tb('packs','🎁 Packs'+(bw.packs.length?` (${bw.packs.length})`:''))}${tb('store','🏪 Store')}${tb('team','🏟️ Team')}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tb('deck','🃏 Deck')}${tb('collection','📚 Collection')}${tb('packs','🎁 Packs'+(bw.packs.length?` (${bw.packs.length})`:''))}${tb('store','🏪 Store')}${tb('stats','📊 Stats')}${tb('team','🏟️ Team')}</div>
     ${body}`);
   _atTitle=true;ensureNavBtns();
 }
