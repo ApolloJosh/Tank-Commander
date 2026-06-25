@@ -32,7 +32,7 @@
     font-family:'Barlow',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     line-height:1.45;font-size:15px}
   .disp,h1,h2,h3{font-family:var(--disp);text-transform:uppercase;letter-spacing:.04em}
-  html,body{overflow-x:hidden}
+  body{overflow-x:clip}
   #app{max-width:1060px;margin:0 auto;
     padding:calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(70px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
   input,textarea,select{-webkit-user-select:text;user-select:text}
@@ -204,6 +204,8 @@
   .tmi .tag{font-family:var(--disp);font-size:8px;font-weight:700;letter-spacing:.1em;color:#10220a;background:#7d8a44;padding:1px 5px;border-radius:2px}
   .tmi .tag.hot{background:var(--amber);color:#3a1d04}
   .tmi.lk{opacity:.5}
+  .tmi.tsub{padding-left:26px;font-size:14px;color:#8a936a}
+  .tmi.tsub:hover{color:var(--ink)}
   .tnav-foot{margin-top:20px;border-top:1px solid var(--line);padding-top:12px}
   .tnav-foot .tmi{font-size:13px;color:#7e856a}
   .thero{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:26px 22px}
@@ -1815,9 +1817,7 @@ const warPun=()=>pick(WAR_PUNS);
 let _titleMode='career', _titleName=null;
 function selectTitleMode(k){const el=document.getElementById('tname');if(el)_titleName=el.value;_titleMode=k;screenTitle();}
 function rerollTitleName(){_titleName=warPun();const el=document.getElementById('tname');if(el)el.value=_titleName;}
-function screenTitle(){
-  if(_titleName==null)_titleName=warPun();
-  const MODES={
+const TITLE_MODES={
     career:{label:'6-Year Sprint',tag:'',hot:false,needName:true,cta:'Take the job ▸',
       blurb:'The classic run. You inherit a club that won it all four years ago — but the stars have aged and the farm’s gone bare. Tank for picks, develop talent, swing trades, and build a 100-win contender. Graded after six seasons.',
       go:"(function(){newGame(document.getElementById('tname').value.trim(),'career',false);goPhase(0);})()"},
@@ -1831,6 +1831,24 @@ function screenTitle(){
       blurb:'Sit in the owner’s box. Spend $4B to buy a club and build a ballpark, hire your front office, then steer your GM, keep the fans happy, and grow the franchise’s value. Endless — sell for profit or build a 50-year dynasty.',
       go:"ownerStartSetup()"}
   };
+function screenNewFranchise(k){
+  _titleMode=k;
+  const m=TITLE_MODES[k]||TITLE_MODES.career;
+  if(_titleName==null)_titleName=warPun();
+  render(`${topBar('')}
+    <div class="panel center" style="border-color:var(--gold);max-width:600px;margin:18px auto">
+      <div class="pill gold">${m.tag?m.label+' · '+m.tag:m.label}</div>
+      <h2 class="disp" style="margin:12px 0 4px;font-size:22px">${m.label}</h2>
+      <p class="sub" style="max-width:520px;margin:6px auto 0">${m.blurb}</p>
+      ${m.needName?`<div class="tname-row" style="justify-content:center;margin:16px auto 0"><input id="tname" value="${_titleName.replace(/"/g,'&quot;')}" oninput="_titleName=this.value"/><button class="btn ghost sm" title="Random name" onclick="rerollTitleName()">🎲</button></div><div class="small muted" style="margin-top:5px">Name your franchise (or roll the dice).</div>`:''}
+      <div class="center" style="margin-top:18px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="cta" onclick="${m.go}">${m.cta}</button>
+        <button class="btn ghost" onclick="screenTitle()">← Back</button></div>
+    </div>`);
+  _atTitle=true;ensureNavBtns();
+}
+function screenTitle(){
+  if(_titleName==null)_titleName=warPun();
+  const MODES=TITLE_MODES;
   const m=MODES[_titleMode]||MODES.career;
   const navMi=k=>{const mm=MODES[k];return `<div class="tmi ${_titleMode===k?'on':''}" onclick="selectTitleMode('${k}')">${mm.label}${mm.tag?` <span class="tag ${mm.hot?'hot':''}">${mm.tag}</span>`:''}</div>`;};
   const cap=capUnlocked();
@@ -1856,9 +1874,13 @@ function screenTitle(){
      <div class="tdash-grid">
        <nav class="tnav">
          <div class="tnav-lab">New Franchise</div>
-         ${navMi('career')}${navMi('hard')}${navMi('survivor')}${navMi('owner')}
-         <div class="tmi" onclick="screenGauntlet()">⚔️ bWARfare <span class="tag hot">Gauntlet</span></div>
-         <div class="tmi" onclick="screenRivals()">🌐 Rivals <span class="tag hot">PvP</span></div>
+         <div class="tmi" onclick="screenNewFranchise('career')">6-Year Sprint</div>
+         <div class="tmi tsub" onclick="screenNewFranchise('hard')">↳ Hard Mode <span class="tag hot">6-YR</span></div>
+         <div class="tmi" onclick="screenNewFranchise('survivor')">Career Mode <span class="tag">Beta</span></div>
+         <div class="tmi" onclick="screenNewFranchise('owner')">Owner Mode <span class="tag">Alpha</span></div>
+         <div class="tnav-lab">bWARfare</div>
+         <div class="tmi" onclick="screenGauntlet()">Gauntlet <span class="tag">Campaign</span></div>
+         <div class="tmi" onclick="screenRivals()">Rivals <span class="tag hot">PvP</span></div>
          <div class="tnav-lab">Profile</div>
          <div class="tmi" onclick="screenPlatoon()">Platoon <span class="tag hot">bWARfare</span></div>
          ${createMi}
@@ -1872,10 +1894,12 @@ function screenTitle(){
        </nav>
        <section class="thero">
          <img src="${LOGO_SQ}" alt="Baseball Tank Commander">
-         <div class="tagrule"><span class="ln"></span><span class="tx">Rebuild Simulator</span><span class="ln"></span></div>
-         <p class="tblurb">${m.blurb}</p>
-         ${m.needName?`<div class="tname-row"><input id="tname" value="${_titleName.replace(/"/g,'&quot;')}" oninput="_titleName=this.value"/><button class="btn ghost sm" title="Random name" onclick="rerollTitleName()">🎲</button></div>`:''}
-         <button class="cta" onclick="${m.go}">${m.cta}</button>
+         <div class="tagrule"><span class="ln"></span><span class="tx">Baseball Simulator</span><span class="ln"></span></div>
+         <div class="tblurb" style="max-width:470px;margin:0 auto;text-align:left">
+           <p style="margin:0 0 8px">Hi, welcome to my game! I build this because I'm a baseball nerd that, like most of us baseball nerds, thinks I could do a better job running my favorite team than the current GM (mostly kidding here.. mostly). This is all a work in development. I'm testing, updating, and learning things every day. If you have any questions or feedback, please feel free to DM me on Twitter or IG, or leave a note here in game. I really want to make this the most fun little baseball simulation game I can make it.</p>
+           <p style="margin:0 0 6px">Thanks for playing!</p>
+           <p style="margin:0;color:var(--gold);font-weight:600">- @ApolloJosh1</p>
+         </div>
        </section>
        <aside class="tside">
          <div class="tside-lab"><span><span class="lk"></span>Current Runs</span><span class="num">${runs.length}</span></div>
