@@ -4517,6 +4517,7 @@ function capBuild(d){   // turn a draft into a finished prospect template
 }
 function screenCreatePlayer(){
   if(!capUnlocked()){screenTitle();return;}
+  bwEnsureStyles();bwbEnsureStyles();
   if(!_cap){const cp=PROFILE.createdPlayer;_cap=cp?{name:cp.name,pos:cp.pos,alloc:cp._alloc||{},dawg:cp._dawg||0}:capDefaults();}
   const positions=unlockedPositions();
   if(!positions.includes(_cap.pos))_cap.pos=positions[0]||"RF";
@@ -4550,6 +4551,11 @@ function screenCreatePlayer(){
       <div class="pcard" style="cursor:default">${ovrHTML(built.ovr)} ${built.pot>built.ovr?ceilMini(built.pot):''} <b>${built.name||'My Player'}</b>${built.dawg>=78?' 🐶':''} <span class="small muted">${built.pos} ${built.age}y</span></div>
       <p class="small muted" style="margin-top:8px">Starts at ${built.ovr} OVR with a ${built.pot} ceiling${isPit?' (pitcher)':''}. He's a prospect — develop him in your minors like any other.</p>
     </div>
+    <div class="panel">
+      <h3>⚔️ Your bWARfare Card</h3>
+      <p class="small muted" style="margin:2px 0 6px">Your created player is also a live bWARfare card — his 🔥/💨/🌀 ratings and abilities grow as you raise his ceiling. Save him, then add him to your deck from <b>Platoon → Collection</b>.</p>
+      <div style="display:flex;justify-content:center;padding:34px 0 24px"><div style="transform:scale(1.55);transform-origin:center">${bwbCardHTML(bwbCard(bwCapCard(built.name,built.pos,built.pot)))}</div></div>
+    </div>
     <div class="center"><button class="btn primary" onclick="saveCreatedPlayer()">Save Player</button>
       ${PROFILE.createdPlayer?'<button class="btn ghost" onclick="(function(){if(confirm){};PROFILE.createdPlayer=null;saveProfile();_cap=capDefaults();toast(\'Player cleared\');screenCreatePlayer();})()">Delete</button>':''}</div>`);
 }
@@ -4560,7 +4566,10 @@ function capAdj(k,d){const total=attrPointsForLevel(),amax=allocMaxForLevel();
   screenCreatePlayer();}
 function saveCreatedPlayer(){const nm=(document.getElementById('capname')||{}).value;if(nm)_cap.name=nm;
   const built=capBuild(_cap);built._alloc=Object.assign({},_cap.alloc);built._dawg=_cap.dawg||0;
-  PROFILE.createdPlayer=built;saveProfile();toast(`${built.name} saved — he'll appear in your next new game!`);screenTitle();}
+  PROFILE.createdPlayer=built;
+  const bw=bwState();let edgeMsg='';
+  if(!bw._capEdgeBonus){bw._capEdgeBonus=true;const pool=SET1.edges.filter(c=>c.rar<=1);for(let i=0;i<3;i++){const e=pick(pool);bw.collection[e.id]=(bwOwned(e.id))+1;}edgeMsg=' +3 starter Edges added to your collection!';}
+  saveProfile();toast(`${built.name} saved — he's in your next game and ready as a bWARfare card.${edgeMsg}`);screenTitle();}
 function makeCreatedProspect(){const c=PROFILE.createdPlayer;if(!c)return null;
   return {id:uid(),name:c.name,pos:c.pos,age:c.age||20,ovr:c.ovr,pot:c.pot,realCeil:c.pot,
     dura:rollDura(c.age||20),attr:Object.assign({},c.attr),dawg:c.dawg,mlbYears:0,salary:0.75,years:6,
@@ -4663,16 +4672,23 @@ function bwMergeFromCloud(cbw){
   if(cbw.gaunt&&gp(cbw.gaunt)>gp(bw.gaunt))bw.gaunt=cbw.gaunt;   // furthest gauntlet progress wins
   bw._retroDone=bw._retroDone||cbw._retroDone;   // don't re-run the level catch-up
 }
+function bwFreshProfile(){return {xp:0,gamesPlayed:0,createdPlayer:null};}
+function bwWipeLocalData(){   // remove device-local franchise data so accounts never bleed together
+  try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE_AT);}catch(e){}
+  try{(loadRuns()||[]).forEach(r=>{try{localStorage.removeItem(RUN_PREFIX+r.id);}catch(e){}});localStorage.removeItem(RUNS_KEY);}catch(e){}
+}
+function replaceProfileFromCloud(cloudStr){   // the signed-in account is authoritative — load ITS profile, no merging
+  let c=null;try{c=cloudStr?JSON.parse(cloudStr):null;}catch(e){}
+  PROFILE=Object.assign(bwFreshProfile(), c||{});
+  try{localStorage.setItem(PROFILE_KEY,JSON.stringify(PROFILE));}catch(e){}
+  try{bwState();}catch(e){}
+}
 async function reconcileAfterLogin(d){
-  mergeProfileFromCloud(d.profile);
+  bwWipeLocalData();                       // clear the previous account's device data first
+  replaceProfileFromCloud(d.profile);      // load this account's collection / coins / level (replace, not merge)
   let loadedCloud=false;
-  const localSave=localStorage.getItem(SAVE);
-  const localAt=parseInt(localStorage.getItem(SAVE_AT)||"0",10);
-  const cloudAt=d.updated||0;
-  if(d.save && (!localSave || cloudAt>localAt)){
-    try{localStorage.setItem(SAVE,d.save);localStorage.setItem(SAVE_AT,String(cloudAt));loadedCloud=true;}catch(e){}
-  }
-  await cloudSyncNow();   // push the merged result back up
+  if(d.save){try{localStorage.setItem(SAVE,d.save);localStorage.setItem(SAVE_AT,String(d.updated||Date.now()));loadedCloud=true;}catch(e){}}
+  await cloudSyncNow();
   return loadedCloud;
 }
 let _syncT=null,_syncing=false;
@@ -4738,6 +4754,7 @@ function bwRedeemCheat(){
   const el=document.getElementById('cheatcode'),code=((el&&el.value)||'').trim().toUpperCase().replace(/\s+/g,'');
   if(!code){toast('Enter a code.');return;}
   if(code==='GODSQWAD'){const bw=bwState();bw.coins=999999;saveProfile();toast('🪙 GOD SQUAD — max Diamond Coins granted!');screenAccount();return;}
+  if(code==='CANTHIDEMONEY'){const bw=bwState();if(bw._cheat5k){toast('That code was already redeemed on this account.');return;}bw._cheat5k=true;bw.coins=(bw.coins||0)+5000;saveProfile();toast('💰 +5,000 Diamond Coins!');screenAccount();return;}
   toast('Invalid code.');
 }
 async function doSignup(){
@@ -4770,9 +4787,14 @@ async function doReset(){
 }
 async function doLogout(){
   const a=authState();
-  try{await cloudSyncNow();}catch(e){}
+  try{await cloudSyncNow();}catch(e){}   // make sure this account's latest state is safe in the cloud first
   try{if(a)await authCall("/logout",{token:a.token});}catch(e){}
-  setAuth(null);toast("Logged out");screenTitle();
+  setAuth(null);
+  bwWipeLocalData();                      // wipe device data so the next account/guest starts clean
+  PROFILE=bwFreshProfile();
+  try{localStorage.setItem(PROFILE_KEY,JSON.stringify(PROFILE));}catch(e){}
+  try{bwState();}catch(e){}
+  toast("Logged out");screenTitle();
 }
 function showRecovery(code){
   const old=document.getElementById('saveov');if(old)old.remove();
@@ -4812,6 +4834,7 @@ function bwWelcomeCardRow(){
   const ex=[0,1,2,3,4].map(R=>SET1.cards.filter(c=>c.t==='H'&&c.rar===R).sort((a,b)=>b.ov-a.ov)[0]).filter(Boolean);
   return `<div style="display:flex;gap:6px;align-items:stretch;justify-content:center;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 2px;margin:8px 0">${ex.map(bwExCard).join('')}</div>`;
 }
+function bwWelcomeGo(where){try{localStorage.setItem(WELCOME_KEY,'1');}catch(e){}if(where==='platoon')screenPlatoon();else screenTitle();}
 function screenWelcome(){
   bwEnsureStyles();
   render(`<div class="hero" style="padding-top:8px">
@@ -4826,9 +4849,9 @@ function screenWelcome(){
       ${bwWelcomeCardRow()}
       <div class="center" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--dim)">
         <span>🎴 500-card set</span><span>·</span><span>🃏 30 / 10 / 12 deck</span><span>·</span><span>⚔️ Gauntlet</span><span>·</span><span>🌐 Rivals PvP</span></div>
-      <div class="center" style="margin-top:10px"><button class="btn" onclick="(function(){try{localStorage.setItem(WELCOME_KEY,'1');}catch(e){};screenPlatoon();})()">Open Platoon ▸</button></div>
+      <div class="center" style="margin-top:10px"><button class="btn" onclick="bwWelcomeGo('platoon')">Open Platoon ▸</button></div>
     </div>
-    <div class="center" style="margin:8px 0 14px"><button class="btn primary" style="font-size:17px;padding:14px 28px" onclick="(function(){try{localStorage.setItem(WELCOME_KEY,'1');}catch(e){};screenTitle();})()">I'm ready for the job →</button>
+    <div class="center" style="margin:8px 0 14px"><button class="btn primary" style="font-size:17px;padding:14px 28px" onclick="bwWelcomeGo('home')">I'm ready for the job →</button>
       <p class="small muted" style="margin:8px auto 0;max-width:460px">This is a beta — when you finish a run you can leave a note for the creator with anything to fix, balance, or add.</p></div>
     <div class="panel" style="border-color:var(--gold);background:linear-gradient(180deg,rgba(201,162,39,0.06),transparent)">
       <h3 style="margin-top:0">🆕 New in v9</h3>
@@ -4992,13 +5015,13 @@ function bwGrantStarter(){
 }
 const bwOwned=id=>id==='CAP'?(PROFILE.createdPlayer?1:0):((PROFILE.bw&&PROFILE.bw.collection[id])||0);
 // your Create-A-Player as a live bWARfare card — stats track the player as you upgrade him
-function bwCapGet(){
-  const c=PROFILE.createdPlayer;if(!c)return null;
-  const pot=clamp(Math.round(c.pot||c.ovr||70),60,99),base=clamp(Math.round((pot-49)/5),1,10);
-  const isP=(c.pos==='SP'||c.pos==='RP'),rar=pot>=99?4:pot>=96?3:pot>=90?2:pot>=80?1:0;
+function bwCapCard(name,pos,pot){
+  pot=clamp(Math.round(pot||70),60,99);const base=clamp(Math.round((pot-49)/5),1,10);
+  const isP=(pos==='SP'||pos==='RP'),rar=pot>=99?4:pot>=96?3:pot>=90?2:pot>=80?1:0;
   const ab=isP?{whiff:pot>=82,soft:pot>=90}:{con:pot>=80,pwr:pot>=88};
-  return {id:'CAP',t:isP?'P':'H',name:(c.name||'My Player'),pos:c.pos||'DH',ov:pot,rar,vf:base,vo:base,ab,cap:true};
+  return {id:'CAP',t:isP?'P':'H',name:(name||'My Player'),pos:pos||'DH',ov:pot,rar,vf:base,vo:base,ab,cap:true};
 }
+function bwCapGet(){const c=PROFILE.createdPlayer;if(!c)return null;return bwCapCard(c.name,c.pos,c.pot||c.ovr);}
 function bwCardById(id){return SET1.byId[id]||(id==='CAP'?bwCapGet():null);}
 const bwDistinct=()=>Object.keys((PROFILE.bw&&PROFILE.bw.collection)||{}).length;
 function bwRollRar(w){const tot=w.reduce((s,x)=>s+x,0);let r=Math.random()*tot;for(let i=0;i<w.length;i++){if((r-=w[i])<0)return i;}return 0;}
@@ -5124,7 +5147,7 @@ function bwCardMini(c,inDeck){
 // ---- deck toggle ----
 function bwToggle(id){
   const c=bwCardById(id),bw=bwState();if(!c)return;
-  if(!bwOwned(id)){toast("You don't own that card yet.");return;}
+  if(id!=='CAP'&&!bwOwned(id)){toast("You don't own that card yet.");return;}
   if(c.t==='C'){bw.deck.coach=(bw.deck.coach===id?null:id);saveProfile();toast(bw.deck.coach?`${c.name} hired as coach.`:'Coach removed.');screenPlatoon(_bwTab);return;}
   const list=c.t==='E'?bw.deck.e:(c.t==='H'?bw.deck.h:bw.deck.p);
   const cap=c.t==='E'?12:(c.t==='H'?30:10),i=list.indexOf(id);
@@ -5191,8 +5214,33 @@ function bwStoreTab(){
     <div class="disp" style="font-weight:700;font-size:14px;color:${PACK_COL[t]}">${t.toUpperCase()} PACK</div>
     <p class="small muted" style="margin:4px 0 8px">${desc}</p>
     <button class="btn ${PROFILE.bw.coins>=PACK_PRICE[t]?'primary':''} sm" ${PROFILE.bw.coins>=PACK_PRICE[t]?'':'disabled'} onclick="bwBuy('${t}')">💎 ${PACK_PRICE[t]}</button></div>`;
+  const ex=bwDuplicateValue();const RV=[5,15,40,100,300],RN=['Common','Good','All-Star','MVP','HOF'];
+  const breakdown=ex.byRar.map((n,r)=>n>0?`<span class="chip" style="cursor:default">${RN[r]} ×${n} → 💎${n*RV[r]}</span>`:'').join('');
   return `<p class="small muted" style="margin:0 0 10px">You have <b style="color:var(--gold)">💎 ${PROFILE.bw.coins} Diamond Coins</b>. Earn more in the Gauntlet, leveling up, and finishing franchises.</p>
-    <div class="bwgrid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${item('bronze','Mostly Commons, a shot at better. HOF 1:10,000.')}${item('silver','All-Stars show up. HOF 1:500.')}${item('gold','Top MVP odds. HOF 1:100.')}${item('diamond','Elite — stacked with All-Stars & MVPs. HOF 1:15.')}</div>`;
+    <div class="bwgrid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${item('bronze','Mostly Commons, a shot at better. HOF 1:10,000.')}${item('silver','All-Stars show up. HOF 1:500.')}${item('gold','Top MVP odds. HOF 1:100.')}${item('diamond','Elite — stacked with All-Stars & MVPs. HOF 1:15.')}</div>
+    <div class="panel" style="margin-top:14px;border-color:var(--line2)">
+      <div class="sectlbl" style="margin-bottom:4px">🔁 Exchange Duplicates</div>
+      <p class="small muted" style="margin:0 0 8px">Turn extra copies into Diamond Coins — you always keep one of each. Common 💎5 · Good 💎15 · All-Star 💎40 · MVP 💎100 · HOF 💎300.</p>
+      ${ex.count>0?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${breakdown}</div>
+        <div class="center"><button class="btn primary" onclick="bwExchangeDupes()">Exchange ${ex.count} duplicate${ex.count>1?'s':''} → 💎 ${ex.coins}</button></div>`
+        :'<p class="muted" style="margin:0">No duplicates right now — open more packs!</p>'}
+    </div>`;
+}
+function bwDuplicateValue(){
+  const bw=bwState(),RV=[5,15,40,100,300],byRar=[0,0,0,0,0];let count=0,coins=0;
+  Object.keys(bw.collection||{}).forEach(id=>{
+    const n=bw.collection[id];if(!(n>1))return;
+    const c=bwCardById(id);if(!c)return;const r=c.rar||0,dupes=n-1;
+    byRar[r]+=dupes;count+=dupes;coins+=dupes*RV[r];
+  });
+  return {count,coins,byRar};
+}
+function bwExchangeDupes(){
+  const bw=bwState(),v=bwDuplicateValue();
+  if(v.count<=0){toast('No duplicates to exchange.');return;}
+  if(!confirm(`Exchange ${v.count} duplicate card${v.count>1?'s':''} for 💎 ${v.coins} Diamond Coins? You'll keep one copy of each.`))return;
+  Object.keys(bw.collection).forEach(id=>{if(bw.collection[id]>1)bw.collection[id]=1;});
+  bw.coins=(bw.coins||0)+v.coins;saveProfile();toast(`🔁 Exchanged ${v.count} duplicates for 💎 ${v.coins} Diamond Coins!`);screenPlatoon('store');
 }
 function bwBuy(t){const bw=bwState();if(bw.coins<PACK_PRICE[t]){toast('Not enough Diamond Coins.');return;}bw.coins-=PACK_PRICE[t];bw.packs.push(t);saveProfile();toast(`Bought a ${t} pack — open it in Packs.`);screenPlatoon('packs');}
 function bwOpen(i){const bw=bwState();const tier=bw.packs[i];if(!tier)return;bw.packs.splice(i,1);saveProfile();const cards=bwOpenPack(tier);bwShowPack(cards,tier);}
@@ -5212,7 +5260,20 @@ function bwShowPack(cards,tier){
     <button class="btn primary" onclick="document.getElementById('packov').remove();screenPlatoon('collection')">Add to collection ▸</button>`;
   document.body.appendChild(ov);
 }
-function bwFlipHof(i){const c=(window._bwPack||[])[i],el=document.getElementById('bwslot'+i);if(!el||!c)return;el.className='hofpull';el.innerHTML=bwCardMini(c,false);}
+function bwFlipHof(i){
+  const c=(window._bwPack||[])[i],el=document.getElementById('bwslot'+i);if(!el||!c)return;
+  const back=el.firstElementChild;if(!back){el.innerHTML=bwCardMini(c,false);return;}
+  el.style.perspective='800px';
+  back.style.transformOrigin='center';back.style.transition='transform .32s ease-in';
+  back.style.transform='rotateY(90deg)';
+  setTimeout(()=>{
+    el.innerHTML=bwCardMini(c,false);
+    const front=el.firstElementChild;if(!front)return;
+    front.style.transformOrigin='center';front.style.transform='rotateY(-90deg)';
+    front.style.transition='transform .34s cubic-bezier(.2,1.25,.4,1)';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{front.style.transform='rotateY(0deg)';}));
+  },330);
+}
 /* ============================================================
    bWARfare — GAUNTLET + BATTLE ENGINE
    ============================================================ */
@@ -5246,7 +5307,7 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
  .bwb-bs{position:absolute;width:12px;height:12px;background:var(--panel2);border:1px solid var(--line2);transform:rotate(45deg)}
  .bwb-bs.on{background:var(--gold);border-color:var(--gold)}
  .bwb-o{display:inline-flex;gap:4px}.bwb-od{width:10px;height:10px;border-radius:50%;border:1px solid var(--line2)}.bwb-od.on{background:var(--red);border-color:var(--red)}
- .bwb-field{background:linear-gradient(180deg,#10160a,#0b0f07);border:1px solid var(--line);border-radius:8px;padding:14px;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;margin-bottom:6px}
+ .bwb-field{background:linear-gradient(180deg,#10160a,#0b0f07);border:1px solid var(--line);border-radius:8px;padding:14px;min-height:330px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;margin-bottom:6px}
  .bwb-hand{display:flex;gap:7px;overflow-x:auto;padding:6px 2px;width:100%;justify-content:flex-start}
  .bwb-pick{cursor:pointer;flex-shrink:0;transition:transform .1s;border-radius:7px}
  .bwb-pick:hover{transform:translateY(-5px)}
@@ -5268,12 +5329,13 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
  .gnode .gn{font-family:var(--disp);font-weight:700;text-transform:uppercase;font-size:13px;flex:1}
  .gnode .gs{font-family:var(--disp);font-size:10px;color:var(--dim);letter-spacing:.06em}
  .bwb-fan{display:flex;justify-content:center;align-items:flex-end;min-height:158px;position:relative;padding-top:2px;margin-bottom:12px}
- .bwb-slot{transform-origin:bottom center;transition:transform .16s,filter .16s;margin:0 -10px}
+ .bwb-slot{transform-origin:bottom center;transition:transform .16s,filter .16s;margin:0 -5px}
  .bwb-fan.you .bwb-slot{cursor:pointer}
  .bwb-fan.you .bwb-slot:hover{transform:translateY(-20px) scale(1.05)!important;z-index:20;filter:brightness(1.12)}
  .bwb-slot.sel{transform:translateY(-24px) scale(1.06)!important;z-index:21}
  .bwb-slot.sel .bwc{outline:2px solid var(--gold);box-shadow:0 0 14px rgba(189,238,60,.4)}
- .bwb-fan.opp{min-height:96px;padding-top:4px;margin-bottom:10px}
+ .bwb-fan.opp{min-height:96px;padding-top:4px;margin-bottom:10px;transform:scaleY(-1)}
+ .bwb-fan.opp .bwb-back{transform:scaleY(-1)}
  .bwb-fan.opp .bwb-slot{margin:0 -20px}
  .bwb-back{width:108px;height:144px;border-radius:7px;border:1px solid var(--line2);background:radial-gradient(circle at 50% 38%,rgba(189,238,60,.10),transparent 60%),repeating-linear-gradient(135deg,#161c0e,#161c0e 6px,#1c2413 6px,#1c2413 12px);display:flex;align-items:center;justify-content:center}
  .bwb-fan.opp .bwb-back{width:62px;height:84px}
@@ -5285,16 +5347,16 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
  .bwb-stack.ped .c{color:var(--amber)}
  .bwb-stack .l{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-family:var(--disp);font-size:8px;color:var(--dim);letter-spacing:.04em}
  .bwb-zlbl{font-family:var(--disp);text-transform:uppercase;letter-spacing:.1em;font-size:10px;color:var(--dim);text-align:center;margin-bottom:4px}
- .bwbc{width:106px;height:158px;box-sizing:border-box;padding:8px;display:flex;flex-direction:column;cursor:default;position:relative}
+ .bwbc{width:100px;height:152px;box-sizing:border-box;padding:8px;display:flex;flex-direction:column;cursor:default;position:relative}
  .bwbc:hover{transform:none;border-color:var(--line2)}
  .bwbc .bwc-r{font-size:8.5px;padding-right:30px}
- .bwbc .bwc-n{font-size:10.5px;margin-top:3px;padding-right:24px;white-space:normal;line-height:1.08;max-height:2.2em;overflow:hidden}
+ .bwbc .bwc-n{font-size:10px;margin-top:3px;padding-right:22px;white-space:normal;line-height:1.05;max-height:2.5em;overflow:hidden}
  .bwbc .bwc-p{font-size:8.5px;margin-top:1px;opacity:.8}
  .bwbc .bwc-s{font-size:12.5px;font-weight:600;margin-top:4px}
  .bwbc-rt{font-size:15px;font-weight:700;letter-spacing:.01em;text-align:center;margin-top:6px;color:var(--ink)}
  .bwbc-blurb{font-size:9px;color:var(--dim);font-style:italic;text-align:center;margin-top:4px;line-height:1.25;padding:0 2px}
  .bwbc-blurb.hofab{color:var(--gold);font-style:normal;font-weight:700;font-size:9.5px}
- .bwbc-ov{position:absolute;top:6px;right:8px;font-family:var(--disp);font-weight:800;font-size:24px;line-height:1}
+ .bwbc-ov{position:absolute;top:6px;right:7px;font-family:var(--disp);font-weight:800;font-size:21px;line-height:1}
  .bwbc-abs{margin-top:auto;display:flex;gap:4px;min-height:18px;align-items:flex-end;justify-content:center}
  .bwbc-abs .bwc-ab{margin-left:0;font-size:9px;padding:2px 6px}
  .bwb-fan.dim{opacity:.42}
@@ -5329,16 +5391,16 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
  .bwb-legend b{font-family:var(--disp)}
  @media(max-width:560px){
   .bwb-fan{min-height:136px;margin-bottom:10px}
-  .bwbc{width:90px;height:138px;padding:7px}
-  .bwbc .bwc-n{font-size:9.5px;padding-right:22px}
-  .bwbc-ov{font-size:21px;top:5px;right:6px}
+  .bwbc{width:80px;height:128px;padding:6px}
+  .bwbc .bwc-n{font-size:9px;padding-right:20px}
+  .bwbc-ov{font-size:18px;top:5px;right:6px}
   .bwbc .bwc-r{padding-right:26px}
   .bwbc-rt{font-size:13px;margin-top:6px}
   .bwbc-blurb{font-size:8px;margin-top:4px}
-  .bwb-slot{margin:0 -16px}
+  .bwb-slot{margin:0 -10px}
   .bwb-fan.you .bwb-slot:hover{transform:translateY(-14px) scale(1.04)!important}
   .bwb-slot.sel{transform:translateY(-16px) scale(1.05)!important}
-  .bwb-back{width:90px;height:130px}
+  .bwb-back{width:80px;height:128px}
   .bwb-fan.opp{min-height:80px}
   .bwb-fan.opp .bwb-slot{margin:0 -26px}
   .bwb-fan.opp .bwb-back{width:54px;height:74px}
@@ -5346,7 +5408,7 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
   .bwb-bteam .nm{font-size:11px}
   .bwb-die{width:40px;height:40px;font-size:20px}
   .bwb-outc{font-size:22px}
-  .bwb-field{padding:11px;min-height:236px}
+  .bwb-field{padding:11px;min-height:300px}
  }
  `;document.head.appendChild(s);}
 // ---- normalize a Set 1 card for the engine ----
@@ -5690,8 +5752,7 @@ function bwbCoachBtn(yb){
 function bwbFan(cards,faceUp,selId,clickable){
   const n=cards.length,dim=faceUp&&!clickable,opp=!faceUp;
   return `<div class="bwb-fan ${clickable?'you':''} ${faceUp?'':'opp'} ${dim?'dim':''}">${cards.map((c,i)=>{
-    let ang=(i-(n-1)/2)*6,lift=Math.abs(i-(n-1)/2)*7;
-    if(opp){ang=-ang;lift=-lift;}   // the opponent holds from the top — mirror the fan toward them
+    let ang=(i-(n-1)/2)*5,lift=Math.abs(i-(n-1)/2)*6;   // the opponent holds from the top — mirror the fan toward them
     const inner=faceUp?bwbCardHTML(c):'<div class="bwb-back"><span>b<b>WAR</b></span></div>';
     return `<div class="bwb-slot ${selId&&c.id===selId?'sel':''}" style="transform:rotate(${ang}deg) translateY(${lift}px)" ${clickable?`onclick="bwbSelHit(${i})"`:''}>${inner}</div>`;
   }).join('')}</div>`;
@@ -6142,7 +6203,7 @@ function screenPlatoon(tab){
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tb('deck','🃏 Deck')}${tb('collection','📚 Collection')}${tb('packs','🎁 Packs'+(bw.packs.length?` (${bw.packs.length})`:''))}${tb('store','🏪 Store')}${tb('stats','📊 Stats')}${tb('team','🏟️ Team')}</div>
     ${body}`);
   _atTitle=true;ensureNavBtns();
-  bwCoachGift();
+  bwShowGifts();
 }
 function bwCoachGift(){
   const bw=bwState();if(bw._coachGift)return;
@@ -6161,6 +6222,31 @@ function bwCoachGift(){
       <button class="btn ghost sm" onclick="document.getElementById('saveov').remove()">Maybe later</button></div>
   </div>`;
   document.body.appendChild(ov);
+}
+function bwShowGifts(){
+  const bw=bwState();
+  if(!bw._coachGift){bwCoachGift();return;}
+  if(!bw._giftBonus2){bwBonusGift();return;}
+}
+function bwBonusGift(){
+  const bw=bwState();if(bw._giftBonus2)return;
+  const old=document.getElementById('saveov');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='saveov';ov.className='saveov';
+  ov.innerHTML=`<div class="savebox" style="max-width:480px">
+    <div class="center"><div class="pill gold">🎁 A gift for everyone</div></div>
+    <h3 style="margin:12px 0 6px;text-align:center">2 free Gold packs</h3>
+    <p class="small muted" style="margin:0 0 14px;text-align:center">Thanks for playing the update — grab two more Gold packs to deepen your collection and find more Coaches. Good luck out there!</p>
+    <div class="center"><button class="btn primary" style="font-size:15px;padding:11px 22px" onclick="bwRedeemBonus2()">🎁 Redeem 2 Gold packs</button>
+      <button class="btn ghost sm" onclick="document.getElementById('saveov').remove()">Maybe later</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function bwRedeemBonus2(){
+  const bw=bwState();const o=document.getElementById('saveov');if(o)o.remove();
+  if(bw._giftBonus2)return;
+  bw._giftBonus2=true;bw.packs.push('gold','gold');saveProfile();
+  toast('🎁 2 Gold packs added — opening them now!');
+  screenPlatoon('packs');
 }
 function bwRedeemCoachGift(){
   const bw=bwState();const o=document.getElementById('saveov');if(o)o.remove();
