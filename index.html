@@ -572,10 +572,10 @@ const SERVICE_MULT=[0,0.10,0.18,0.30,0.52,0.76,1.0];   // index = MLB years (1..
 // Realistic open-market value, modeled on recent MLB free-agent AAVs and extensions:
 // ~99 OVR ≈ $52M (Ohtani/Soto tier), 95 ≈ $43M, 90 ≈ $34M, 85 ≈ $25M, 80 ≈ $18M, 75 ≈ $12M, 70 ≈ $7M, 65 ≈ $4M.
 function fullSalary(ovr){return clamp(0.75+Math.pow(Math.max(0,ovr-54)/45,2.0)*52,0.75,55);}
-function salaryFor(ovr,mlbYears){const m=SERVICE_MULT[clamp(mlbYears,1,6)];return Math.max(0.75,Math.round(fullSalary(ovr)*m*10)/10);}
+function salaryFor(ovr,mlbYears,pos){const m=SERVICE_MULT[clamp(mlbYears,1,6)];let s=fullSalary(ovr)*m;if(pos==='RP')s=Math.min(s*0.5,24);return Math.max(0.75,Math.round(s*10)/10);}   // relievers top out ~half an ace, ~$24M
 const initService=age=>clamp(age-22,1,9);
 function clonePlayer(d){const[n,p,a,o,t,s,y]=d;const pot=Math.max(t,o);const mlb=initService(a);
-  return {id:uid(),name:n,pos:p,age:a,ovr:o,pot,realCeil:Math.max(o,rollRealCeil(pot)),dura:rollDura(a),attr:genAttrs(p),mlbYears:mlb,salary:salaryFor(o,mlb),years:y,loc:"mlb",inj:0};}
+  return {id:uid(),name:n,pos:p,age:a,ovr:o,pot,realCeil:Math.max(o,rollRealCeil(pot)),dura:rollDura(a),attr:genAttrs(p),mlbYears:mlb,salary:salaryFor(o,mlb,p),years:y,loc:"mlb",inj:0};}
 // fictional college draftee
 const C_F=["Tyler","Brody","Chase","Aiden","Mason","Cooper","Hudson","Easton","Carson","Brooks","Maddox","Holden","Bennett","Cash","Rhys","Wells","Ledger","Tate","Gunner","Jrue"];
 const C_L=["Whitfield","Carrasco","Bautch","Demaris","Holcomb","Pennington","Vasquez","Stallings","Brockman","Yount","Dellinger","Marsh","Ocampo","Steele","Hargrove","Vitelli","Brubaker","Sandoval","Kingery","Marchetti"];
@@ -617,7 +617,7 @@ function ficProspect(){
 }
 function ficReplacement(){
   const pos=pick(POSPOOL);const ovr=ri(56,68);const age=ri(25,33);const mlb=initService(age);
-  return {id:uid(),name:ficName(),pos,age,ovr,pot:ovr+ri(0,3),mlbYears:mlb,salary:salaryFor(ovr,mlb),years:ri(1,3),loc:"pool",inj:0,fic:true};
+  return {id:uid(),name:ficName(),pos,age,ovr,pot:ovr+ri(0,3),mlbYears:mlb,salary:salaryFor(ovr,mlb,pos),years:ri(1,3),loc:"pool",inj:0,fic:true};
 }
 // color-code ceilings
 function ceilClass(pot){return pot>=99?'irid':pot>=96?'bdiamond':pot>=90?'gold':pot>=82?'green':pot>=74?'blue':'';}
@@ -712,7 +712,7 @@ const REP_BAT=0.86, REP_SP=0.95, REP_RP=0.37;   // replacement-level fill for em
 let _dlMode=false;   // true during the in-season trade deadline (shifts valuations)
 // how far BELOW market you're paying a player for his ability — 1 = dirt-cheap/cost-controlled, 0 = paid full market or more.
 // Trade value is surplus value: a player on a fair-market contract (e.g. a free agent you just signed) has little surplus to flip.
-function controlFactor(p){const market=Math.max(8,salaryFor(p.ovr,6));return clamp(1-((p.salary||0)/market),0,1);}
+function controlFactor(p){const market=Math.max(8,salaryFor(p.ovr,6,p.pos));return clamp(1-((p.salary||0)/market),0,1);}
 // longer deals trade a little annual money for security (shown on the sign/extend dropdowns)
 function termAAV(base,years){const mult=clamp(1.08-years*0.03,0.78,1.08);return Math.max(0.75,Math.round(base*mult*10)/10);}
 function tradeValueDeadline(p){
@@ -1216,7 +1216,7 @@ function developAll(){
       if(lastH){if(lastH.champ)h+=9;else if(lastH.playoffs)h+=4;else if(lastH.wins<70)h-=4;else h-=1;}
       if(p.loc==="farm"){if(p.ovr>=72)h-=4;}              // MLB-ready but buried in the minors
       else{h+=starters.has(p.id)?2:-3;}                   // playing every day vs riding the bench
-      const mkt=salaryFor(p.ovr,6);
+      const mkt=salaryFor(p.ovr,6,p.pos);
       if((p.mlbYears||0)>=4){if(p.salary<mkt*0.5)h-=4;else if(p.salary>=mkt*0.9)h+=2;}   // underpaid vs paid his worth
       if(p.loc==="mlb"&&(p.years||0)<=1&&!p.locked)h-=3;  // wants security in a contract year
       h+=(60-h)*0.10;                                     // moods drift back toward content
@@ -1230,7 +1230,7 @@ function developAll(){
   G.roster.forEach(p=>{if(p.loc==="mlb"){
     if(p._svcHold){p._svcHold=false;p._skipYr=true;}
     else if(p.locked){p.mlbYears=Math.max(p.mlbYears||6,6);}   // locked deal: salary stays fixed (good value or dead money)
-    else{p.mlbYears=(p.mlbYears||initService(p.age))+1;p.salary=salaryFor(p.ovr,p.mlbYears);}
+    else{p.mlbYears=(p.mlbYears||initService(p.age))+1;p.salary=salaryFor(p.ovr,p.mlbYears,p.pos);}
   }});
   // contracts tick (mlb only); expirations walk as FA
   G.leftAsFA=[];
@@ -1289,7 +1289,7 @@ function enforceRosterCaps(){
       star.ovr=clamp(Math.max(ceilOf(a),ceilOf(b))+ri(2,6),62,92);
       star.pot=Math.max(star.pot||star.ovr,star.ovr);
       star.pos=(isPitPos(need)||LINEUP.includes(need))?need:a.pos;
-      star.age=ri(25,30);star.salary=salaryFor(star.ovr,4);star.years=ri(2,4);star.src="trade";star.mlbYears=4;star._teamYears=0;star.inj=0;star.prospect=false;
+      star.age=ri(25,30);star.salary=salaryFor(star.ovr,4,star.pos);star.years=ri(2,4);star.src="trade";star.mlbYears=4;star._teamYears=0;star.inj=0;star.prospect=false;
       const toMlb=(star.ovr>=70&&mlbN()<MLB_ROSTER_CAP);star.loc=toMlb?"mlb":"farm";(toMlb?G.roster:G.farm).push(star);
       log.push(`🔁 Packaged ${a.name} + ${b.name} for ${star.pos} ${star.name} (${star.ovr} OVR)`);cons++;
     } else {
@@ -1954,7 +1954,7 @@ function screenTrade(){
   if(_offers===null)_offers=genOffers();
   if(!_custom)_custom={giveIds:new Set(),getIds:new Set(),partner:null,seg:"league",search:"",posF:"all",sort:"val"};
   if(G.draftOrderYear!==G.year)computeDraftOrder();
-  if(G.year>=3&&G.faYear!==G.year){G.faMarket=genFAMarket();G.faYear=G.year;}
+  if(G.year>=3&&G.faYear!==G.year){G.faMarket=genFAMarket();G.faYear=G.year;G.faSigns=0;}
   const proj=warToWins(teamWAR(G.roster));
   const expiring=G.roster.filter(p=>p.loc==="mlb"&&p.years<=1).sort((a,b)=>b.ovr-a.ovr);
   render(`${header()}${stepbar(0)}
@@ -1995,7 +1995,7 @@ function screenTrade(){
 }
 // Owner Mode: step in and run the front office yourself for the offseason — the GM stands down (he'll still get the trade deadline)
 function ownerTakeover(){const o=G.owner;G._ownerTakeover=true;G.phase=0;_offers=null;_custom=null;_sugg=null;
-  if(G.year>=2&&G.faYear!==G.year){G.faMarket=genFAMarket();G.faYear=G.year;}
+  if(G.year>=2&&G.faYear!==G.year){G.faMarket=genFAMarket();G.faYear=G.year;G.faSigns=0;}
   o._ownerActed=G.year;o._gmYear=G.year;o._gmVetoed=null;_vetoQ=[];
   o._gmDigest={applied:[`🎮 You ran the front office yourself this winter — GM ${o.gmName} stood down on offseason moves.`],pendingDesc:[]};
   saveGame();screenTrade();}
@@ -2014,7 +2014,7 @@ function ficVeteran(elite){
   return {id:uid(),name:ficName(),pos,age,ovr,pot:ovr,realCeil:ovr,dura:rollDura(age),attr:genAttrs(pos),mlbYears:6,salary:0,years:0,loc:"pool",inj:0,fic:true};
 }
 function faAsk(p){
-  const aav=salaryFor(p.ovr,6);     // veterans command full freight for their ability
+  const aav=salaryFor(p.ovr,6,p.pos);     // veterans command full freight for their ability
   const years=p.age<=30?ri(3,5):p.age<=34?ri(2,3):1+ri(0,1);
   return {aav,years:Math.max(1,years)};
 }
@@ -2028,9 +2028,11 @@ function genFAMarket(){
   for(let i=0;i<ri(7,9);i++){const v=ficVeteran(false);const a=faAsk(v);list.push({id:uid(),player:v,aav:a.aav,years:a.years});}
   return list.sort((a,b)=>b.player.ovr-a.player.ovr);
 }
+const FA_CAP=4;
 function renderFA(){
   if(!G.faMarket||!G.faMarket.length)return `<p class="muted">No free agents left this winter.</p>`;
-  return G.faMarket.map(fa=>{const p=fa.player;
+  const left=Math.max(0,FA_CAP-(G.faSigns||0));
+  return `<p class="small muted" style="margin:0 0 8px">You can sign up to <b>${FA_CAP}</b> free agents per winter — <b style="color:${left>0?'var(--gold)':'var(--red)'}">${left} left</b>.</p>`+G.faMarket.map(fa=>{const p=fa.player;
     return `<div class="offer"><div class="row" style="align-items:center">
      <div style="flex:2"><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • ${ovrHTML(p.ovr)} OVR</span>${p.fic?'':' <span class="small" style="color:var(--blue)">real FA</span>'} ${statCardBtn(p)}</div>
      <div style="flex:1;text-align:right"><span class="small muted">asks ~$${fa.aav}M/yr</span>
@@ -2038,13 +2040,15 @@ function renderFA(){
 }
 function signFA(fid,years){
   const fa=(G.faMarket||[]).find(x=>x.id===fid);if(!fa)return;const p=fa.player;
+  if((G.faSigns||0)>=FA_CAP){toast(`You've used all ${FA_CAP} free-agent signings this winter.`);screenTrade();return;}
   years=parseInt(years)||fa.years||3;
   if(p._fromPool){if(!G.pool.some(x=>x.id===p.id)){G.faMarket=G.faMarket.filter(x=>x.id!==fid);toast('No longer available');screenTrade();return;}
     G.pool=G.pool.filter(x=>x.id!==p.id);delete p._fromPool;}
   const aav=termAAV(fa.aav,years);
   p.salary=aav;p.years=years;p.loc="mlb";p.src="fa";p.inj=0;p.mlbYears=6;p.happy=clamp(happyVal(p)+12,60,90);
   G.roster.push(p);G.faMarket=G.faMarket.filter(x=>x.id!==fid);_custom=null;
-  _sugg=null;toast(`Signed ${p.name} — ${years}yr / $${aav}M/yr`);screenTrade();
+  G.faSigns=(G.faSigns||0)+1;
+  _sugg=null;toast(`Signed ${p.name} — ${years}yr / $${aav}M/yr (${Math.max(0,FA_CAP-(G.faSigns||0))} signing${(FA_CAP-(G.faSigns||0))===1?'':'s'} left)`);screenTrade();
 }
 function needsSurplus(){
   const mlb=G.roster.filter(p=>p.loc==="mlb");const a=buildActive(G.roster);
@@ -2158,7 +2162,7 @@ function placeAcquired(p){
   p.loc=(p.ovr>=68&&p.age>22&&!p.prospect)?"mlb":"farm";
   if(p.years<2&&p.loc==="mlb")p.years=6;
   if(p.src!=="draft")p.src="trade";
-  if(p.loc==="mlb"){p.mlbYears=p.mlbYears||initService(p.age);p.salary=salaryFor(p.ovr,p.mlbYears);}
+  if(p.loc==="mlb"){p.mlbYears=p.mlbYears||initService(p.age);p.salary=salaryFor(p.ovr,p.mlbYears,p.pos);}
   if(p.loc==="mlb")G.roster.push(p);else G.farm.push(p);
 }
 /* ---- generated offers ---- */
@@ -2535,7 +2539,7 @@ function releaseFarm(pid){const p=G.farm.find(x=>x.id===pid);if(!p)return;
   G.farm=G.farm.filter(x=>x.id!==pid);toast(`${p.name} released.`);try{saveGame();}catch(e){}screenRoster();
 }
 function promoteCore(pid){const p=G.farm.find(x=>x.id===pid);if(!p)return;G.farm=G.farm.filter(x=>x.id!==pid);
-  p.loc="mlb";p.prospect=false;if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;if(!p.locked)p.salary=salaryFor(p.ovr,p.mlbYears);p.happy=clamp(happyVal(p)+10,0,95);G.roster.push(p);toast(`${p.name} called up!`);}
+  p.loc="mlb";p.prospect=false;if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;if(!p.locked)p.salary=salaryFor(p.ovr,p.mlbYears,p.pos);p.happy=clamp(happyVal(p)+10,0,95);G.roster.push(p);toast(`${p.name} called up!`);}
 function promote(pid){promoteCore(pid);screenRoster();}
 function sendDown(pid){const p=G.roster.find(x=>x.id===pid);if(!p)return;G.roster=G.roster.filter(x=>x.id!==pid);
   p.loc="farm";if(p.ovr>=70)p.happy=clamp(happyVal(p)-12,0,100);G.farm.push(p);toast(`${p.name} sent down`);screenRoster();}
@@ -2597,7 +2601,7 @@ function screenServiceTime(){
    <div class="center" style="margin-top:14px"><button class="btn primary" onclick="afterServiceTime()">Continue ▶</button></div>`);
 }
 function promoteService(pid){const p=G.farm.find(x=>x.id===pid);if(!p)return;G.farm=G.farm.filter(x=>x.id!==pid);
-  p.loc="mlb";if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;p._svcHold=true;p.salary=salaryFor(p.ovr,p.mlbYears);G.roster.push(p);
+  p.loc="mlb";if(p.years<2)p.years=6;p.mlbYears=p.mlbYears||1;p._svcHold=true;p.salary=salaryFor(p.ovr,p.mlbYears,p.pos);G.roster.push(p);
   toast(`${p.name} called up — service-time hold (no year burned)`);screenServiceTime();}
 function afterServiceTime(){
   if(G.mode==="survivor"&&!G.owner&&G.year>=2&&!G._mediaAnswered&&Math.random()<0.6){
@@ -3389,7 +3393,7 @@ function gmTalent(){return G.owner?G.owner.gmTier:1;}   // 0..3
 function gmProjPayroll(){return payroll(G.roster);}
 function gmOffseason(){
   if(G.owner._gmYear===G.year)return gmReport();   // already ran this winter — show the digest
-  if(G.year>=2&&G.faYear!==G.year){G.faMarket=genFAMarket();G.faYear=G.year;}
+  if(G.year>=2&&G.faYear!==G.year){G.faMarket=genFAMarket();G.faYear=G.year;G.faSigns=0;}
   const o=G.owner,tier=o.gmTier,mand=o.mandate,dir=o.directives,budget=o.payrollBudget||200;
   const applied=[],pending=[];_vetoQ=[];
   const ns=needsSurplus();let needs=ns.needs.slice();
@@ -3428,7 +3432,7 @@ function gmOffseason(){
     if(topFarm.length>=2&&(mand==='winNow'||Math.random()<0.5)){
       const starOvr=clamp(ri(83,90)+ (tier>=3?2:0)+(gmHasTradeEdge()?ri(1,3):0),80,95);   // a trade-shark GM lands sharper targets
       const pos=needs[0]||pick(["SP","SS","CF","3B","RF"]);
-      const star=ficVeteran(true);star.ovr=starOvr;star.pot=Math.max(star.pot,starOvr);star.pos=(pos==='RP'||pos==='SP')?pos:star.pos;star.age=ri(27,31);star.salary=salaryFor(starOvr,4);star.years=ri(3,5);star.loc='mlb';star.src='trade';star.mlbYears=6;
+      const star=ficVeteran(true);star.ovr=starOvr;star.pot=Math.max(star.pot,starOvr);star.pos=(pos==='RP'||pos==='SP')?pos:star.pos;star.age=ri(27,31);star.salary=salaryFor(starOvr,4,star.pos);star.years=ri(3,5);star.loc='mlb';star.src='trade';star.mlbYears=6;
       // only propose it if your authorized budget can absorb the salary — so an approval always goes through
       if(gmProjPayroll()+star.salary<=budget+25){
         const cost=topFarm.slice(0,star.ovr>=88?2:1);
@@ -3527,7 +3531,7 @@ function genDeadlineMove(){
     if(o.directives.protectProspects&&Math.random()<0.7)return null;
     const top=G.farm.slice().sort((a,b)=>b.pot-a.pot)[0];if(!top)return null;
     const ovr=clamp(ri(80,86)+(tier>=3?1:0)+(gmHasTradeEdge()?ri(1,2):0),78,92),pos=needsSurplus().needs[0]||pick(["SP","RP","SS","CF","3B"]);
-    const rent=ficVeteran(true);rent.ovr=ovr;rent.pot=Math.max(rent.pot,ovr);rent.pos=(pos==='SP'||pos==='RP')?pos:rent.pos;rent.age=ri(28,33);rent.salary=Math.round(salaryFor(ovr,1)*0.5*10)/10;rent.years=1;rent.loc='mlb';rent.src='trade';rent.mlbYears=6;
+    const rent=ficVeteran(true);rent.ovr=ovr;rent.pot=Math.max(rent.pot,ovr);rent.pos=(pos==='SP'||pos==='RP')?pos:rent.pos;rent.age=ri(28,33);rent.salary=Math.round(salaryFor(ovr,1,rent.pos)*0.5*10)/10;rent.years=1;rent.loc='mlb';rent.src='trade';rent.mlbYears=6;
     if(gmProjPayroll()+rent.salary>budget+30)return null;
     const i=G.farm.indexOf(top);if(i>=0)G.farm.splice(i,1);   // reserve the prospect
     return {stance,desc:`acquire rental ${rent.pos} ${rent.name} (${rent.ovr} OVR, expiring) for prospect ${top.name} (${top.pot} ceil)`,
@@ -6083,7 +6087,7 @@ function bwLbRender(){
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);${mine?'background:var(--panel2)':''}">
       <span class="disp" style="width:24px;text-align:right;color:${i<3?'var(--gold)':'var(--dim)'}">${i+1}</span>
       <span style="font-size:18px">${e.logo}</span>
-      <span style="flex:1;min-width:0"><b style="word-break:break-word">${String(e.name).replace(/</g,'&lt;')}</b>${mine?' <span class="small" style="color:var(--gold)">· you</span>':''}<br><span class="small muted">Lv ${e.level} · 🏅 ${e.deckRating} OVR</span></span>
+      <span style="flex:1;min-width:0"><b style="word-break:break-word">${String(e.name).replace(/</g,'&lt;')}</b>${mine?' <span class="small" style="color:var(--gold)">· you</span>':''}<br><span class="small muted">Lv ${e.level} · 🏅 ${e.deckRating} OVR${(e.gm&&String(e.gm).toLowerCase()!==String(e.name).toLowerCase())?` · @${String(e.gm).replace(/</g,'&lt;')}`:''}</span></span>
       <span style="text-align:right"><b class="disp" style="color:var(--gold)">${e.rating}</b><br><span class="small muted">${e.wins}–${e.losses}</span></span>
     </div>`;}).join('');
 }
