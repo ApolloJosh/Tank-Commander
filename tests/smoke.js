@@ -18,5 +18,33 @@ t('leaderboard row escapes hostile ghost',()=>{ctx.__X=null;
     return ctx.__G.esc(e.logo)+ctx.__G.esc(e.level);})();
   if(html.includes('<script'))throw new Error('logo unescaped');});
 t('bwbTutTip constant across phases',()=>{ctx.__G.BW={phase:'pitch',over:false};const a=!!ctx.bwbTutTip(false);ctx.__G.BW.phase='swing';const b=!!ctx.bwbTutTip(true);ctx.__G.BW.phase='result';const c=!!ctx.bwbTutTip(true);if(!(a&&b&&c))throw new Error(a+','+b+','+c);ctx.__G.PROFILE.bw._tut=1;if(ctx.bwbTutTip(true)!=='')throw new Error('not dismissed');});
+t('pack overlay has rip stage',()=>{
+  const body=ctx.document.body;const n0=body.children.length;
+  ctx.bwShowPack(ctx.bwOpenPack('gold'),'gold');
+  const ov=body.children[body.children.length-1];
+  if(body.children.length<=n0)throw new Error('no overlay');
+  if(!/ripwrap/.test(ov._h||''))throw new Error('no ripwrap');
+  if(!/packrev/.test(ov._h||''))throw new Error('no hidden reveal');
+});
+t('draftReveal r5 is instant toast',()=>{
+  let went=false;ctx.draftReveal({name:'X',pos:'SS',age:20,ovr:60,pot:80,college:'St U'},5,3,()=>{went=true;});
+  if(!went)throw new Error('next not called');
+});
+t('draftReveal r1 builds ceremony overlay',()=>{
+  const body=ctx.document.body;const n0=body.children.length;
+  ctx.draftReveal({name:'Y',pos:'CF',age:19,ovr:55,pot:92,college:'Tech'},1,4,()=>{});
+  const ov=body.children[body.children.length-1];
+  if(!/commissioner/.test(ov._h||''))throw new Error('no podium line');
+  if(!/dfcard/.test(ov._h||''))throw new Error('no card');
+});
+t('music state defaults + controls safe headless',()=>{
+  const m=ctx.musState();
+  if(!(m&&m.vol>0&&m.i>=0))throw new Error('bad state');
+  ctx.musToggle();ctx.musSkip(1);ctx.musVol(0.1);ctx.musMin(1);ctx.musMin(0);ctx.musMuteSync();ctx.musAutoStart();
+});
+t('sampled sfx fall back safely headless',()=>{
+  ctx.sfx('playball');ctx.sfx('strikeout');ctx.sfx('yourout');ctx.sfx('crack');ctx.sfx('pack');
+  if(ctx.playSmp('crack')!==false)throw new Error('expected false without Audio');
+});
 console.log(checks.join('\n'));
 if(checks.some(c=>c.startsWith('❌')))process.exit(1);

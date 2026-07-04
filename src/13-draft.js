@@ -39,8 +39,52 @@ function screenDraft(){
         <div style="flex:1;text-align:right"><span class="pill ${ceilClass(p.pot)}">Ceiling ${p.pot}</span>
           <button class="btn primary sm" onclick="draftPick(${i})">Draft</button></div></div></div>`).join("")}</div></div>`);
 }
-function draftPick(i){const p=_board[i];p.loc="farm";p.src="draft";G.farm.push(p);_dpicks.push(p);_dq.shift();
-  if(!G._gmAutoDraft)toast(`Drafted ${p.name}`);screenDraft();}
+function draftPick(i){
+  const p=_board[i];p.loc="farm";p.src="draft";G.farm.push(p);_dpicks.push(p);
+  const pk=_dq[0]||{},rd=pk.round||1,slot=pickResolvedSlot(pk)||0;
+  _dq.shift();
+  if(G._gmAutoDraft){screenDraft();return;}
+  draftReveal(p,rd,slot,()=>screenDraft());
+}
+/* ---- draft reveal ceremony — grand in round 1, fading to a toast by round 5 ---- */
+function draftReveal(p,rd,slot,next){
+  if(rd>=5){sfx('tap');toast(`R${rd}: Drafted ${p.name}`);next();return;}
+  const old=document.getElementById('dfov');if(old)old.remove();
+  const cardHTML=`<div class="dfcard ${rd===1?'r1':''}" id="dfcard" style="display:none">
+      ${rd<=2?`<div class="dfstamp">ROUND ${rd} SELECTION</div>`:''}
+      <div class="dfch"><span>${esc(p.pos)} · AGE ${p.age}</span><b>${p.ovr}</b></div>
+      <div class="dfname">${esc(p.name)}</div>
+      <div class="dfcol">${esc(p.college||'')}</div>
+      <div class="dfrow"><span class="pill ${ceilClass(p.pot)}">Ceiling ${p.pot}</span>${p.advanced?'<span class="pill green">MLB-Ready</span>':'<span class="pill blue">Project</span>'}</div>
+    </div>`;
+  const ov=document.createElement('div');ov.id='dfov';ov.className='dfov'+(rd>=4?' lite':'');
+  ov.innerHTML=`
+    ${rd===1?`<div class="dfline" id="dfl1">📋 The commissioner steps to the podium…</div>
+      <div class="dfline big" id="dfl2" style="display:none">With pick #${slot} of the first round,<br>${esc(G.teamName)} select…</div>`
+    :rd<=3?`<div class="dfline big">Round ${rd} · Pick #${slot}</div>`:''}
+    ${cardHTML}
+    <button class="btn primary" id="dfnext" style="display:none">Next pick ▸</button>`;
+  document.body.appendChild(ov);
+  const done=()=>{const o=document.getElementById('dfov');if(o)o.remove();next();};
+  const show=()=>{
+    const c=document.getElementById('dfcard');if(c)c.style.display='block';
+    if(rd===1){sfx('rare');hap([20,40,60]);
+      const b=document.createElement('i');b.className='dfburst';ov.appendChild(b);setTimeout(()=>b.remove(),1000);
+      for(let s=0;s<16;s++){const sp=document.createElement('i');sp.className='dfspark';ov.appendChild(sp);
+        const a=Math.random()*Math.PI*2,dd=70+Math.random()*110;
+        if(sp.animate)sp.animate([{transform:'translate(-50%,-50%)',opacity:1},{transform:`translate(${Math.cos(a)*dd}px,${Math.sin(a)*dd}px) rotate(${Math.round(Math.random()*400-200)}deg)`,opacity:0}],{duration:700+Math.random()*400,easing:'cubic-bezier(.2,.8,.4,1)'});
+        setTimeout(()=>sp.remove(),1200);}}
+    else if(rd===2){sfx('coin');hap(20);}
+    else sfx('flip');
+    const nb=document.getElementById('dfnext');
+    if(rd>=4){setTimeout(done,1000);ov.onclick=done;}
+    else setTimeout(()=>{if(nb){nb.style.display='inline-block';nb.onclick=done;}},rd===1?450:250);
+  };
+  if(rd===1){
+    setTimeout(()=>{const l2=document.getElementById('dfl2');if(l2)l2.style.display='block';},950);
+    setTimeout(show,2000);
+  } else setTimeout(show,rd===2?500:120);
+}
 function draftDone(){
   G._gmAutoDraft=false;G._gmRec=null;
   const got=_dpicks||[];G.ownedPicks=freshDraftPicks().concat(G.pendingComp||[]);G.pendingComp=[];_dq=null;_dpicks=null;saveGame();

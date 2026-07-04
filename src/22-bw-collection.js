@@ -192,6 +192,26 @@ function bwEnsureStyles(){if(document.getElementById('bwcss'))return;const s=doc
  .chip.on{background:var(--gold);color:#10130b;border-color:var(--gold)}
  .packov{position:fixed;inset:0;z-index:80;background:rgba(4,5,1,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;overflow:auto}
  .packrow{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;max-width:780px}
+ .ripwrap{position:relative;width:206px;height:284px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;animation:packfloat 2.8s ease-in-out infinite}
+ @keyframes packfloat{0%,100%{transform:translateY(0) rotate(-.6deg)}50%{transform:translateY(-7px) rotate(.6deg)}}
+ .ripwrap.ripping{animation:none;cursor:default}
+ .ripstub{position:absolute;left:0;right:0;top:0;height:60px;z-index:2;background:linear-gradient(160deg,var(--tc),var(--td));border-radius:10px 10px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:transform .5s cubic-bezier(.55,-.35,.7,1),opacity .5s ease;clip-path:polygon(0 0,100% 0,100% calc(100% - 7px),94% 100%,88% calc(100% - 7px),82% 100%,76% calc(100% - 7px),70% 100%,64% calc(100% - 7px),58% 100%,52% calc(100% - 7px),46% 100%,40% calc(100% - 7px),34% 100%,28% calc(100% - 7px),22% 100%,16% calc(100% - 7px),10% 100%,4% calc(100% - 7px),0 100%)}
+ .ripstub b{font-family:var(--stencil);font-weight:400;font-size:16px;color:#1c1508;letter-spacing:.04em}
+ .ripstub small{font-family:var(--disp);font-weight:700;font-size:8px;letter-spacing:.28em;color:rgba(28,21,8,.75)}
+ .ripping .ripstub{transform:translate(46px,-120px) rotate(22deg);opacity:0}
+ .ripbody{position:absolute;left:0;right:0;top:53px;bottom:0;background:linear-gradient(165deg,#2a2e1d,#15170f 72%);border:1px solid var(--td);border-top:2px dashed var(--td);border-radius:0 0 10px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;overflow:hidden}
+ .ripbody::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.10) 46%,rgba(255,255,255,.02) 52%,transparent 68%);background-size:240% 100%;animation:ripsheen 3.4s ease-in-out infinite}
+ @keyframes ripsheen{0%,15%{background-position:130% 0}55%,100%{background-position:-70% 0}}
+ .riplogo{width:44px;height:44px;border-radius:50%;border:2px solid var(--tc);color:var(--tc);display:flex;align-items:center;justify-content:center;font-size:20px}
+ .ripbrand{font-family:var(--stencil);font-weight:400;font-size:19px;line-height:1.12;color:var(--ink);letter-spacing:.02em}
+ .riptier{font-family:var(--disp);font-weight:700;font-size:9px;letter-spacing:.3em;color:var(--tc)}
+ .riphint{position:absolute;bottom:12px;left:0;right:0;font-family:var(--disp);font-weight:600;font-size:9px;letter-spacing:.2em;color:var(--dim);animation:riphint 1.6s ease-in-out infinite}
+ @keyframes riphint{0%,100%{opacity:.55}50%{opacity:1}}
+ .ripping .ripbody{animation:ripjolt .28s cubic-bezier(.36,.07,.19,.97)}
+ @keyframes ripjolt{20%{transform:translate(-2px,2px) rotate(-1deg)}55%{transform:translate(3px,-1px) rotate(1deg)}100%{transform:none}}
+ .ripping::after{content:"";position:absolute;inset:-36px;background:radial-gradient(circle,rgba(244,236,214,.4),transparent 62%);animation:ripflash .5s ease-out forwards;pointer-events:none}
+ @keyframes ripflash{0%{opacity:1}100%{opacity:0}}
+ .ripshred{position:absolute;width:9px;height:6px;background:linear-gradient(160deg,var(--tc),var(--td));border-radius:1px;pointer-events:none;z-index:3}
  .preveal{animation:bwflip .55s cubic-bezier(.2,1.2,.4,1) both}
  @keyframes bwflip{0%{transform:rotateY(90deg) scale(.85);opacity:0}100%{opacity:1}}
  .bwc{border-top:1px solid var(--line2)}
@@ -207,7 +227,7 @@ function bwEnsureStyles(){if(document.getElementById('bwcss'))return;const s=doc
  .hofpull{animation:hofpop .6s cubic-bezier(.2,1.5,.4,1)}
  @keyframes hofpop{0%{transform:scale(.4) rotate(-8deg);opacity:0}100%{transform:scale(1)}}
  .hofglow{position:absolute;left:50%;top:50%;width:10px;height:10px;pointer-events:none;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(230,200,78,.9),rgba(230,200,78,0) 70%);animation:hofglow .9s ease-out forwards;z-index:3}
- .hofglow.irid{background:radial-gradient(circle,rgba(189,238,60,.95),rgba(159,176,200,.5) 40%,rgba(189,238,60,0) 70%)}
+ .hofglow.irid{background:radial-gradient(circle,rgba(244,236,214,.95),rgba(159,176,200,.5) 40%,rgba(189,238,60,0) 70%)}
  @keyframes hofglow{0%{width:10px;height:10px;opacity:1}100%{width:340px;height:340px;opacity:0}}`;document.head.appendChild(s);}
 // ---- card mini ----
 function bwCardBlurb(f,o,b,isHit){
@@ -362,12 +382,39 @@ function bwShowPack(cards,tier){
   const slot=(c,i)=>c.rar>=3
     ? `<div class="preveal" id="bwslot${i}" style="animation-delay:${(i*step).toFixed(2)}s"><div class="hofback ${c.rar===3?'mvpback':''}" onclick="bwFlipHof(${i})"><b>${c.rar===4?'★ HOF ★':'◆ MVP ◆'}</b><small>TAP TO REVEAL</small></div></div>`
     : `<div class="preveal" style="animation-delay:${(i*step).toFixed(2)}s">${bwCardMini(c,false)}</div>`;
-  sfx('pack');hap(20);
+  const TIER_C={bronze:['#c08552','#7a5433'],silver:['#cdd6bf','#8a927e'],gold:['#e6b24a','#9a7526'],diamond:['#bfe9ff','#5d93ad']};
+  const tc=(TIER_C[tier]||TIER_C.bronze)[0],td=(TIER_C[tier]||TIER_C.bronze)[1];
   const ov=document.createElement('div');ov.id='packov';ov.className='packov';
-  ov.innerHTML=`<div class="disp" style="font-weight:700;letter-spacing:.08em;color:${tier==='gold'?'var(--amber)':tier==='silver'?'#cdd6bf':'#c08552'};font-size:20px">${tier.toUpperCase()} PACK</div>
-    <div class="packrow">${order.map(slot).join('')}</div>
-    <button class="btn primary" onclick="document.getElementById('packov').remove();screenPlatoon('collection')">Add to collection ▸</button>`;
+  ov.innerHTML=`<div class="disp" style="font-weight:700;letter-spacing:.12em;color:${tc};font-size:20px">${tier.toUpperCase()} PACK</div>
+    <div class="ripwrap" id="ripwrap" onclick="bwRipPack()" style="--tc:${tc};--td:${td}">
+      <div class="ripstub"><b>bWARfare</b><small>SET ONE · 8 CARDS</small></div>
+      <div class="ripbody">
+        <div class="riplogo">★</div>
+        <b class="ripbrand">TANK<br>COMMANDER</b>
+        <small class="riptier">${tier.toUpperCase()} ISSUE · FIELD PACK</small>
+        <span class="riphint">HOLD THE TAB — TAP TO RIP ▸</span>
+      </div>
+    </div>
+    <div id="packrev" style="display:none;flex-direction:column;align-items:center;gap:16px">
+      <div class="packrow">${order.map(slot).join('')}</div>
+      <button class="btn primary" onclick="document.getElementById('packov').remove();screenPlatoon('collection')">Add to collection ▸</button>
+    </div>`;
   document.body.appendChild(ov);
+}
+function bwRipPack(){
+  const w=document.getElementById('ripwrap');if(!w||w.dataset.rip)return;w.dataset.rip=1;
+  sfx('pack');hap([15,30,15]);
+  w.classList.add('ripping');
+  for(let i=0;i<12;i++){const s=document.createElement('i');s.className='ripshred';w.appendChild(s);
+    const a=-Math.PI/2+(Math.random()-.5)*1.7,d=55+Math.random()*95;
+    s.style.left=(15+Math.random()*70)+'%';s.style.top='20%';
+    if(s.animate)s.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d+80}px) rotate(${Math.round(Math.random()*520-260)}deg)`,opacity:0}],{duration:650+Math.random()*380,easing:'cubic-bezier(.2,.7,.4,1)'});
+    setTimeout(()=>s.remove(),1100);}
+  setTimeout(()=>{
+    const rev=document.getElementById('packrev');
+    w.style.display='none';
+    if(rev)rev.style.display='flex';
+  },520);
 }
 function bwFlipHof(i){
   const c=(window._bwPack||[])[i],el=document.getElementById('bwslot'+i);if(!el||!c)return;

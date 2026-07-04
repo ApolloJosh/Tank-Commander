@@ -22,14 +22,14 @@ function bwCpuDeck(tier,step){
 function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=document.createElement('style');s.id='bwbcss';s.textContent=`
  .bwb-score{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
  .bwb-sb{flex:1;min-width:130px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:8px 11px;display:flex;align-items:center;justify-content:space-between}
- .bwb-sb.bat{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(189,238,60,.25)}
+ .bwb-sb.bat{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(217,130,43,.25)}
  .bwb-sb .w{font-family:var(--disp);text-transform:uppercase;font-weight:700;font-size:12px;letter-spacing:.04em}
  .bwb-sb .w small{display:block;font-size:8px;color:var(--dim);letter-spacing:.12em}
- .bwb-sb .r{font-family:var(--disp);font-weight:700;font-size:26px;color:var(--gold)}
+ .bwb-sb .r{font-family:var(--mono);font-weight:600;font-size:24px;color:var(--phos)}
  .bwb-state{display:flex;align-items:center;gap:14px;justify-content:center;flex-wrap:wrap;font-family:var(--disp);text-transform:uppercase;font-size:11px;letter-spacing:.08em;color:var(--dim);margin-bottom:8px}
  .bwb-dia{position:relative;width:42px;height:42px}
  .bwb-bs{position:absolute;width:12px;height:12px;background:var(--panel2);border:1px solid var(--line2);transform:rotate(45deg)}
- .bwb-bs.on{background:var(--gold);border-color:var(--gold)}
+ .bwb-bs.on{background:var(--phos);border-color:var(--phos);box-shadow:0 0 7px rgba(158,240,26,.55)}
  .bwb-o{display:inline-flex;gap:4px}.bwb-od{width:10px;height:10px;border-radius:50%;border:1px solid var(--line2)}.bwb-od.on{background:var(--red);border-color:var(--red)}
  .bwb-field{background:linear-gradient(180deg,#10160a,#0b0f07);border:1px solid var(--line);border-radius:8px;padding:14px;min-height:330px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;margin-bottom:6px}
  .bwb-hand{display:flex;gap:7px;overflow-x:auto;padding:6px 2px;width:100%;justify-content:flex-start}
@@ -37,19 +37,19 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
  .bwb-pick:hover{transform:translateY(-5px)}
  .bwb-pick.sel{outline:2px solid var(--gold);transform:translateY(-5px)}
  .bwb-dice{display:flex;gap:10px;justify-content:center}
- .bwb-die{width:46px;height:46px;border-radius:8px;background:linear-gradient(180deg,#1c2413,#11140b);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:24px;color:var(--gold)}
- .bwb-die.roll{animation:bwbshake .12s linear infinite;color:var(--dim)}
+ .bwb-die{width:46px;height:46px;border-radius:8px;background:linear-gradient(180deg,#f2ede0,#cfc8b4);border:1px solid #8a8468;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:24px;color:#1c1508;box-shadow:0 3px 8px rgba(0,0,0,.45)}
+ .bwb-die.roll{animation:bwbshake .12s linear infinite;color:#8a8468}
  @keyframes bwbshake{0%{transform:translate(0,0)}25%{transform:translate(-2px,1px) rotate(-5deg)}50%{transform:translate(2px,-1px) rotate(5deg)}100%{transform:translate(1px,1px)}}
  .bwb-pop{font-family:var(--disp);text-transform:uppercase;letter-spacing:.1em;font-weight:700;display:flex;align-items:center;gap:10px;font-size:20px;animation:bwbpop .5s cubic-bezier(.2,1.4,.4,1)}
  .bwb-pop .ic{font-size:32px}
  @keyframes bwbpop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
- .bwb-math{font-family:var(--disp);font-size:14px;opacity:0;transition:opacity .3s}.bwb-math .tot{color:var(--gold);font-size:18px}
+ .bwb-math{font-family:var(--disp);font-size:14px;opacity:0;transition:opacity .3s}.bwb-math .tot{color:var(--phos);font-family:var(--mono);font-size:17px}
  .bwb-outc{font-family:var(--disp);text-transform:uppercase;font-weight:700;font-size:26px;opacity:0;transition:opacity .25s}
  .bwb-peds{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
  .bwb-ped{font-family:var(--disp);font-size:10.5px;text-transform:uppercase;border:1px solid var(--line2);border-left:3px solid var(--amber);border-radius:3px;padding:5px 8px;background:var(--panel2);cursor:pointer}
  .bwb-ped.pit{border-left-color:var(--red)} .bwb-ped.sel{outline:2px solid var(--gold)} .bwb-ped.dim{opacity:.4;cursor:not-allowed}
  .gnode{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line2);border-radius:5px;background:var(--panel2);margin-bottom:6px}
- .gnode.done{opacity:.5;border-color:var(--line)} .gnode.cur{border-color:var(--gold);box-shadow:0 0 10px rgba(189,238,60,.25)} .gnode.boss{border-left:4px solid var(--red)}
+ .gnode.done{opacity:.5;border-color:var(--line)} .gnode.cur{border-color:var(--gold);box-shadow:0 0 10px rgba(217,130,43,.25)} .gnode.boss{border-left:4px solid var(--red)}
  .gnode .gn{font-family:var(--disp);font-weight:700;text-transform:uppercase;font-size:13px;flex:1}
  .gnode .gs{font-family:var(--disp);font-size:10px;color:var(--dim);letter-spacing:.06em}
  .bwb-fan{display:flex;justify-content:center;align-items:flex-end;min-height:158px;position:relative;padding-top:2px;margin-bottom:12px}
@@ -57,11 +57,11 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
  .bwb-fan.you .bwb-slot{cursor:pointer}
  .bwb-fan.you .bwb-slot:hover{transform:translateY(-20px) scale(1.05)!important;z-index:20;filter:brightness(1.12)}
  .bwb-slot.sel{transform:translateY(-24px) scale(1.06)!important;z-index:21}
- .bwb-slot.sel .bwc{outline:2px solid var(--gold);box-shadow:0 0 14px rgba(189,238,60,.4)}
+ .bwb-slot.sel .bwc{outline:2px solid var(--gold);box-shadow:0 0 14px rgba(217,130,43,.4)}
  .bwb-fan.opp{min-height:96px;padding-top:4px;margin-bottom:10px;transform:scaleY(-1)}
  .bwb-fan.opp .bwb-back{transform:scaleY(-1)}
  .bwb-fan.opp .bwb-slot{margin:0 -20px}
- .bwb-back{width:108px;height:144px;border-radius:7px;border:1px solid var(--line2);background:radial-gradient(circle at 50% 38%,rgba(189,238,60,.10),transparent 60%),repeating-linear-gradient(135deg,#161c0e,#161c0e 6px,#1c2413 6px,#1c2413 12px);display:flex;align-items:center;justify-content:center}
+ .bwb-back{width:108px;height:144px;border-radius:7px;border:1px solid var(--line2);background:radial-gradient(circle at 50% 38%,rgba(217,130,43,.08),transparent 60%),repeating-linear-gradient(135deg,#161c0e,#161c0e 6px,#1c2413 6px,#1c2413 12px);display:flex;align-items:center;justify-content:center}
  .bwb-fan.opp .bwb-back{width:62px;height:84px}
  .bwb-back span{font-family:var(--disp);font-weight:700;font-size:13px;color:var(--gold);opacity:.55;letter-spacing:.04em}.bwb-back b{color:var(--ink)}
  .bwb-fan.opp .bwb-back span{font-size:9px}
@@ -88,7 +88,9 @@ function bwbEnsureStyles(){if(document.getElementById('bwbcss'))return;const s=d
  .bwb-bug{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(16,20,10,.96);border:1px solid var(--line2);border-radius:6px;padding:6px 10px;margin-bottom:6px;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
  .bwb-bteam{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
  .bwb-bteam.r{justify-content:flex-end;text-align:right}
- .bwb-bteam .rn{font-family:var(--disp);font-weight:800;font-size:26px;color:var(--gold);line-height:1;flex-shrink:0}
+ .bwb-bteam .rn{font-family:var(--mono);font-weight:600;font-size:24px;color:var(--phos);line-height:1;flex-shrink:0}
+ .bwb-bteam .rn.pulse{animation:runpop .55s cubic-bezier(.2,1.5,.4,1)}
+ @keyframes runpop{0%{transform:scale(1)}30%{transform:scale(1.45);text-shadow:0 0 16px rgba(158,240,26,.75)}100%{transform:scale(1)}}
  .bwb-bteam .nm{font-family:var(--disp);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;flex-direction:column;min-width:0}
  .bwb-bteam .nm small{font-size:8px;color:var(--dim);letter-spacing:.1em}
  .bwb-bteam.bat .nm{color:var(--gold)}
@@ -168,6 +170,7 @@ function bwbRefill(s){
   while(s.phand.length<(s._edgeHand||3)&&s.peds.length)s.phand.push(s.peds.shift());   // edges finite per battle (Deep Bench coach grows the hand)
 }
 function bwbStart(youDeck,cpuDeck,meta){
+  setTimeout(()=>{try{sfx('playball');}catch(e){}},250);
   clearTimers();
   BW={you:bwbMkSide(bwTeam().name,youDeck),cpu:bwbMkSide(meta.oppName||'Rivals',cpuDeck),inning:1,half:'top',outs:0,bases:[null,null,null],phase:'pitch',committedPitch:null,pdEdge:null,selHitter:null,selEdge:null,last:null,pending:null,over:false,winner:null,meta,_rewarded:false,_pitchLog:{FB:0,OFF:0,BR:0},_cpuPitchLog:{FB:0,OFF:0,BR:0}};
   BW.you.coach=youDeck.coach||null;BW.cpu.coach=cpuDeck.coach||null;bwbInitCoach(BW.you);bwbInitCoach(BW.cpu);
@@ -296,7 +299,7 @@ function bwbDoAB(h,hE){
   BW.lastMsg=(r.meatball&&r.bases>=1?'\ud83c\udf56 Hung pitch! ':'')+(r.walk?`${who}: ${h.name} walks${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} forced in`:''}.`:r.ejected?`${h.name} ejected for a corked bat — out.`:r.bases===0?`${h.name} ${r.total<=4?'strikes out':'is retired'}.`:`${who}: ${h.name} ${r.label.toLowerCase()}${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} in`:''}!`);
   screenBwBattle();
 }
-function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;const def=bwbDef();if(def.pitcher)def.pitcher._runsInn=(def.pitcher._runsInn||0)+p.runs;BW.bases=p.nb;BW._ab=(BW._ab||0)+1;bwbRecordStats(p,off,def);if(p.runs>0&&!BW.over&&bwbWalkoffCheck()){BW.over=true;BW.winner=BW.cpu;}BW.pending=null;}
+function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;if(p.runs>0)BW._runPulse=(off===BW.you)?'you':'cpu';const def=bwbDef();if(def.pitcher)def.pitcher._runsInn=(def.pitcher._runsInn||0)+p.runs;BW.bases=p.nb;BW._ab=(BW._ab||0)+1;bwbRecordStats(p,off,def);if(p.runs>0&&!BW.over&&bwbWalkoffCheck()){BW.over=true;BW.winner=BW.cpu;}BW.pending=null;}
 function bwCardStat(id,mode){
   const bw=bwState();if(!bw.cardStats)bw.cardStats={};
   if(!bw.cardStats[id])bw.cardStats[id]={};
@@ -448,9 +451,9 @@ function bwbOppTendency(){
 function bwbBug(yb){
   const outs=[0,1,2].map(i=>`<span class="bwb-od ${i<BW.outs?'on':''}"></span>`).join('');
   return `<div class="bwb-bug">
-    <div class="bwb-bteam ${!yb?'bat':''}"><span class="rn" style="color:var(--blue)">${BW.cpu.runs}</span><span class="nm">${(BW.cpu.name||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}<small>${!yb?'AT BAT':'PITCHING'}</small></span></div>
+    <div class="bwb-bteam ${!yb?'bat':''}"><span class="rn${BW._runPulse==='cpu'?' pulse':''}" style="color:var(--blue)">${BW.cpu.runs}</span><span class="nm">${(BW.cpu.name||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}<small>${!yb?'AT BAT':'PITCHING'}</small></span></div>
     <div class="bwb-bmid">${bwbDia()}<div class="bwb-binn">${yb?'\u25b2 Top':'\u25bc Bot'} ${BW.inning}<span class="bwb-o">${outs}</span></div></div>
-    <div class="bwb-bteam r ${yb?'bat':''}"><span class="nm">${bwTeam().logo} ${(BW.you.name||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}<small>${yb?'AT BAT':'PITCHING'}</small></span><span class="rn">${BW.you.runs}</span></div>
+    <div class="bwb-bteam r ${yb?'bat':''}"><span class="nm">${bwTeam().logo} ${(BW.you.name||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}<small>${yb?'AT BAT':'PITCHING'}</small></span><span class="rn${BW._runPulse==='you'?' pulse':''}">${BW.you.runs}</span></div>
   </div>`;
 }
 function bwbActions(yb){
@@ -537,6 +540,7 @@ function screenBwBattle(){
     ${bwbStacks(BW.you)}
     <div class="bwb-legend">🔥 Fastball · 💨 Offspeed · 🌀 Breaking · <b style="color:var(--green)">CON</b> contact (easier hits) · <b style="color:var(--red)">PWR</b> +1 base on hits · <b style="color:var(--blue)">WHIFF</b> strikeout stuff · <b style="color:var(--amber)">GB</b> kills extra-base hits</div>`);
   _atTitle=true;ensureNavBtns();
+  setTimeout(()=>{BW._runPulse=null;},600);
   if(BW.phase==='result'&&!BW.over)bwbAnimate();
 }
 
@@ -556,7 +560,7 @@ function bwbAnimate(){
   const t0=setTimeout(()=>{let tick=setInterval(()=>{const a=document.getElementById('bwbd1'),b=document.getElementById('bwbd2');if(a)a.textContent=rint(1,6);if(b)b.textContent=rint(1,6);},80);window._bwTimers.push(tick);
     const settle=setTimeout(()=>{clearInterval(tick);const a=document.getElementById('bwbd1'),b=document.getElementById('bwbd2');if(a){a.textContent=r.d1;a.classList.remove('roll');}if(b){b.textContent=r.d2;b.classList.remove('roll');}},850);window._bwTimers.push(settle);},650);
   const tM=setTimeout(()=>{const m=document.getElementById('bwbmath');if(m)m.style.opacity=1;},1650);
-  const tO=setTimeout(()=>{const _s=r.walk?'walk':(r.ejected||r.bases===0)?'out':r.bases>=4?'hr':['out','single','double','triple'][Math.min(3,r.bases)];sfx(_s);if(_s==='hr')hap(35);if(r.meatball&&r.bases>=1)sfx('meatball');bwbApply();const o=document.getElementById('bwboutc');if(o)o.style.opacity=1;const sub=document.getElementById('bwbsub');if(sub)sub.textContent=BW.lastMsg;const nb=document.getElementById('bwbnext');if(nb){nb.style.opacity=1;nb.textContent=BW.over?'See result ▸':BW.outs>=3?'Change sides ▸':'Next batter ▸';}if(BW.over)screenBwBattle();},2050);
+  const tO=setTimeout(()=>{const _s=r.walk?'walk':(r.ejected||r.bases===0)?((BW.pending&&BW.pending.isK)?'strikeout':'yourout'):r.bases>=4?'hr':['out','single','double','triple'][Math.min(3,r.bases)];sfx(_s);if(_s==='hr')hap(35);if(r.meatball&&r.bases>=1)sfx('meatball');bwbApply();const o=document.getElementById('bwboutc');if(o)o.style.opacity=1;const sub=document.getElementById('bwbsub');if(sub)sub.textContent=BW.lastMsg;const nb=document.getElementById('bwbnext');if(nb){nb.style.opacity=1;nb.textContent=BW.over?'See result ▸':BW.outs>=3?'Change sides ▸':'Next batter ▸';}if(BW.over)screenBwBattle();},2050);
   window._bwTimers.push(t0,tM,tO);
 }
 // ---- gauntlet flow ----

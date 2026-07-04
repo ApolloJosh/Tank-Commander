@@ -420,7 +420,7 @@ function screenTitle(){
       <div class="row"><span class="v">${r.owner?fmtB(r.clubValue||0)+' value':r.mode==='survivor'?'Score '+(r.score||0):(r.champions||0)+'× 🏆'}</span><button class="rbtn" onclick="resumeRun('${r.id}')">Resume</button></div>
     </div>`;
   const runsHtml=runs.length?runs.slice(0,5).map(runCard).join(''):'<p class="small muted" style="margin:0">No franchises yet — start one from the left.</p>';
-  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v9.5</span>`;
+  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v9.8</span>`;
   render(`
    <div class="tdash">
      <div class="tdash-top"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="tdash-top-r">${topR}</div></div>
@@ -448,6 +448,7 @@ function screenTitle(){
        <section class="thero">
          <img src="${LOGO_SQ}" alt="Baseball Tank Commander">
          <div class="tagrule"><span class="ln"></span><span class="tx">Baseball Simulator</span><span class="ln"></span></div>
+         <span class="stamp" style="margin:0 0 10px">Field Issue · Spec TC-98</span>
          <div class="tpitch" style="max-width:470px;margin:0 auto;text-align:left">
            <div class="tpitch-row"><span class="ic">🏗️</span><div><b>Rebuild a broken franchise.</b><span class="small muted"> Tank for picks, draft stars, work the trade market, win it all in 6 seasons.</span></div></div>
            <div class="tpitch-row"><span class="ic">🃏</span><div><b>Collect the 500-card set.</b><span class="small muted"> Rip packs, chase HOF rainbows, and build your bWARfare deck.</span></div></div>
@@ -483,7 +484,7 @@ function screenTitle(){
          </div>
        </aside>
      </div>
-     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 9.5.0</span></div>
+     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 9.8.0</span></div>
    </div>
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);

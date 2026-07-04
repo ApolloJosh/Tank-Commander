@@ -753,7 +753,7 @@ function celebrateWS(){
   sfx('win');hap([40,60,120]);
   const old=document.getElementById('wscele');if(old)old.remove();
   const ov=document.createElement('div');ov.id='wscele';
-  const cols=['#bdee3c','#e6c84e','#9bd84a','#ffffff','#e6b24a','#9fb0c8'];
+  const cols=['#d9822b','#e6c84e','#9bd84a','#f4ecd6','#e6b24a','#9fb0c8'];
   let conf='';
   for(let i=0;i<96;i++){const l=Math.random()*100,d=2.4+Math.random()*2.8,delay=-Math.random()*4.5,c=cols[i%cols.length],w=6+Math.random()*7;
     conf+=`<i class="burst" style="left:${l}vw;width:${w.toFixed(1)}px;height:${(w*1.5).toFixed(1)}px;background:${c};animation:confFall ${d.toFixed(2)}s linear ${delay.toFixed(2)}s infinite"></i>`;}

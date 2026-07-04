@@ -1,7 +1,7 @@
 // Headless loader: stubs the DOM, loads the built game script, exposes globals.
 const fs=require('fs'),path=require('path'),vm=require('vm');
-function mockEl(){const el={style:{},children:[],classList:{add(){},remove(){},toggle(){},contains(){return false}},
-  setAttribute(){},getAttribute(){return null},addEventListener(){},removeEventListener(){},remove(){},
+function mockEl(){const el={style:{},children:[],classList:{add(){},remove(){},animate(){return{cancel(){},finished:Promise.resolve()}},toggle(){},contains(){return false}},
+  setAttribute(){},getAttribute(){return null},addEventListener(){},removeEventListener(){},remove(){},animate(){return{cancel(){},finished:Promise.resolve()}},
   appendChild(c){el.children.push(c);return c},insertBefore(c){el.children.push(c);return c},querySelector(){return null},
   querySelectorAll(){return[]},getContext(){return null},focus(){},blur(){},click(){},
   getBoundingClientRect(){return{top:0,left:0,width:0,height:0}}};
