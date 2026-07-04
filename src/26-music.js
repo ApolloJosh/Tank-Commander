@@ -73,6 +73,15 @@ function musAutoStart(){   // called from the first user gesture (autoplay-safe)
   if(_musStarted||_musDead)return;_musStarted=true;
   if(musState().on&&sndOn())musLoad(true);
 }
+function musTryAutoplay(){   // best-effort autoplay at page load; browsers may veto until first tap
+  if(_musStarted||_musDead)return;
+  const m=musState();if(!(m.on&&sndOn()))return;
+  const el=musEl();if(!el)return;
+  el.src=AUDIO_BASE+MUSIC[m.i][0];el.volume=m.vol;
+  const p=el.play();
+  if(p&&p.then)p.then(()=>{_musStarted=true;musPaint();}).catch(()=>{});   // vetoed → first tap starts it
+  else{_musStarted=true;musPaint();}
+}
 function ensureMusBar(){
   if(document.getElementById('musbar')||typeof Audio==='undefined')return;
   const d=document.createElement('div');d.id='musbar';document.body.appendChild(d);musPaint();
@@ -92,10 +101,10 @@ function musPaint(){
     <button class="mb dim" title="Collapse" onclick="musMin(1)">×</button>`;
 }
 if(typeof document!=='undefined'&&document.addEventListener)
-  setTimeout(()=>{try{ensureMusBar();}catch(e){}},0);
+  setTimeout(()=>{try{ensureMusBar();musTryAutoplay();}catch(e){}},0);
 
 /* ---- sampled SFX (with synth fallback) ---- */
-const SFX_FILES={crack:'sfx/bat-impact.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:'sfx/strikeout.mp3',yourout:'sfx/youre-out.mp3'};
+const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:'sfx/strikeout.mp3',yourout:'sfx/youre-out.mp3'};
 const _smp={};
 function playSmp(n,vol){
   if(typeof Audio==='undefined'||!SFX_FILES[n])return false;

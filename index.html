@@ -1913,7 +1913,7 @@ function screenTitle(){
       <div class="row"><span class="v">${r.owner?fmtB(r.clubValue||0)+' value':r.mode==='survivor'?'Score '+(r.score||0):(r.champions||0)+'× 🏆'}</span><button class="rbtn" onclick="resumeRun('${r.id}')">Resume</button></div>
     </div>`;
   const runsHtml=runs.length?runs.slice(0,5).map(runCard).join(''):'<p class="small muted" style="margin:0">No franchises yet — start one from the left.</p>';
-  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v9.8</span>`;
+  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v9.8.1</span>`;
   render(`
    <div class="tdash">
      <div class="tdash-top"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="tdash-top-r">${topR}</div></div>
@@ -1977,7 +1977,7 @@ function screenTitle(){
          </div>
        </aside>
      </div>
-     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 9.8.0</span></div>
+     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 9.8.1</span></div>
    </div>
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
@@ -6482,11 +6482,12 @@ function _noise(dur,fc,q,vol,at,type){ // filtered noise burst
 }
 const _SFX={
   tap(){_tone(1400,900,.05,'square',.06);},
-  dice(){for(let i=0;i<5;i++)_tone(700+Math.random()*500,0,.03,'square',.05,i*.09);},
+  dice(){if(playSmp('dice'))return;for(let i=0;i<5;i++)_tone(700+Math.random()*500,0,.03,'square',.05,i*.09);},
   crack(){if(playSmp('crack'))return;_noise(.09,2100,1.2,.5);_tone(180,60,.09,'triangle',.3);},
-  single(){_SFX.crack();_tone(660,880,.12,'sine',.14,.08);},
-  double(){_SFX.crack();_tone(660,1100,.16,'sine',.16,.08);},
-  triple(){_SFX.crack();_tone(660,1320,.2,'sine',.18,.08);},
+  hit(){if(playSmp('crackhit'))return;_SFX.crack();},   // non-HR contact
+  single(){_SFX.hit();_tone(660,880,.12,'sine',.14,.08);},
+  double(){_SFX.hit();_tone(660,1100,.16,'sine',.16,.08);},
+  triple(){_SFX.hit();_tone(660,1320,.2,'sine',.18,.08);},
   hr(){_SFX.crack();_tone(520,1560,.5,'sawtooth',.12,.06);_noise(1.1,1000,.4,.16,.18,'lowpass');},
   out(){_tone(140,70,.14,'sine',.3);_noise(.06,500,1,.12);},
   walk(){_tone(520,520,.07,'sine',.12);_tone(650,650,.07,'sine',.12,.1);},
@@ -6605,6 +6606,15 @@ function musAutoStart(){   // called from the first user gesture (autoplay-safe)
   if(_musStarted||_musDead)return;_musStarted=true;
   if(musState().on&&sndOn())musLoad(true);
 }
+function musTryAutoplay(){   // best-effort autoplay at page load; browsers may veto until first tap
+  if(_musStarted||_musDead)return;
+  const m=musState();if(!(m.on&&sndOn()))return;
+  const el=musEl();if(!el)return;
+  el.src=AUDIO_BASE+MUSIC[m.i][0];el.volume=m.vol;
+  const p=el.play();
+  if(p&&p.then)p.then(()=>{_musStarted=true;musPaint();}).catch(()=>{});   // vetoed → first tap starts it
+  else{_musStarted=true;musPaint();}
+}
 function ensureMusBar(){
   if(document.getElementById('musbar')||typeof Audio==='undefined')return;
   const d=document.createElement('div');d.id='musbar';document.body.appendChild(d);musPaint();
@@ -6624,10 +6634,10 @@ function musPaint(){
     <button class="mb dim" title="Collapse" onclick="musMin(1)">×</button>`;
 }
 if(typeof document!=='undefined'&&document.addEventListener)
-  setTimeout(()=>{try{ensureMusBar();}catch(e){}},0);
+  setTimeout(()=>{try{ensureMusBar();musTryAutoplay();}catch(e){}},0);
 
 /* ---- sampled SFX (with synth fallback) ---- */
-const SFX_FILES={crack:'sfx/bat-impact.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:'sfx/strikeout.mp3',yourout:'sfx/youre-out.mp3'};
+const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:'sfx/strikeout.mp3',yourout:'sfx/youre-out.mp3'};
 const _smp={};
 function playSmp(n,vol){
   if(typeof Audio==='undefined'||!SFX_FILES[n])return false;

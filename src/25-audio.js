@@ -35,11 +35,12 @@ function _noise(dur,fc,q,vol,at,type){ // filtered noise burst
 }
 const _SFX={
   tap(){_tone(1400,900,.05,'square',.06);},
-  dice(){for(let i=0;i<5;i++)_tone(700+Math.random()*500,0,.03,'square',.05,i*.09);},
+  dice(){if(playSmp('dice'))return;for(let i=0;i<5;i++)_tone(700+Math.random()*500,0,.03,'square',.05,i*.09);},
   crack(){if(playSmp('crack'))return;_noise(.09,2100,1.2,.5);_tone(180,60,.09,'triangle',.3);},
-  single(){_SFX.crack();_tone(660,880,.12,'sine',.14,.08);},
-  double(){_SFX.crack();_tone(660,1100,.16,'sine',.16,.08);},
-  triple(){_SFX.crack();_tone(660,1320,.2,'sine',.18,.08);},
+  hit(){if(playSmp('crackhit'))return;_SFX.crack();},   // non-HR contact
+  single(){_SFX.hit();_tone(660,880,.12,'sine',.14,.08);},
+  double(){_SFX.hit();_tone(660,1100,.16,'sine',.16,.08);},
+  triple(){_SFX.hit();_tone(660,1320,.2,'sine',.18,.08);},
   hr(){_SFX.crack();_tone(520,1560,.5,'sawtooth',.12,.06);_noise(1.1,1000,.4,.16,.18,'lowpass');},
   out(){_tone(140,70,.14,'sine',.3);_noise(.06,500,1,.12);},
   walk(){_tone(520,520,.07,'sine',.12);_tone(650,650,.07,'sine',.12,.1);},
