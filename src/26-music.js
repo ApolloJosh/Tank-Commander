@@ -18,6 +18,15 @@ const MUSIC=[
  ['music/We_Are_Young.mp3','We Are Young'],
  ['music/We_Didnt_Start_the_Fire.mp3',"We Didn't Start the Fire"],
  ['music/Yellow_Submarine.mp3','Yellow Submarine'],
+ ['music/Baseball_Medley_Lowrey_Stardust.mp3','Baseball Medley'],
+ ['music/America_My_Country_Tis_of_Thee.mp3',"My Country, 'Tis of Thee"],
+ ['music/America_the_Beautiful.mp3','America the Beautiful'],
+ ['music/It_s_Gonna_Be_Me.mp3',"It's Gonna Be Me"],
+ ['music/God_Only_Knows.mp3','God Only Knows'],
+ ['music/Your_Love.mp3','Your Love'],
+ ['music/Ob-La-Di_Ob-La-Da.mp3','Ob-La-Di, Ob-La-Da'],
+ ['music/Born_This_Way_Organ_Version.mp3','Born This Way (Organ)'],
+ ['music/California_Girls.mp3','California Girls'],
 ];
 const MUS_KEY='tankCommander_music';
 let _mus=null,_musEl=null,_musStarted=false,_musErr=0,_musDead=false;
@@ -104,14 +113,22 @@ if(typeof document!=='undefined'&&document.addEventListener)
   setTimeout(()=>{try{ensureMusBar();musTryAutoplay();}catch(e){}},0);
 
 /* ---- sampled SFX (with synth fallback) ---- */
-const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:'sfx/strikeout.mp3',yourout:'sfx/youre-out.mp3'};
+const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:'sfx/strikeout.mp3',yourout:['sfx/youre-out.mp3','sfx/out.mp3','sfx/youre-out-2.mp3']};
 const _smp={};
-function playSmp(n,vol){
-  if(typeof Audio==='undefined'||!SFX_FILES[n])return false;
-  let a=_smp[n];
+function _smpOne(path,vol){   // one sample file, cached; false once known-bad
+  let a=_smp[path];
   if(a===false)return false;
-  if(!a){a=new Audio(AUDIO_BASE+SFX_FILES[n]);a.preload='auto';a.addEventListener('error',()=>{_smp[n]=false;});_smp[n]=a;}
-  if(_smp[n]===false||(a.error))return false;
+  if(!a){a=new Audio(AUDIO_BASE+path);a.preload='auto';a.addEventListener('error',()=>{_smp[path]=false;});_smp[path]=a;}
+  if(_smp[path]===false||a.error)return false;
   try{a.currentTime=0;a.volume=vol==null?.9:vol;const p=a.play();if(p&&p.catch)p.catch(()=>{});return true;}
   catch(e){return false;}
+}
+function playSmp(n,vol){
+  if(typeof Audio==='undefined'||!SFX_FILES[n])return false;
+  const f=SFX_FILES[n];
+  if(!Array.isArray(f))return _smpOne(f,vol);
+  // variant pool: pick at random, fall through to the others if that file is missing
+  const order=f.slice();for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+  for(const path of order)if(_smpOne(path,vol))return true;
+  return false;
 }

@@ -1913,7 +1913,7 @@ function screenTitle(){
       <div class="row"><span class="v">${r.owner?fmtB(r.clubValue||0)+' value':r.mode==='survivor'?'Score '+(r.score||0):(r.champions||0)+'× 🏆'}</span><button class="rbtn" onclick="resumeRun('${r.id}')">Resume</button></div>
     </div>`;
   const runsHtml=runs.length?runs.slice(0,5).map(runCard).join(''):'<p class="small muted" style="margin:0">No franchises yet — start one from the left.</p>';
-  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v9.8.1</span>`;
+  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v9.8.2</span>`;
   render(`
    <div class="tdash">
      <div class="tdash-top"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="tdash-top-r">${topR}</div></div>
@@ -1977,7 +1977,7 @@ function screenTitle(){
          </div>
        </aside>
      </div>
-     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 9.8.1</span></div>
+     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 9.8.2</span></div>
    </div>
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
@@ -6499,7 +6499,7 @@ const _SFX={
   levelup(){[523,659,784,1046].forEach((f,i)=>_tone(f,f,.16,'triangle',.16,i*.08));},
   win(){[392,523,659,784].forEach((f,i)=>_tone(f,f,.3,'sawtooth',.1,i*.11));_noise(1.2,900,.4,.14,.3,'lowpass');},
   lose(){_tone(330,262,.3,'triangle',.16);_tone(262,196,.42,'triangle',.16,.24);},
-  strikeout(){if(playSmp('strikeout'))return;_SFX.out();},
+  strikeout(){if(playSmp('strikeout'))return;_noise(.12,3400,1.5,.22,0,'highpass');_tone(900,300,.16,'square',.1,.06);_tone(120,60,.12,'sine',.3,.12);},   // swish + punchout
   yourout(){if(playSmp('yourout'))return;_SFX.out();},
   playball(){if(playSmp('playball'))return;[392,523,659].forEach((f,i)=>_tone(f,f,.18,'triangle',.14,i*.09));},
 };
@@ -6551,6 +6551,15 @@ const MUSIC=[
  ['music/We_Are_Young.mp3','We Are Young'],
  ['music/We_Didnt_Start_the_Fire.mp3',"We Didn't Start the Fire"],
  ['music/Yellow_Submarine.mp3','Yellow Submarine'],
+ ['music/Baseball_Medley_Lowrey_Stardust.mp3','Baseball Medley'],
+ ['music/America_My_Country_Tis_of_Thee.mp3',"My Country, 'Tis of Thee"],
+ ['music/America_the_Beautiful.mp3','America the Beautiful'],
+ ['music/It_s_Gonna_Be_Me.mp3',"It's Gonna Be Me"],
+ ['music/God_Only_Knows.mp3','God Only Knows'],
+ ['music/Your_Love.mp3','Your Love'],
+ ['music/Ob-La-Di_Ob-La-Da.mp3','Ob-La-Di, Ob-La-Da'],
+ ['music/Born_This_Way_Organ_Version.mp3','Born This Way (Organ)'],
+ ['music/California_Girls.mp3','California Girls'],
 ];
 const MUS_KEY='tankCommander_music';
 let _mus=null,_musEl=null,_musStarted=false,_musErr=0,_musDead=false;
@@ -6637,16 +6646,24 @@ if(typeof document!=='undefined'&&document.addEventListener)
   setTimeout(()=>{try{ensureMusBar();musTryAutoplay();}catch(e){}},0);
 
 /* ---- sampled SFX (with synth fallback) ---- */
-const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:'sfx/strikeout.mp3',yourout:'sfx/youre-out.mp3'};
+const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:'sfx/strikeout.mp3',yourout:['sfx/youre-out.mp3','sfx/out.mp3','sfx/youre-out-2.mp3']};
 const _smp={};
-function playSmp(n,vol){
-  if(typeof Audio==='undefined'||!SFX_FILES[n])return false;
-  let a=_smp[n];
+function _smpOne(path,vol){   // one sample file, cached; false once known-bad
+  let a=_smp[path];
   if(a===false)return false;
-  if(!a){a=new Audio(AUDIO_BASE+SFX_FILES[n]);a.preload='auto';a.addEventListener('error',()=>{_smp[n]=false;});_smp[n]=a;}
-  if(_smp[n]===false||(a.error))return false;
+  if(!a){a=new Audio(AUDIO_BASE+path);a.preload='auto';a.addEventListener('error',()=>{_smp[path]=false;});_smp[path]=a;}
+  if(_smp[path]===false||a.error)return false;
   try{a.currentTime=0;a.volume=vol==null?.9:vol;const p=a.play();if(p&&p.catch)p.catch(()=>{});return true;}
   catch(e){return false;}
+}
+function playSmp(n,vol){
+  if(typeof Audio==='undefined'||!SFX_FILES[n])return false;
+  const f=SFX_FILES[n];
+  if(!Array.isArray(f))return _smpOne(f,vol);
+  // variant pool: pick at random, fall through to the others if that file is missing
+  const order=f.slice();for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+  for(const path of order)if(_smpOne(path,vol))return true;
+  return false;
 }
 /* boot */
 (localStorage.getItem(WELCOME_KEY)?screenTitle:screenWelcome)();

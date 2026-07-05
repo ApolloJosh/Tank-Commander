@@ -52,7 +52,7 @@ const _SFX={
   levelup(){[523,659,784,1046].forEach((f,i)=>_tone(f,f,.16,'triangle',.16,i*.08));},
   win(){[392,523,659,784].forEach((f,i)=>_tone(f,f,.3,'sawtooth',.1,i*.11));_noise(1.2,900,.4,.14,.3,'lowpass');},
   lose(){_tone(330,262,.3,'triangle',.16);_tone(262,196,.42,'triangle',.16,.24);},
-  strikeout(){if(playSmp('strikeout'))return;_SFX.out();},
+  strikeout(){if(playSmp('strikeout'))return;_noise(.12,3400,1.5,.22,0,'highpass');_tone(900,300,.16,'square',.1,.06);_tone(120,60,.12,'sine',.3,.12);},   // swish + punchout
   yourout(){if(playSmp('yourout'))return;_SFX.out();},
   playball(){if(playSmp('playball'))return;[392,523,659].forEach((f,i)=>_tone(f,f,.18,'triangle',.14,i*.09));},
 };

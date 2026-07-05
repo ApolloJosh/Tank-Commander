@@ -28,7 +28,7 @@ function load(file){
   };
   ctx.window=ctx;ctx.globalThis=ctx;
   vm.createContext(ctx);
-  vm.runInContext(js+';globalThis.__X={SET1:typeof SET1!=="undefined"?SET1:null};'+'globalThis.__G={get esc(){return typeof esc!=="undefined"?esc:null},get PROFILE(){return PROFILE},set PROFILE(v){PROFILE=v},get BW(){return typeof BW!=="undefined"?BW:null},set BW(v){BW=v},get G(){return typeof G!=="undefined"?G:null}};',ctx,{filename:'game.js'});
+  vm.runInContext(js+';globalThis.__X={SET1:typeof SET1!=="undefined"?SET1:null};'+'globalThis.__G={get esc(){return typeof esc!=="undefined"?esc:null},get PROFILE(){return PROFILE},set PROFILE(v){PROFILE=v},get BW(){return typeof BW!=="undefined"?BW:null},set BW(v){BW=v},get G(){return typeof G!=="undefined"?G:null},get MUSIC(){return typeof MUSIC!=="undefined"?MUSIC:null}};',ctx,{filename:'game.js'});
   return ctx;
 }
 module.exports={load};

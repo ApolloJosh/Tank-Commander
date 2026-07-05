@@ -43,7 +43,13 @@ t('music state defaults + controls safe headless',()=>{
   ctx.musToggle();ctx.musSkip(1);ctx.musVol(0.1);ctx.musMin(1);ctx.musMin(0);ctx.musMuteSync();ctx.musAutoStart();
 });
 t('sampled sfx fall back safely headless',()=>{
-  ctx.sfx('playball');ctx.sfx('strikeout');ctx.sfx('yourout');ctx.sfx('crack');ctx.sfx('pack');
+  ctx.sfx('playball');ctx.sfx('strikeout');ctx.sfx('yourout');ctx.sfx('crack');ctx.sfx('pack');ctx.sfx('hit');ctx.sfx('dice');ctx.sfx('single');ctx.sfx('hr');ctx.musTryAutoplay();
+});
+t('yourout pool + strikeout distinct + 19 tracks',()=>{
+  for(let i=0;i<5;i++)ctx.sfx('yourout');
+  ctx.sfx('strikeout');
+  if(ctx.playSmp('yourout')!==false)throw new Error('array pool should fail headless');
+  if(ctx.__G.MUSIC.length!==19)throw new Error('tracks: '+ctx.__G.MUSIC.length);
   if(ctx.playSmp('crack')!==false)throw new Error('expected false without Audio');
 });
 console.log(checks.join('\n'));
