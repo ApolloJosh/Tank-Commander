@@ -283,6 +283,31 @@ function bwbCommitPitch(pitch){
   const off=bwbOff();bwbDoAB(bwbCpuHitter(off),bwbCpuHitEdge(off));
 }
 function bwbSwing(){if(!BW.selHitter)return;bwbDoAB(BW.selHitter,BW.selEdge&&BW.selEdge.side==='H'?BW.selEdge:null);}
+
+/* ---- typed outs: a strikeout is its own moment; contact outs get real (sometimes fun) outcomes.
+   total ≤4 = K · 5–6 = weak contact · 7 = hard contact (just missed a hit) ---- */
+function bwbOutKind(isK,total,h){
+  const nm=h&&h.name?h.name:'The batter';
+  if(isK)return {k:'K',lab:'STRIKEOUT',msg:pick([
+    `${nm} goes down swinging — strike three!`,
+    `${nm} freezes — called strike three on the corner.`,
+    `${nm} chases one in the dirt — punched out.`,
+    `Filthy. ${nm} never had a chance — strike three.`])};
+  if(total>=7)return {k:'hard',lab:pick(['LINE OUT','ROBBED!','WARNING TRACK','THROWN OUT','DIVING CATCH']),msg:''};
+  return {k:'soft',lab:pick(['GROUND OUT','FLY OUT','POP OUT','FOUL OUT','COMEBACKER']),msg:''};
+}
+const BWB_OUT_MSGS={
+  'LINE OUT':n=>`${n} smokes a liner — right at the shortstop. Robbed of a hit.`,
+  'ROBBED!':n=>`${n} crushes it to deep center… and the center fielder goes UP THE WALL to bring it back!`,
+  'WARNING TRACK':n=>`${n} drives it to the track — caught a few feet shy of a souvenir.`,
+  'THROWN OUT':n=>`${n} rips one to the gap and tries to stretch it into a double — gunned down at second!`,
+  'DIVING CATCH':n=>`${n} laces it down the line — stolen with a full-layout dive.`,
+  'GROUND OUT':n=>pick([`${n} chops it to short — routine play at first.`,`${n} rolls one over to second — 4-3.`]),
+  'FLY OUT':n=>`${n} lofts a lazy fly to left — the easy catch.`,
+  'POP OUT':n=>`${n} pops it straight up — the infield squeezes it.`,
+  'FOUL OUT':n=>`${n} clips it foul behind the plate — the catcher camps under it.`,
+  'COMEBACKER':n=>`${n} raps it right back to the mound — easiest out of the day.`,
+};
 function bwbDoAB(h,hE){
   const off=bwbOff(),def=bwbDef();
   const sit=(off===BW.cpu)?(BW._cpuSitForce?3:((BW._sitPred&&BW._sitPred===BW.committedPitch)?2:0)):0;   // CPU read / sign-steal
@@ -290,13 +315,14 @@ function bwbDoAB(h,hE){
   const r=bwbResolve(h,BW.committedPitch,hE,BW.pdEdge,def.pitcher,sit);
   let pend={outs:0,runs:0,nb:BW.bases.slice(),scorers:[],batter:h,bases:r.bases,ejected:!!r.ejected,isK:false,walk:!!r.walk,pitcher:def.pitcher};
   if(r.walk){const wc=bwbWalkCalc(BW.bases,h);pend.runs=wc.runs;pend.nb=wc.nb;pend.scorers=wc.scorers;pend.bases=0;}
-  else if(r.ejected||r.bases===0){pend.outs=1;pend.isK=(!r.ejected&&r.total<=4);}
+  else if(r.ejected||r.bases===0){pend.outs=1;pend.isK=(!r.ejected&&r.total<=4);
+    if(!r.ejected){pend.outKind=bwbOutKind(pend.isK,r.total,h);r.label=pend.outKind.lab;}}
   else{const rc=bwbRunCalc(r.bases,BW.bases,h);pend.runs=rc.runs;pend.nb=rc.nb;pend.scorers=rc.scorers;}
   off.hand=off.hand.filter(x=>x.id!==h.id);if(hE)off.phand=off.phand.filter(e=>e.id!==hE.id);bwbRefill(off);
   BW.last=r;BW.pending=pend;BW.phase='result';
   if(off===BW.you){BW._cpuPitchLog=BW._cpuPitchLog||{FB:0,OFF:0,BR:0};BW._cpuPitchLog[BW.committedPitch]++;}   // book on the opposing pitcher
   const who=off===BW.you?'You':BW.cpu.name;
-  BW.lastMsg=(r.meatball&&r.bases>=1?'\ud83c\udf56 Hung pitch! ':'')+(r.walk?`${who}: ${h.name} walks${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} forced in`:''}.`:r.ejected?`${h.name} ejected for a corked bat — out.`:r.bases===0?`${h.name} ${r.total<=4?'strikes out':'is retired'}.`:`${who}: ${h.name} ${r.label.toLowerCase()}${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} in`:''}!`);
+  BW.lastMsg=(r.meatball&&r.bases>=1?'\ud83c\udf56 Hung pitch! ':'')+(r.walk?`${who}: ${h.name} walks${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} forced in`:''}.`:r.ejected?`${h.name} ejected for a corked bat — out.`:r.bases===0?(pend.outKind?(pend.outKind.msg||(BWB_OUT_MSGS[pend.outKind.lab]||(n=>`${n} is retired.`))(h.name)):`${h.name} is retired.`):`${who}: ${h.name} ${r.label.toLowerCase()}${pend.runs?` — ${pend.runs} run${pend.runs>1?'s':''} in`:''}!`);
   screenBwBattle();
 }
 function bwbApply(){const off=bwbOff(),p=BW.pending;if(!p)return;BW.outs+=p.outs;off.runs+=p.runs;if(p.runs>0)BW._runPulse=(off===BW.you)?'you':'cpu';const def=bwbDef();if(def.pitcher)def.pitcher._runsInn=(def.pitcher._runsInn||0)+p.runs;BW.bases=p.nb;BW._ab=(BW._ab||0)+1;bwbRecordStats(p,off,def);if(p.runs>0&&!BW.over&&bwbWalkoffCheck()){BW.over=true;BW.winner=BW.cpu;}BW.pending=null;}
@@ -560,7 +586,9 @@ function bwbAnimate(){
   const t0=setTimeout(()=>{let tick=setInterval(()=>{const a=document.getElementById('bwbd1'),b=document.getElementById('bwbd2');if(a)a.textContent=rint(1,6);if(b)b.textContent=rint(1,6);},80);window._bwTimers.push(tick);
     const settle=setTimeout(()=>{clearInterval(tick);const a=document.getElementById('bwbd1'),b=document.getElementById('bwbd2');if(a){a.textContent=r.d1;a.classList.remove('roll');}if(b){b.textContent=r.d2;b.classList.remove('roll');}},850);window._bwTimers.push(settle);},650);
   const tM=setTimeout(()=>{const m=document.getElementById('bwbmath');if(m)m.style.opacity=1;},1650);
-  const tO=setTimeout(()=>{const _s=r.walk?'walk':(r.ejected||r.bases===0)?((BW.pending&&BW.pending.isK)?'strikeout':'yourout'):r.bases>=4?'hr':['out','single','double','triple'][Math.min(3,r.bases)];sfx(_s);if(_s==='hr')hap(35);if(r.meatball&&r.bases>=1)sfx('meatball');bwbApply();const o=document.getElementById('bwboutc');if(o)o.style.opacity=1;const sub=document.getElementById('bwbsub');if(sub)sub.textContent=BW.lastMsg;const nb=document.getElementById('bwbnext');if(nb){nb.style.opacity=1;nb.textContent=BW.over?'See result ▸':BW.outs>=3?'Change sides ▸':'Next batter ▸';}if(BW.over)screenBwBattle();},2050);
+  const tO=setTimeout(()=>{const _k=BW.pending&&BW.pending.outKind;
+    const _s=r.walk?'walk':r.ejected?'yourout':(r.bases===0)?((_k&&_k.k==='K')?'strikeout':'contactout'):r.bases>=4?'hr':['out','single','double','triple'][Math.min(3,r.bases)];
+    if(_s==='contactout'){sfx('hit');setTimeout(()=>{try{sfx('yourout');}catch(e){}},320);}else sfx(_s);if(_s==='hr')hap(35);if(r.meatball&&r.bases>=1)sfx('meatball');bwbApply();const o=document.getElementById('bwboutc');if(o)o.style.opacity=1;const sub=document.getElementById('bwbsub');if(sub)sub.textContent=BW.lastMsg;const nb=document.getElementById('bwbnext');if(nb){nb.style.opacity=1;nb.textContent=BW.over?'See result ▸':BW.outs>=3?'Change sides ▸':'Next batter ▸';}if(BW.over)screenBwBattle();},2050);
   window._bwTimers.push(t0,tM,tO);
 }
 // ---- gauntlet flow ----

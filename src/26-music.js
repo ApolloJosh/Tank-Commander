@@ -113,7 +113,7 @@ if(typeof document!=='undefined'&&document.addEventListener)
   setTimeout(()=>{try{ensureMusBar();musTryAutoplay();}catch(e){}},0);
 
 /* ---- sampled SFX (with synth fallback) ---- */
-const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:'sfx/strikeout.mp3',yourout:['sfx/youre-out.mp3','sfx/out.mp3','sfx/youre-out-2.mp3']};
+const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:['sfx/strikeout.mp3','sfx/strikeout-2.mp3'],yourout:['sfx/youre-out-1.mp3','sfx/youre-out-2.mp3','sfx/out.mp3']};
 const _smp={};
 function _smpOne(path,vol){   // one sample file, cached; false once known-bad
   let a=_smp[path];
