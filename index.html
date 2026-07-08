@@ -1893,6 +1893,7 @@ function screenNewFranchise(k){
   _atTitle=true;ensureNavBtns();
 }
 function screenTitle(){
+  bwState();
   if(_titleName==null)_titleName=warPun();
   const MODES=TITLE_MODES;
   const m=MODES[_titleMode]||MODES.career;
