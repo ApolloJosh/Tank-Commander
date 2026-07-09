@@ -61,6 +61,126 @@
   .tpitch-row{display:flex;gap:10px;align-items:flex-start;margin:9px 0;line-height:1.4}
   .tpitch-row .ic{font-size:22px;line-height:1.2;flex-shrink:0}
   .tnote summary::-webkit-details-marker{display:none}
+  /* ---- franchise moments (v9.9) ---- */
+  .ico{vertical-align:-2.5px}
+  .cmap{display:flex;align-items:flex-start;margin:10px 0 16px}
+  .cmap .leg{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
+  .cmap .leg::before{content:"";position:absolute;top:7px;left:-50%;width:100%;height:2px;background:var(--line)}
+  .cmap .leg:first-child::before{display:none}
+  .cmap .dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--line2);background:var(--bg);z-index:1;box-sizing:border-box}
+  .cmap .leg.done .dot{background:var(--green);border-color:var(--green)}
+  .cmap .leg.done::before{background:var(--green)}
+  .cmap .leg.on .dot{background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px rgba(217,130,43,.6)}
+  .cmap .lb{font-family:var(--disp);font-weight:600;font-size:8.5px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;text-align:center}
+  .cmap .leg.on .lb{color:var(--gold)}
+  .fmemo{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:2px;padding:11px 13px;margin:12px 0;font-size:13.5px;line-height:1.55}
+  .fmemo .from{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--dim);margin-bottom:5px;text-transform:uppercase}
+  details.deskp{border:1px solid var(--line);border-radius:3px;background:var(--panel);margin-bottom:9px;overflow:hidden}
+  details.deskp[open]{border-color:var(--line2)}
+  details.deskp>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer;transition:background .12s}
+  details.deskp>summary::-webkit-details-marker{display:none}
+  details.deskp>summary:hover{background:var(--panel2)}
+  details.deskp>summary .dic{flex-shrink:0;width:26px;text-align:center;color:var(--gold)}
+  details.deskp>summary .dtx{flex:1;min-width:0}
+  details.deskp>summary .dtx b{font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:13.5px;display:block}
+  details.deskp>summary .dtx span{font-size:12px;color:var(--dim)}
+  details.deskp>summary .dgo{font-family:var(--disp);color:var(--gold);font-size:15px;transition:transform .15s}
+  details.deskp[open]>summary .dgo{transform:rotate(90deg)}
+  details.deskp>.dbody{padding:2px 14px 14px;border-top:1px solid var(--line)}
+  details.deskp.pri{border-color:var(--gold);background:linear-gradient(160deg,#2b2717,var(--panel) 70%)}
+  .deskcta{position:sticky;bottom:10px;display:flex;justify-content:center;margin-top:14px;z-index:5}
+  .brknews{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:95;background:#ece5cd;color:#1c1508;border-left:5px solid #b0483a;border-radius:3px;padding:10px 16px;box-shadow:0 10px 30px rgba(0,0,0,.6);max-width:min(480px,92vw);animation:brkin .45s cubic-bezier(.2,1.4,.4,1)}
+  .brknews.out{transition:transform .4s,opacity .4s;transform:translateX(-50%) translateY(-80px);opacity:0}
+  @keyframes brkin{0%{transform:translateX(-50%) translateY(-80px)}100%{transform:translateX(-50%) translateY(0)}}
+  .brknews .tag{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:#b0483a;font-weight:600;display:block}
+  .brknews b{font-family:var(--disp);font-size:14.5px;letter-spacing:.04em;display:block;text-transform:uppercase}
+  .brknews span{font-size:12px;color:#4d4025;display:block}
+  .fmtick{position:fixed;inset:0;z-index:88;background:rgba(10,11,6,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center;overflow:auto}
+  .fmtick .skip{position:absolute;top:12px;right:16px;font-family:var(--disp);font-weight:600;font-size:10px;letter-spacing:.16em;color:var(--dim);cursor:pointer}
+  .tk-club{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.24em;color:var(--dim);text-transform:uppercase}
+  .tk-mon{font-family:var(--stencil);font-weight:400;font-size:32px;color:var(--ink)}
+  .tk-rec{font-family:var(--mono);font-weight:600;font-size:26px;color:var(--phos)}
+  .tk-pace{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+  .tk-bars{display:flex;gap:6px;align-items:flex-end;height:54px;margin-top:4px}
+  .tk-bars i{width:26px;background:linear-gradient(180deg,var(--green),#4a5330);border-radius:2px 2px 0 0;opacity:0;transition:height .3s}
+  .tk-bars i.bad{background:linear-gradient(180deg,var(--red),#5a2a1e)}
+  .tk-bars i.show{opacity:1}
+  .tk-hl{background:#ece5cd;color:#1c1508;font-family:var(--disp);font-weight:700;letter-spacing:.05em;font-size:13px;padding:7px 14px;border-radius:2px;box-shadow:0 8px 20px rgba(0,0,0,.5);opacity:0;transform:rotate(-2deg);max-width:92%;}
+  .tk-hl small{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.18em;color:#8f5116}
+  .tk-hl.pop{animation:tkhl 2.4s cubic-bezier(.2,1.3,.4,1) both}
+  @keyframes tkhl{0%{opacity:0;transform:rotate(-2deg) scale(.6)}8%,82%{opacity:1;transform:rotate(-2deg) scale(1)}100%{opacity:0;transform:rotate(-2deg) translateY(-14px)}}
+  .tk-fin{display:none;flex-direction:column;align-items:center;gap:8px}
+  .tk-fin .rec{font-family:var(--stencil);font-weight:400;font-size:46px;color:var(--ink);animation:dfslam .5s cubic-bezier(.2,1.5,.4,1)}
+  .tk-stamp{transform:rotate(-4deg);border:2.5px solid var(--red);color:var(--red);font-family:var(--disp);font-weight:700;letter-spacing:.24em;font-size:14px;padding:5px 16px;border-radius:2px;text-transform:uppercase;animation:tkstamp .4s cubic-bezier(.2,1.6,.4,1) .25s both}
+  .tk-stamp.ok{border-color:var(--phos);color:var(--phos)}
+  .tk-stamp.plan{border-color:var(--amber);color:var(--amber)}
+  @keyframes tkstamp{0%{transform:rotate(-14deg) scale(2.6);opacity:0}100%{transform:rotate(-4deg) scale(1);opacity:1}}
+  .ccard{width:240px;background:linear-gradient(160deg,#2a2d1d,#1c1e13 60%);border:1px solid var(--line2);border-radius:8px;overflow:hidden;position:relative;animation:cardin2 .5s cubic-bezier(.2,1.5,.4,1)}
+  @keyframes cardin2{0%{transform:translateY(24px) rotateY(80deg);opacity:0}100%{transform:none;opacity:1}}
+  .ccard .ch{display:flex;justify-content:space-between;padding:10px 13px;border-bottom:1px solid var(--line);font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.14em;color:var(--gold)}
+  .ccard .nm{font-family:var(--stencil);font-weight:400;font-size:17px;text-align:center;padding:18px 10px 2px}
+  .ccard .role{text-align:center;font-size:11.5px;color:var(--dim);padding-bottom:10px}
+  .ccard .jump{display:flex;align-items:baseline;justify-content:center;gap:10px;padding-bottom:6px;font-family:var(--mono)}
+  .ccard .jump .o{font-size:17px;color:var(--dim);text-decoration:line-through}
+  .ccard .jump .a{font-size:15px;color:var(--dim)}
+  .ccard .jump .n{font-size:30px;font-weight:600;color:var(--phos)}
+  .ccard .verdict{text-align:center;font-size:12px;color:var(--dim);padding:0 12px 16px}
+  .ccard .bstamp{position:absolute;top:14px;left:-42px;transform:rotate(-35deg);background:#b0483a;color:#f4ecd6;font-family:var(--disp);font-weight:700;font-size:9px;letter-spacing:.2em;padding:3px 44px;text-transform:uppercase}
+  .ccard .bstamp.gray{background:#57503a}
+  .camp-dots{display:flex;gap:5px}.camp-dots i{width:7px;height:7px;border-radius:50%;background:var(--line2)}.camp-dots i.on{background:var(--gold)}
+  .fmstrip{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-width:94vw;overflow-x:auto;white-space:nowrap;display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:5px 12px;cursor:pointer}
+  .fmstrip b{font-family:var(--disp);letter-spacing:.14em;color:var(--khaki);font-size:9px}
+  .fmstrip span{color:var(--dim)}
+  .fmstrip span i{font-style:normal;color:var(--ink)}
+  .fmstrip span.me{color:var(--gold)}
+  .fmstrip span.me i{color:var(--phos)}
+  .dcard.dealin{animation:dealin .5s cubic-bezier(.25,1.2,.4,1) both}
+  @keyframes dealin{0%{transform:translate(0,-120px) rotate(-7deg) scale(.55);opacity:0}70%{opacity:1}100%{transform:none;opacity:1}}
+  .oct-vs{display:flex;align-items:center;gap:12px;font-family:var(--stencil);font-size:19px}
+  .oct-vs i{font-family:var(--disp);font-style:normal;color:var(--gold);font-size:14px;letter-spacing:.1em}
+  .oct-vs .you{color:var(--gold)}
+  .oct-plans{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:520px}
+  .oct-plan{display:flex;flex-direction:column;gap:2px;max-width:170px}
+  .oct-plan b{font-size:12.5px}
+  .oct-plan small{font-size:9.5px;letter-spacing:.04em;color:var(--dim);text-transform:none;font-family:'Barlow'}
+  .oct-plan.ruled{opacity:.45}
+  .oct-score{display:flex;align-items:baseline;gap:10px;font-family:var(--stencil);font-size:42px;justify-content:center}
+  .oct-score i{font-style:normal;color:var(--dim);font-size:26px}
+  .oct-score span:first-child{color:var(--phos)}
+  .oct-chips{display:flex;gap:5px;justify-content:center;margin-top:6px;min-height:24px}
+  .oc{width:22px;height:22px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:12px;animation:dffade .3s ease both}
+  .oc.w{background:rgba(158,240,26,.16);border:1px solid var(--phos);color:var(--phos)}
+  .oc.l{background:rgba(224,101,74,.12);border:1px solid var(--red);color:var(--red)}
+  .wp-list{display:flex;flex-direction:column;gap:6px;max-height:44vh;overflow:auto}
+  .wp-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:8px 11px;text-align:left}
+  .wp-row .wp-info{min-width:0}
+  .wp-row .wp-btns{display:flex;gap:5px;flex-shrink:0}
+  .dgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:6px}
+  @media(max-width:680px){.dgrid{grid-template-columns:repeat(2,1fr)}}
+  .dcard{border-radius:7px;min-height:172px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden}
+  .dcard.back{background:radial-gradient(circle at 50% 34%,rgba(217,130,43,.07),transparent 60%),repeating-linear-gradient(135deg,#20231a,#20231a 6px,#262a1b 6px,#262a1b 12px);border:1px solid var(--line2);cursor:pointer;gap:8px;padding:12px 8px;transition:transform .12s,border-color .12s}
+  .dcard.back.can:hover{transform:translateY(-3px);border-color:var(--gold)}
+  .dcard.back.dead{opacity:.45;cursor:not-allowed}
+  .dcard .d-file{font-family:var(--disp);font-weight:700;font-size:9px;letter-spacing:.2em;color:var(--khaki);line-height:1.7}
+  .dcard .d-lines{display:flex;flex-direction:column;gap:3px}
+  .dcard .d-lines span{font-family:var(--mono);font-size:10.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:2px;padding:2px 7px}
+  .dcard .d-hint{font-family:var(--disp);font-weight:600;font-size:8px;letter-spacing:.22em;color:var(--dim)}
+  .dcard.back.can .d-hint{animation:riphint 1.6s ease-in-out infinite;color:var(--gold)}
+  .dcard.front{background:linear-gradient(160deg,#2a2d1d,#1c1e13 60%);border:1px solid var(--gold);animation:dflip .45s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes dflip{0%{transform:rotateY(88deg);opacity:0}100%{transform:rotateY(0);opacity:1}}
+  .dcard .d-top{display:flex;justify-content:space-between;align-items:baseline;width:100%;padding:8px 11px 6px;border-bottom:1px solid var(--line);font-family:var(--disp);font-weight:700;font-size:10px;letter-spacing:.14em;color:var(--gold)}
+  .dcard .d-top b{font-family:var(--stencil);font-weight:400;font-size:17px;color:var(--ink)}
+  .dcard .d-name{font-family:var(--stencil);font-weight:400;font-size:13px;padding:8px 6px 2px;line-height:1.15}
+  .dcard .d-col{font-size:10px;color:var(--dim);padding-bottom:6px}
+  .dcard .d-tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;padding:0 6px 6px}
+  .tk-stopcard{margin-top:6px;border:1px solid var(--amber);border-radius:4px;background:linear-gradient(160deg,#2b2717,var(--panel) 65%);padding:16px 22px;animation:dffade .3s ease both}
+  .tk-stopcard .sc-g{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--dim)}
+  .tk-stopcard .sc-n{font-family:var(--stencil);font-weight:400;font-size:22px;color:var(--amber);margin-top:2px}
+  .tk-stopcard .sc-s{font-size:12.5px;color:var(--dim);margin-top:4px;max-width:340px}
+  .decbox{border:1px solid var(--amber);border-radius:4px;background:linear-gradient(160deg,#2b2717,var(--panel) 65%);padding:16px;max-width:440px}
+  .decbox p{font-size:14px;margin:0 0 14px;text-align:left}
+  .decbox .opts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .decbox .opts .btn small{display:block;font-size:9px;letter-spacing:.1em;color:var(--dim);font-weight:600}
   /* ---- draft reveal ceremony ---- */
   .dfov{position:fixed;inset:0;z-index:85;background:rgba(10,11,6,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;text-align:center}
   .dfov.lite{background:rgba(10,11,6,.72)}
@@ -733,7 +853,7 @@ function pickLabel(pk){if(pk.comp)return '🎟️ Comp Pick (R1.5)';const s=pick
 function mkFuturePick(rd){return {id:uid(),round:rd||1,slot:9,future:true,fromMe:true};}
 function freshDraftPicks(){return (typeof G!=="undefined"&&G&&(G.mode==="survivor"||G.hard))
   ?[mkFuturePick(1),mkFuturePick(2),mkFuturePick(3),mkFuturePick(4),mkFuturePick(5)]   // 5 rounds in Career Mode AND Hard 6-Year (deeper farm to cover injuries)
-  :[mkFuturePick(1),mkFuturePick(2),mkFuturePick(3)];}
+  :[mkFuturePick(1),mkFuturePick(2),mkFuturePick(3),mkFuturePick(4)];}   // 6-Year Sprint: 4 rounds
 
 /* ============================================================
    WAR / WINS
@@ -1063,6 +1183,11 @@ function simulateRegularSeason(){
   if(G.owner&&G.owner.homeEdge){const m=entries.find(e=>e.me);m.wins=clamp(m.wins+Math.round(G.owner.homeEdge),40,118);m.losses=162-m.wins;}   // a rowdy die-hard home crowd
   if(G.owner&&G.owner.parkFactor){const {bal,pf}=ownerParkSynergy();const m=entries.find(e=>e.me);   // outfield dimensions: park that suits your roster wins you games at home
     m.wins=clamp(m.wins+Math.round(clamp(pf*clamp(bal/8,-0.5,0.5)*6,-3,3)),40,118);m.losses=162-m.wins;}
+  if(!G.owner&&G._season&&G._season.g>0){   // segmented season: keep the record you actually built; sim only the stretch run
+    const m=entries.find(e=>e.me),left=162-G._season.g;
+    const lw=clamp(Math.round((m.wins/162)*left+gauss(0,1.8)),Math.round(left*0.08),Math.round(left*0.92));
+    m.wins=clamp((G._season.w||0)+lw,40,118);m.losses=162-m.wins;G._season.finW=m.wins;
+  }
   entries.sort((a,b)=>b.wins-a.wins);entries.forEach((e,i)=>e.seed=i+1);   // overall seed = draft order (worst drafts #1)
   const field=mlbPlayoffField(entries);          // 12 playoff teams, seeded 1–6 within each league
   const me=entries.find(e=>e.me);
@@ -1085,6 +1210,7 @@ function runPlayoffsAndFinish(){
   const wonWS=champ&&champ.me;if(wonWS){G.champions++;G.roster.filter(p=>p.loc==="mlb").forEach(p=>p._rings=(p._rings||0)+1);}
   const NT=G.ai.length+1;const mySlot=NT+1-me.seed;   // worst overall record drafts #1
   G.ownedPicks.forEach(pk=>{if(pk.future&&pk.fromMe){pk.slot=mySlot;pk.future=false;}});
+  G._octScript=null;
   generateSeasonStats();   // each big-leaguer gets this year's stat line
   G.history.push({year:G.year,wins:me.wins,losses:me.losses,seed:me.seed,playoffs:madePO,champ:wonWS,division:`${me.league} ${me.div}`,divRank:me.divRank});
   G._po=null;
@@ -1116,9 +1242,12 @@ function runMLBPlayoffs(field){
   const dm=1+(teamDawg()-50)/50*0.10;
   const chem=1+(teamChem()-60)/40*0.08;   // a happy clubhouse: chemistry is a small October edge
   _poInfo={reachedWS:false,rounds:0};
+  const scr=Array.isArray(G._octScript)?G._octScript.slice():null;   // interactive October already decided this bracket
   const series=(a,b)=>{ if(!a)return b; if(!b)return a;
-    const sa=(a.war+22)*(a.me?cb*dm*chem:1), sb=(b.war+22)*(b.me?cb*dm*chem:1);
-    const pa=clamp(sa/(sa+sb),0.30,0.68); const w=Math.random()<pa?a:b;
+    let w;
+    if(scr&&scr.length){w=scr.shift()?a:b;}
+    else{const sa=(a.war+22)*(a.me?cb*dm*chem:1), sb=(b.war+22)*(b.me?cb*dm*chem:1);
+      const pa=clamp(sa/(sa+sb),0.30,0.68); w=Math.random()<pa?a:b;}
     if((a.me||b.me)&&w.me)_poInfo.rounds++;
     return w; };
   const champ={};
@@ -1450,9 +1579,9 @@ function ensureNavBtns(){
 function ensureSaveBtn(){ensureNavBtns();}
 function goHome(){try{saveGame();}catch(e){}screenTitle();}
 function homeBtn(){return `<button class="btn ghost sm" onclick="goHome()" title="Back to the home menu (your game is saved)">🏠</button> `;}
-const PHASES=["Trade Hub","Set Roster","Play Season","Draft","Develop"];
+const PHASES=["Winter","Camp","Season","Draft","Develop"];
 function stepbar(a){const ph=(G.mode!=="survivor"&&G.year>=6)?PHASES.slice(0,3):PHASES;
-  return `<div class="stepbar">${ph.map((s,i)=>`<div class="step ${i<a?'done':''} ${i===a?'on':''}">${i+1}. ${s}</div>`).join("")}</div>`;}
+  return `<div class="cmap">${ph.map((s,i)=>`<div class="leg ${i<a?'done':''} ${i===a?'on':''}"><span class="dot"></span><span class="lb">${s}</span></div>`).join("")}</div>`;}
 function mandate(){if(G.year<=2)return{cls:'blue',txt:'Mandate: Rebuild — losing is OK'};
   if(G.year===3)return{cls:'gold',txt:'Mandate: Turn the corner'};return{cls:'green',txt:'Mandate: CONTEND now'};}
 // shared branded top bar: wide logo (left) + home/right controls
@@ -1893,7 +2022,6 @@ function screenNewFranchise(k){
   _atTitle=true;ensureNavBtns();
 }
 function screenTitle(){
-  bwState();
   if(_titleName==null)_titleName=warPun();
   const MODES=TITLE_MODES;
   const m=MODES[_titleMode]||MODES.career;
@@ -1914,7 +2042,7 @@ function screenTitle(){
       <div class="row"><span class="v">${r.owner?fmtB(r.clubValue||0)+' value':r.mode==='survivor'?'Score '+(r.score||0):(r.champions||0)+'× 🏆'}</span><button class="rbtn" onclick="resumeRun('${r.id}')">Resume</button></div>
     </div>`;
   const runsHtml=runs.length?runs.slice(0,5).map(runCard).join(''):'<p class="small muted" style="margin:0">No franchises yet — start one from the left.</p>';
-  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v9.8.4</span>`;
+  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v10.0</span>`;
   render(`
    <div class="tdash">
      <div class="tdash-top"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="tdash-top-r">${topR}</div></div>
@@ -1942,7 +2070,7 @@ function screenTitle(){
        <section class="thero">
          <img src="${LOGO_SQ}" alt="Baseball Tank Commander">
          <div class="tagrule"><span class="ln"></span><span class="tx">Baseball Simulator</span><span class="ln"></span></div>
-         <span class="stamp" style="margin:0 0 10px">Field Issue · Spec TC-98</span>
+         <span class="stamp" style="margin:0 0 10px">Field Issue · Spec TC-100</span>
          <div class="tpitch" style="max-width:470px;margin:0 auto;text-align:left">
            <div class="tpitch-row"><span class="ic">🏗️</span><div><b>Rebuild a broken franchise.</b><span class="small muted"> Tank for picks, draft stars, work the trade market, win it all in 6 seasons.</span></div></div>
            <div class="tpitch-row"><span class="ic">🃏</span><div><b>Collect the 500-card set.</b><span class="small muted"> Rip packs, chase HOF rainbows, and build your bWARfare deck.</span></div></div>
@@ -1978,7 +2106,7 @@ function screenTitle(){
          </div>
        </aside>
      </div>
-     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 9.8.4</span></div>
+     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.0.0</span></div>
    </div>
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
@@ -2017,6 +2145,8 @@ function screenTrade(){
   const proj=warToWins(teamWAR(G.roster));
   const expiring=G.roster.filter(p=>p.loc==="mlb"&&p.years<=1).sort((a,b)=>b.ovr-a.ovr);
   const tutFr=(!(PROFILE.gamesPlayed||0)&&!PROFILE._tutFr)?`<div class="small" style="display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line2);border-left:3px solid var(--gold);border-radius:4px;padding:8px 10px;margin:10px 0"><span style="flex:1;min-width:0">🎓 <b>Your first rebuild.</b> This club is old and expensive. A classic year 1: trade veterans on expiring deals for <b>prospects and draft picks</b>, eat some losses, then build through the draft. The steps above are one season — you have six.</span><button class="btn ghost sm" style="flex-shrink:0" onclick="PROFILE._tutFr=1;saveProfile();screenTrade()">Got it</button></div>`:'';
+  const ns=needsSurplus();
+  const faLeft=Math.max(0,4-(G.faSigns||0));
   render(`${header()}${stepbar(0)}${tutFr}
    <div class="grid4">
      <div class="kpi"><div class="big">${proj}</div><div class="lbl">Proj Wins</div></div>
@@ -2024,34 +2154,38 @@ function screenTrade(){
      <div class="kpi"><div class="big">${G.ownedPicks.length}</div><div class="lbl">Draft Picks</div></div>
      <div class="kpi"><div class="big">$${payroll(G.roster)}M</div><div class="lbl">Payroll</div></div>
    </div>
-   <div class="panel"><h3>🎖️ Front Office Resources <span class="small muted">(set your allocation for the year ahead)</span></h3>
-     <div id="resbox">${renderResources()}</div></div>
-   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster <span class="small muted">(updates after each trade)</span></summary>
-     <div style="margin-top:8px">${rosterMini()}</div></details>
-   ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0">
-     <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none — roster is balanced</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span>
-     ${luxuryTax()>0?`<div class="small" style="color:var(--red);margin-top:4px">⚠ Payroll over $300M — luxury tax will cost ~${luxuryTax()} win${luxuryTax()>1?'s':''} this season.</div>`:''}</div>`;})()}
-   ${expiring.length?`<div class="panel" style="border-color:var(--red)">
-     <h3>⏳ Expiring contracts — extend or trade before they walk</h3>
-     <table><tbody>${expiring.map(p=>`<tr>
+   ${fmMemoHTML('FRONT OFFICE MEMO · WINTER, YEAR '+G.year,fmMemoWinter())}
+   ${luxuryTax()>0?`<div class="small" style="color:var(--red);margin:0 0 10px">⚠ Payroll over $300M — luxury tax will cost ~${luxuryTax()} win${luxuryTax()>1?'s':''} this season.</div>`:''}
+   <details class="deskp pri" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('binoc',20)}</span><div class="dtx"><b>Scout's suggested trade</b><span>built around both clubs' needs — respin freely</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><div id="suggbox">${renderSuggestion()}</div></div>
+   </details>
+   ${expiring.length?`<details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('siren',20)}</span><div class="dtx"><b>Expiring contracts <span style="color:var(--red)">· ${expiring.length}</span></b><span>${esc(expiring[0].name)}${expiring.length>1?` and ${expiring.length-1} more`:''} — extend or trade before they walk</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><table><tbody>${expiring.map(p=>`<tr>
        <td><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • ${p.ovr} OVR • ${p.years} yr left</span></td>
        <td class="num">${extendSelect(p.id)}</td>
-     </tr>`).join("")}</tbody></table></div>`:""}
-   <div class="panel">
-     <h3>🛠️ Build your own trade</h3>
-     <p class="sub">Click ＋ to add your assets and a partner's assets. Draft picks are tradeable. Ceiling colors: <span class="pill gold" style="padding:0 6px">elite</span> <span class="pill green" style="padding:0 6px">high</span> <span class="pill blue" style="padding:0 6px">solid</span>.</p>
-     <div id="builder">${renderBuilder()}</div>
-   </div>
-   <div class="panel">
-     <h3>💡 Suggested trade <span class="small muted">(built around both clubs' needs — respin freely)</span></h3>
-     <div id="suggbox">${renderSuggestion()}</div>
-   </div>
-   ${G.year>=3?`<div class="panel">
-     <h3>✍️ Free agents</h3>
-     <p class="sub">Veterans on the open market — sign with cash, no prospects required.${infoDot('Salaries push toward the $300M luxury-tax line, and leaning on free agency hurts your homegrown grade.')}</p>
-     <div id="falist" class="scroll">${renderFA()}</div>
-   </div>`:''}
-   <div class="center" style="margin-top:14px"><button class="btn primary" onclick="${G._ownerTakeover?'ownerDoneTakeover()':'goPhase(1)'}">${G._ownerTakeover?'✅ Done — back to the owner\'s box':'Done trading → Set roster'}</button></div>`);
+     </tr>`).join("")}</tbody></table></div>
+   </details>`:''}
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('swap',20)}</span><div class="dtx"><b>Trade desk</b><span>build any deal — players and picks, every club</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><p class="sub">Click ＋ to add your assets and a partner's assets. Draft picks are tradeable. Ceiling colors: <span class="pill gold" style="padding:0 6px">elite</span> <span class="pill green" style="padding:0 6px">high</span> <span class="pill blue" style="padding:0 6px">solid</span>.</p>
+     <div id="builder">${renderBuilder()}</div></div>
+   </details>
+   ${G.year>=3?`<details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('pen',20)}</span><div class="dtx"><b>Free agency <span style="color:var(--gold)">· ${faLeft} of 4 left</span></b><span>veterans on the open market — cash, not prospects</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><p class="sub">Salaries push toward the $300M luxury-tax line, and leaning on free agency hurts your homegrown grade.</p>
+     <div id="falist" class="scroll">${renderFA()}</div></div>
+   </details>`:''}
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('rank',20)}</span><div class="dtx"><b>Front office resources</b><span>scouting / development / coaching for the year ahead</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><div id="resbox">${renderResources()}</div></div>
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('clip',20)}</span><div class="dtx"><b>Clipboard — roster, needs & surplus</b><span><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'none'} · <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'none'}</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody">${rosterMini()}</div>
+   </details>
+   <div class="deskcta"><button class="btn primary" style="font-size:15px;padding:13px 28px" onclick="${G._ownerTakeover?'ownerDoneTakeover()':'goPhase(1)'}">${G._ownerTakeover?"✅ Done — back to the owner's box":'Break camp → Set roster ▸'}</button></div>`);
 }
 // Owner Mode: step in and run the front office yourself for the offseason — the GM stands down (he'll still get the trade deadline)
 function ownerTakeover(){const o=G.owner;G._ownerTakeover=true;G.phase=0;_offers=null;_custom=null;_sugg=null;
@@ -2300,7 +2434,7 @@ function refreshOffers(){if(G.tradeTries<=0)return;G.tradeTries--;_offers=genOff
 function acceptOffer(oid){const o=_offers.find(x=>x.id===oid);if(!o)return;
   o.give.forEach(giveAsset);o.get.forEach(getAsset);
   _offers=_offers.filter(x=>x.id!==oid);_custom=null;
-  toast(`Trade with ${o.team.name} complete`);screenTrade();}
+  showBreaking(`${G.teamName} strike a deal with ${o.team.name}`,'The clubhouse takes notice.');screenTrade();}
 
 /* ---- custom builder: Option 2 segmented + Option D rows ---- */
 const ATTR_EMO={contact:"🎯",power:"💥",speed:"🏃",eye:"👁️",defense:"🧤",velocity:"🔥",control:"🎛️",spin:"🌀",whiff:"💨"};
@@ -2406,7 +2540,7 @@ function proposeCustom(){
   const nm=teamNameOf(_custom.partner);
   const dl=_dlMode;
   _custom={giveIds:new Set(),getIds:new Set(),partner:null,seg:_custom.seg,search:'',posF:'all',sort:_custom.sort};
-  _sugg=null;toast(`Trade with ${nm} complete`);
+  _sugg=null;showBreaking(`${G.teamName} strike a deal with ${nm}`,'The scout who pitched it takes a bow.');
   if(dl)screenDeadline();else screenTrade();}
 
 /* ---- need-based trade suggestion (one at a time, respin freely, auto-respins after accept) ---- */
@@ -2467,7 +2601,7 @@ function acceptSuggestion(){
   if(give.length!==s.give.length||get.length!==s.get.length){toast("Offer expired — respinning");respinSuggestion();return;}
   give.forEach(giveAsset);get.forEach(getAsset);
   const sh=teamShortOf(s.team);_sugg=null;
-  toast(`Trade with ${sh} complete`);if(_dlMode)screenDeadline();else screenTrade();}
+  showBreaking(`${G.teamName} strike a deal with ${sh}`,_dlMode?'A deadline move — the town holds its breath.':'The clubhouse takes notice.');if(_dlMode)screenDeadline();else screenTrade();}
 /* ============================================================
    PHASE 1 — ROSTER (9 / 4 / 3)
    ============================================================ */
@@ -2621,7 +2755,9 @@ function screenSeason(){
      <p class="sub">Roster locked. Two in-season decision points are coming up — a <b>service-time call-up window</b> (game 20) and the <b>trade deadline</b> (game 110) — before the season plays out.</p>
      <button class="btn primary" style="font-size:16px;padding:14px 26px" onclick="beginSeason()">▶ Start the season</button></div>`);
 }
-function beginSeason(){if(G.hard&&G._injRolled!==G.year)rollSeasonInjuries();G.seasonStage=0;saveGame();screenServiceTime();}
+function beginSeason(){if(G.hard&&G._injRolled!==G.year)rollSeasonInjuries();G.seasonStage=0;G._prevWins=G.lastWins;fmSeasonInit();saveGame();
+  fmSeasonTick(20,{name:'SERVICE-TIME WINDOW',sub:'Call up a prospect now and his clock starts — wait, and you keep the extra year of control.',enterLab:'Review call-ups',
+    enter:()=>screenServiceTime(),skip:()=>afterServiceTime()});}
 // Injured List — long-term injuries that take a player off the active roster
 function ilSection(){
   const il=G.roster.filter(p=>p.loc==="mlb"&&p._il);
@@ -2665,10 +2801,14 @@ function promoteService(pid){const p=G.farm.find(x=>x.id===pid);if(!p)return;G.f
   toast(`${p.name} called up — service-time hold (no year burned)`);screenServiceTime();}
 function afterServiceTime(){
   if(G.mode==="survivor"&&!G.owner&&G.year>=2&&!G._mediaAnswered&&Math.random()<0.6){
-    G.seasonStage=1.5;G._mediaQ=pickMediaQuestion();G._mediaAnswered=false;saveGame();return screenMedia();
+    G._mediaQ=pickMediaQuestion();saveGame();
+    return fmSeasonTick(45,{name:'PRESS CONFERENCE',sub:'The beat writers want a word. Skipping reads as “no comment” — fans notice.',enterLab:'Take the podium',
+      enter:()=>{G.seasonStage=1.5;G._mediaAnswered=false;saveGame();screenMedia();},
+      skip:()=>{try{const fd=fanChange(-3,"Press conference"),od=favorChange(-2,"Press conference");}catch(e){}G._mediaAnswered=true;saveGame();fmToAllStar();}});
   }
-  if(G.hard){G.seasonStage=0.7;saveGame();return screenEarlyBreak();}   // Hard: an early roster check before the All-Star break
-  G.seasonStage=1.7;saveGame();screenAllStar();}
+  if(G.hard)return fmSeasonTick(50,{name:'ROSTER CHECK',sub:'Hard Mode wears a roster down — injuries and cover need managing.',enterLab:'Check the trainer’s room',
+    enter:()=>{G.seasonStage=0.7;saveGame();screenEarlyBreak();},skip:()=>fmToAllStar()});
+  fmToAllStar();}
 /* ---- mid-season stop ~1.7: All-Star Break (game 81) + in-season development ---- */
 function developInSeason(mult){   // a half-season of reps: young players grow toward their ceiling mid-year too
   const dev=(G.resources?G.resources.development:0.333);const notes=[];
@@ -2723,7 +2863,13 @@ function screenAllStar(){
       <button class="btn primary" onclick="afterAllStar()">Continue to the trade deadline ▶</button></div>`);
 }
 function asCallUp(pid){promoteCore(pid);screenAllStar();}
-function afterAllStar(){_rosterMode='';if(G.hard){G.seasonStage=1.3;saveGame();return screenHardBreak();}G.seasonStage=1;saveGame();screenDeadline();}
+function afterAllStar(){_rosterMode='';
+  const go=()=>{
+    if(G.hard)return fmSeasonTick(95,{name:'ROSTER CHECK',sub:'Down the stretch — patch holes and reset the lineup before the deadline.',enterLab:'Check the trainer’s room',
+      enter:()=>{G.seasonStage=1.3;saveGame();screenHardBreak();},skip:()=>fmToDeadline()});
+    fmToDeadline();};
+  if(G._decideYear!==G.year){G._decideYear=G.year;saveGame();try{return showDecision(go);}catch(e){}}
+  go();}
 // shared Hard Mode roster-check break (injury report + IL + call-ups + adjust roster)
 function rosterCheckBreak(o){
   const farm=G.farm.slice().sort((a,b)=>b.ovr-a.ovr);
@@ -2746,11 +2892,11 @@ function rosterCheckBreak(o){
 function screenEarlyBreak(){rosterCheckBreak({pill:'🔥 ROSTER CHECK · Game 50 of 162',title:'The grind sets in',
   sub:'Hard Mode wears a roster down. Check the injury report, call up cover, and set your lineup before the All-Star break.',
   backMode:'earlybreak',reRender:'screenEarlyBreak',continueLabel:'On to the All-Star Break ▶',
-  onContinue:"(function(){_rosterMode='';G.seasonStage=1.7;saveGame();screenAllStar();})()"});}
+  onContinue:"(function(){_rosterMode='';fmToAllStar();})()"});}
 function screenHardBreak(){rosterCheckBreak({pill:'🔥 ROSTER CHECK · Game 95 of 162',title:'Down the stretch',
   sub:'Patch the holes, call up reinforcements, and reset your lineup before the trade deadline.',
   backMode:'hardbreak',reRender:'screenHardBreak',continueLabel:'On to the trade deadline ▶',
-  onContinue:"(function(){_rosterMode='';G.seasonStage=1;saveGame();screenDeadline();})()"});}
+  onContinue:"(function(){_rosterMode='';fmToDeadline();})()"});}
 /* ---- mid-season stop 1.5 (Survivor): media press conference ---- */
 function mediaSituation(){const proj=projWinsNow(),pay=payroll(G.roster);
   if(proj>=90||G.lastPlayoffYear===G.year-1)return 'contend';
@@ -2855,7 +3001,7 @@ function screenMediaResult(){
       <div class="row" style="gap:18px;margin-top:10px;font-size:15px"><span>📣 Fans ${chip(r.fan)}</span><span>🪑 Owner ${chip(r.owner)}</span></div>
       ${r.expect?'<div class="pill gold" style="margin-top:10px;display:inline-block">📈 You raised the stakes — reach the playoffs this year or pay for the promise</div>':''}
     </div>
-    <div class="center"><button class="btn primary" onclick="(function(){G.seasonStage=1.7;saveGame();screenAllStar();})()">On to the All-Star Break ▶</button></div>`);}
+    <div class="center"><button class="btn primary" onclick="fmToAllStar()">Back to the season ▶</button></div>`);}
 /* ---- mid-season stop 2: trade deadline (game 110) ---- */
 function computeDeadlineStances(){
   const arr=G.ai.map(t=>({t,w:warToWins(t.war)}));
@@ -2929,22 +3075,40 @@ function screenDeadline(){
   _sugg=null;
   const proj=warToWins(teamWAR(G.roster)),ms=G._myStance;
   const head=ms==='buyer'?'You\'re in the hunt — be a BUYER':ms==='seller'?'Out of the race — time to SELL':'On the bubble — buy, sell, or stand pat';
+  const stanceMemo=ms==='buyer'
+    ?`The math says you're <b>in the hunt</b> (proj ${proj} W). Contenders overpay in July — including you, if you're not careful. Rentals cost prospects; cost-controlled stars cost a fortune.`
+    :ms==='seller'
+    ?`The math says the race is gone (proj ${proj} W). Good news: <b>your veterans are worth more today than they'll ever be again.</b> Sell the expiring deals, stack youth and picks.`
+    :`Proj ${proj} W — right on the bubble. Buy, sell, or stand pat; just don't half-do all three.`;
   render(`${header()}
-   <div class="panel center" style="border-color:var(--gold)">
-     <div class="pill gold">⏳ TRADE DEADLINE · Game 110 of 162</div>
-     <h2 style="margin:6px 0">${head}</h2>
-     <p class="sub">Projected <b>${proj}</b> wins. Deadline values shift: <b>current production is king</b>, ceilings cool off, and <b>contract control matters more</b> (rentals cheap, cost-controlled stars pricey). Contenders overpay for win-now help; sellers give up expiring vets for youth.</p></div>
-   ${dlStancePanel()}
-   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📊 Current standings <span class="small muted">(who's buying & selling)</span></summary><div style="margin-top:8px"><div class="scroll">${dlStandings()}</div></div></details>
-   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster</summary><div style="margin-top:8px">${rosterMini()}</div></details>
-   <div class="panel"><h3>🎖️ Front Office Resources <span class="small muted">(adjust your strategy for the stretch run)</span></h3>
-     <div id="resbox">${renderResources()}</div></div>
-   <div class="panel"><h3>🛠️ Make a deadline deal</h3>
-     <p class="sub">Buyers overpay for your big-league talent; sellers hand you rentals cheap for prospects and picks.${infoDot('The accept / reject bar already reflects who you are dealing with — an even-value swap is always accepted.')}</p>
+   ${G._season?`<div style="display:flex;justify-content:center;margin:4px 0 10px"><div class="fmstrip" style="position:static;transform:none" onclick="fmStandFull()">${ico('flag',11)} <b>${esc(G.div||'DIVISION')}</b> ${fmLiveStandings().map((r,i)=>`<span class="${r.me?'me':''}">${i+1}. ${esc(String(r.name).split(' ').slice(-1)[0])} <i>${r.w}–${r.l}</i></span>`).join('')}</div></div>`:''}
+   <div class="panel center" style="border-color:var(--gold);padding:12px">
+     <div class="pill gold">${ico('siren',11)} TRADE DEADLINE · GAME 110 OF 162</div>
+     <h2 style="margin:6px 0 0">${head}</h2></div>
+   ${fmMemoHTML('DEADLINE DESK · THE SITUATION',stanceMemo)}
+
+   <details class="deskp pri" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('binoc',20)}</span><div class="dtx"><b>Suggested deadline deal</b><span>built for a ${ms||'bubble'} club — respin freely</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><div id="suggbox">${renderSuggestion()}</div></div>
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('swap',20)}</span><div class="dtx"><b>Make a deadline deal</b><span>buyers overpay for now-help; sellers hand you rentals cheap</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><p class="sub">The accept/reject bar already reflects who you're dealing with — an even-value swap is always accepted. Deadline values shift: <b>current production is king</b>, ceilings cool off, contract control matters more.</p>
      <div id="builder">${renderBuilder()}</div></div>
-   <div class="panel"><h3>💡 Suggested deadline deal <span class="small muted">(respin freely)</span></h3>
-     <div id="suggbox">${renderSuggestion()}</div></div>
-   <div class="center" style="margin-top:14px"><button class="btn primary" style="font-size:16px;padding:12px 22px" onclick="afterDeadline()">Set roster &amp; play out the season ▶</button></div>`);
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('chart',20)}</span><div class="dtx"><b>The market</b><span>who's buying, who's selling — full standings</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody">${dlStancePanel()}<div class="scroll" style="margin-top:8px">${dlStandings()}</div></div>
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('rank',20)}</span><div class="dtx"><b>Resources</b><span>adjust the strategy for the stretch run</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><div id="resbox">${renderResources()}</div></div>
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('clip',20)}</span><div class="dtx"><b>Clipboard — current roster</b><span>updates after each deal</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody">${rosterMini()}</div>
+   </details>
+   <div class="deskcta"><button class="btn primary" style="font-size:15px;padding:13px 28px" onclick="afterDeadline()">Set roster & play out the season ▸</button></div>`);
 }
 function afterDeadline(){_dlMode=false;G.seasonStage=2;_rosterMode='deadline';saveGame();screenRoster();}
 function weakStartSpots(){   // count starting spots that are empty or filled by a sub-70 OVR player
@@ -2956,13 +3120,21 @@ function weakStartSpots(){   // count starting spots that are empty or filled by
 }
 function doSeason(){
   _dlMode=false;
+  const prevWins=G._prevWins!=null?G._prevWins:G.lastWins;
   const reg=simulateRegularSeason();
-  if(reg.madePO&&!G.owner){G.seasonStage=2.8;saveGame();return screenPlayoffRoster();}   // made the playoffs → set your October roster first (the GM handles it in Owner Mode)
-  finishSeason();   // missed October (or owner mode) → straight to the bracket + results
+  const after=()=>{
+    G._season=null;G._prevWins=null;
+    if(reg.madePO&&!G.owner){G.seasonStage=2.8;saveGame();return screenPlayoffRoster();}
+    finishSeason();
+  };
+  try{
+    if(!G.owner&&G._season&&G._season.g>0)fmSeasonFinale(prevWins,!!reg.madePO,after);
+    else showSeasonTicker(prevWins,!!reg.madePO,after);
+  }catch(e){after();}
 }
 // the player reached the postseason — let them set their playoff roster before the bracket runs
 function screenPlayoffRoster(){_rosterMode='playoff';G.phase=1;screenRoster();}
-function startPlayoffs(){finishSeason();}
+function startPlayoffs(){try{fmOctoberRun(()=>finishSeason());}catch(e){finishSeason();}}
 function finishSeason(){
   _res=runPlayoffsAndFinish();
   _res.awards=computeAwards();
@@ -3854,7 +4026,7 @@ function showResult(){
 const POSALL=["C","1B","2B","3B","SS","LF","CF","RF","DH","SP","SP","RP"];
 let _dq=null,_dpicks=null,_board=null;
 function screenDraft(){
-  if(!_dq){_dq=[...G.ownedPicks].sort((a,b)=>(a.round-b.round)||(pickResolvedSlot(a)-pickResolvedSlot(b)));_dpicks=[];}
+  if(!_dq){_dq=[...G.ownedPicks].sort((a,b)=>(a.round-b.round)||(pickResolvedSlot(a)-pickResolvedSlot(b)));_dpicks=[];_board=null;_dfl=null;}
   if(!_dq.length)return draftDone();
   const pk=_dq[0],slot=pickResolvedSlot(pk),rd=pk.round||1;
   // Survivor: fixed per-round odds, identical every year (no "draft MLB-ready late in a short rebuild" scaling).
@@ -3862,8 +4034,19 @@ function screenDraft(){
   const advChance = G.mode==="survivor"
     ? ({1:0.08,2:0.15,3:0.22,4:0.30,5:0.38}[rd]||0.2)
     : (rd>=3?(G.year>=4?0.75:0.5):rd===2?(G.year>=4?0.6:0.3):(G.year>=4?0.5:G.year===3?0.25:0.08));
-  const ps=[...POSALL];for(let i=ps.length-1;i>0;i--){const j=ri(0,i);[ps[i],ps[j]]=[ps[j],ps[i]];}
-  _board=[];for(let i=0;i<10;i++)_board.push(draftee(slot,rd,Math.random()<advChance,ps[i%ps.length]));
+  if(!_board){
+    const ps=[...POSALL];for(let i=ps.length-1;i>0;i--){const j=ri(0,i);[ps[i],ps[j]]=[ps[j],ps[i]];}
+    const nOpts=G.owner?10:8;
+    _board=[];for(let i=0;i<nOpts;i++)_board.push(draftee(slot,rd,Math.random()<advChance,ps[i%ps.length]));
+    if(!G.owner){
+      const t=draftTier();
+      _board.forEach(p=>{
+        if(t===3){const lo=clamp(p.pot-ri(1,4),40,94);p._sc={lo,hi:lo+5};}
+        else if(t===2){const lo=clamp(p.pot-ri(2,13),30,84);p._sc={lo,hi:lo+15};}
+      });
+      _dfl={flipped:[],left:t>=4?_board.length:t===3?5:4,tier:t};
+    }
+  }
   // Owner Mode: the GM recommends a pick (best ceiling, weighted toward roster needs + his scouting tier)
   if(G.owner){G.ownerStage='draft';
     const ns=needsSurplus();const want=new Set(ns.needs);const tier=G.owner.gmTier||0;
@@ -3872,6 +4055,23 @@ function screenDraft(){
     if(G._gmAutoDraft)return draftPick(best);
   }
   const rec=G.owner?G._gmRec:-1;
+  if(!G.owner){
+    const t=_dfl.tier,pct=draftScoutPct();
+    render(`${header()}${stepbar(3)}
+     ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:4px;padding:10px;margin:12px 0">
+       <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span></div>`;})()}
+     <div class="panel" style="padding:14px">
+       <h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${ico('scope',18)} Draft — <span class="pill gold">${pk.comp?'🎟️ Comp Pick':'Round '+rd+' · Pick #'+slot}</span> <span class="small muted">(${_dq.length} selection${_dq.length>1?'s':''} left)</span></h3>
+       <p class="sub" style="margin:4px 0 2px">${ico('binoc',13)} <b>Scouting dept at ${pct}%</b> — ${DRAFT_TIER_DESC[t]}.</p>
+       <p class="sub" style="margin:2px 0 10px">${_dfl.left>0?`<b style="color:var(--gold)">${_dfl.left} scouting trip${_dfl.left>1?'s':''} left</b> — flip the files you want opened, then draft one of them.`:`<b style="color:var(--amber)">Trips exhausted</b> — draft from the opened files. Ceiling is a projection, not a promise.`}</p>
+       ${draftCardsHTML()}
+     </div>
+     <details class="deskp" ontoggle="fmSolo(this)">
+       <summary><span class="dic">${ico('clip',20)}</span><div class="dtx"><b>Clipboard — current roster</b><span>draft to fill your needs</span></div><span class="dgo">▸</span></summary>
+       <div class="dbody">${rosterMini()}</div>
+     </details>`);
+    return;
+  }
   render(`${header()}${stepbar(3)}
    ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0">
      <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none — roster is balanced</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span></div>`;})()}
@@ -3889,8 +4089,44 @@ function screenDraft(){
         <div style="flex:1;text-align:right"><span class="pill ${ceilClass(p.pot)}">Ceiling ${p.pot}</span>
           <button class="btn primary sm" onclick="draftPick(${i})">Draft</button></div></div></div>`).join("")}</div></div>`);
 }
+
+/* ---- scouting-driven draft cards: your scouting budget decides what the file shows ---- */
+let _dfl=null;
+function draftScoutPct(){const r=G.resources||{};return Math.round(((r.scouting!=null?r.scouting:0.334))*100);}
+function draftTier(){const s=draftScoutPct();return s<10?0:s<30?1:s<50?2:s<75?3:4;}
+const DRAFT_TIER_DESC=['bare files — hitter or pitcher, nothing more','position only','position, age, ceiling ±15','position, age, ceiling ±5 — and a 5th flip','full files — exact ceilings, flip everything'];
+function draftFlip(i){
+  if(!_dfl||_dfl.flipped.indexOf(i)>=0)return;
+  if(_dfl.left<=0){toast('No scouting trips left — draft from the flipped files.');return;}
+  _dfl.flipped.push(i);_dfl.left--;sfx('flip');
+  screenDraft();
+}
+function draftCardsHTML(){
+  const t=_dfl.tier;
+  const dealing=!_dfl.dealt;
+  if(dealing){_dfl.dealt=true;sfx('deal');}
+  return `<div class="dgrid">${_board.map((p,i)=>{
+    const dealCls=dealing?` dealin" style="animation-delay:${(i*0.09).toFixed(2)}s`:'';
+    const flipped=_dfl.flipped.indexOf(i)>=0;
+    if(flipped)return `<div class="dcard front"><div class="d-top"><span>${esc(p.pos)} · ${p.age}</span><b>${p.ovr}</b></div>
+      <div class="d-name">${esc(p.name)}</div><div class="d-col">${esc(p.college||'')}</div>
+      <div class="d-tags"><span class="pill ${ceilClass(p.pot)}">Ceil ${p.pot}</span>${p.advanced?'<span class="pill green">MLB-Ready</span>':'<span class="pill blue">Project</span>'}</div>
+      <button class="btn primary sm" style="margin:4px 0 10px" onclick="draftPick(${i})">Draft ▸</button></div>`;
+    const lines=[isPit(p)?'PITCHER':'HITTER'];
+    if(t>=1)lines.push('POS '+p.pos);
+    if(t>=2)lines.push('AGE '+p.age);
+    if(t>=4)lines.push('CEILING '+p.pot);
+    else if(t>=2&&p._sc)lines.push('CEIL '+p._sc.lo+'–'+p._sc.hi);
+    return `<div class="dcard back ${_dfl.left>0?'can':'dead'}${dealCls}" onclick="draftFlip(${i})">
+      <div class="d-file">${ico('binoc',15)}<br>PROSPECT FILE ${String(i+1).padStart(2,'0')}</div>
+      <div class="d-lines">${lines.map(x=>`<span>${x}</span>`).join('')}</div>
+      <div class="d-hint">${_dfl.left>0?'TAP TO SCOUT':'FILE SEALED'}</div></div>`;
+  }).join('')}</div>`;
+}
 function draftPick(i){
+  if(!G.owner&&_dfl&&_dfl.flipped.indexOf(i)<0){toast('You can only draft an opened file.');return;}
   const p=_board[i];p.loc="farm";p.src="draft";G.farm.push(p);_dpicks.push(p);
+  _board=null;_dfl=null;
   const pk=_dq[0]||{},rd=pk.round||1,slot=pickResolvedSlot(pk)||0;
   _dq.shift();
   if(G._gmAutoDraft){screenDraft();return;}
@@ -3950,9 +4186,19 @@ function draftDone(){
 let _devRes=null;
 function screenDevelop(){
   if(G._devDoneYear===G.year){_devRes=_devRes||{fa:G.leftAsFA||[],notes:[],devList:[],cuts:[],retired:[]};return renderDevelopSummary();}   // reload-safe: don't age twice
-  const res=developAll();G._devDoneYear=G.year;saveGame();_devRes=res;
-  if((res.retired||[]).length)return screenRetirements();
-  renderDevelopSummary();
+  if(G._wpYear!==G.year){
+    G._wpYear=G.year;saveGame();
+    try{return showWinterProgram(()=>screenDevelopRun());}catch(e){}
+  }
+  screenDevelopRun();
+}
+function screenDevelopRun(){
+  if(G._devDoneYear===G.year){_devRes=_devRes||{fa:[],notes:[],devList:[],cuts:[],retired:[]};return renderDevelopSummary();}
+  let res=developAll();
+  try{res=wpApply(res);}catch(e){}
+  G._devDoneYear=G.year;saveGame();_devRes=res;
+  const after=()=>{if((res.retired||[]).length)return screenRetirements();renderDevelopSummary();};
+  try{showCampReports(res.devList,after);}catch(e){after();}
 }
 function screenRetirements(){
   const ret=(_devRes&&_devRes.retired||[]).slice().sort((a,b)=>(b._teamYears||0)-(a._teamYears||0));
@@ -5608,7 +5854,8 @@ function bwbRefill(s){
   while(s.phand.length<(s._edgeHand||3)&&s.peds.length)s.phand.push(s.peds.shift());   // edges finite per battle (Deep Bench coach grows the hand)
 }
 function bwbStart(youDeck,cpuDeck,meta){
-  setTimeout(()=>{try{sfx('playball');}catch(e){}},250);
+  setTimeout(()=>{try{sfx('deal');}catch(e){}},120);
+  setTimeout(()=>{try{sfx('playball');}catch(e){}},750);
   clearTimers();
   BW={you:bwbMkSide(bwTeam().name,youDeck),cpu:bwbMkSide(meta.oppName||'Rivals',cpuDeck),inning:1,half:'top',outs:0,bases:[null,null,null],phase:'pitch',committedPitch:null,pdEdge:null,selHitter:null,selEdge:null,last:null,pending:null,over:false,winner:null,meta,_rewarded:false,_pitchLog:{FB:0,OFF:0,BR:0},_cpuPitchLog:{FB:0,OFF:0,BR:0}};
   BW.you.coach=youDeck.coach||null;BW.cpu.coach=cpuDeck.coach||null;bwbInitCoach(BW.you);bwbInitCoach(BW.cpu);
@@ -6522,7 +6769,8 @@ const _SFX={
   walk(){_tone(520,520,.07,'sine',.12);_tone(650,650,.07,'sine',.12,.1);},
   meatball(){_noise(.35,3200,2,.12);_tone(300,180,.3,'sawtooth',.06);},
   pack(){if(playSmp('pack'))return;_noise(.28,2600,.8,.35,0,'highpass');_tone(300,900,.2,'sawtooth',.07,.05);},
-  flip(){_noise(.12,1600,1,.14,0,'highpass');},
+  flip(){if(playSmp('flipcard'))return;_noise(.12,1600,1,.14,0,'highpass');},
+  deal(){if(playSmp('deal'))return;for(let i=0;i<4;i++)_noise(.06,1800,1,.12,i*.07,'highpass');},
   rare(){[880,1108,1318,1760,2217].forEach((f,i)=>_tone(f,f,.24,'sine',.14,i*.07));},
   coin(){_tone(880,880,.07,'sine',.15);_tone(1320,1320,.12,'sine',.15,.07);},
   levelup(){[523,659,784,1046].forEach((f,i)=>_tone(f,f,.16,'triangle',.16,i*.08));},
@@ -6589,6 +6837,12 @@ const MUSIC=[
  ['music/Ob-La-Di_Ob-La-Da.mp3','Ob-La-Di, Ob-La-Da'],
  ['music/Born_This_Way_Organ_Version.mp3','Born This Way (Organ)'],
  ['music/California_Girls.mp3','California Girls'],
+ ['music/Sukiyaki_Ue_o_Muite_Arukou_Nancy_Bea_Hefley.mp3','Sukiyaki (Nancy Bea)'],
+ ['music/Funiculi_Funicula.mp3','Funiculì, Funiculà'],
+ ['music/Shes_Like_the_Wind_Dirty_Dancing_-_Ballpark_Organ.mp3',"She's Like the Wind (Organ)"],
+ ['music/Las_Chiapanecas_Mexican_Hat_Dance_-_Nancy_Bea.mp3','Las Chiapanecas (Nancy Bea)'],
+ ['music/In_the_Good_old_Summertime.mp3','In the Good Old Summertime'],
+ ['music/Here_Comes_the_King.mp3','Here Comes the King'],
 ];
 const MUS_KEY='tankCommander_music';
 let _mus=null,_musEl=null,_musStarted=false,_musErr=0,_musDead=false;
@@ -6675,7 +6929,7 @@ if(typeof document!=='undefined'&&document.addEventListener)
   setTimeout(()=>{try{ensureMusBar();musTryAutoplay();}catch(e){}},0);
 
 /* ---- sampled SFX (with synth fallback) ---- */
-const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:['sfx/strikeout.mp3','sfx/strikeout-2.mp3'],yourout:['sfx/youre-out-1.mp3','sfx/youre-out-2.mp3','sfx/out.mp3']};
+const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',deal:'sfx/card-deal.mp3',flipcard:['sfx/card-flip-1.mp3','sfx/card-flip-2.mp3','sfx/card-flip-3.mp3','sfx/card-flip-4.mp3','sfx/card-flip-5.mp3'],strikeout:['sfx/strikeout.mp3','sfx/strikeout-2.mp3'],yourout:['sfx/youre-out-1.mp3','sfx/youre-out-2.mp3','sfx/out.mp3']};
 const _smp={};
 function _smpOne(path,vol){   // one sample file, cached; false once known-bad
   let a=_smp[path];
@@ -6693,6 +6947,693 @@ function playSmp(n,vol){
   const order=f.slice();for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
   for(const path of order)if(_smpOne(path,vol))return true;
   return false;
+}
+
+/* ============================================================
+   FRANCHISE MOMENTS — v9.9
+   Custom SVG icons · campaign map · memos · season ticker ·
+   camp reports · breaking news · clubhouse decisions
+   ============================================================ */
+
+/* ---- icon set: hand-drawn 24x24 line icons, currentColor ---- */
+const ICO_P={
+  scope:'<circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
+  radio:'<rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M7 9l9-6"/><circle cx="8" cy="14.5" r="2.4"/><path d="M14 12.5h4M14 16.5h4"/>',
+  pen:'<path d="M4 20l1.2-4.2L16.4 4.6a2 2 0 012.8 0l.2.2a2 2 0 010 2.8L8.2 18.8z"/><path d="M13.5 7.5l3 3"/>',
+  swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
+  clip:'<rect x="5" y="4" width="14" height="17" rx="1.5"/><path d="M9 4a3 3 0 016 0"/><path d="M8 10h8M8 14h8M8 18h5"/>',
+  ball:'<circle cx="12" cy="12" r="9"/><path d="M5.5 5.5c2.5 1.8 4 4 4 6.5s-1.5 4.7-4 6.5M18.5 5.5c-2.5 1.8-4 4-4 6.5s1.5 4.7 4 6.5"/>',
+  bat:'<path d="M4 20l2.5-2.5M6.5 17.5L18 4.5a1.8 1.8 0 012.6 2.4L8.5 19.5z"/><circle cx="5" cy="19" r="1.6"/>',
+  star:'<path d="M12 3l2.7 5.7 6.3.8-4.6 4.3 1.2 6.2-5.6-3.1-5.6 3.1 1.2-6.2L3 9.5l6.3-.8z"/>',
+  rank:'<path d="M5 8l7 4 7-4M5 13l7 4 7-4"/>',
+  memo:'<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 6.5l9 6 9-6"/>',
+  siren:'<path d="M6 18v-5a6 6 0 0112 0v5"/><path d="M3.5 20.5h17"/><path d="M12 3v2M5 6l1.4 1.4M19 6l-1.4 1.4"/>',
+  wrench:'<path d="M14.5 6.5a4.5 4.5 0 00-6 5.7L4 16.7a2 2 0 002.8 2.8l4.5-4.5a4.5 4.5 0 005.7-6L14 12l-2-2z"/>',
+  binoc:'<circle cx="6.5" cy="15.5" r="3.5"/><circle cx="17.5" cy="15.5" r="3.5"/><path d="M10 15V7a2 2 0 00-4 0M14 15V7a2 2 0 014 0M10 12h4"/>',
+  trophy:'<path d="M7 4h10v5a5 5 0 01-10 0z"/><path d="M7 5H4a3 3 0 003 4M17 5h3a3 3 0 01-3 4M12 14v3M8.5 20.5h7M10 17.5h4"/>',
+  flag:'<path d="M5 21V4"/><path d="M5 4h13l-2.5 3.5L18 11H5"/>',
+  helmet:'<path d="M4 13a8 8 0 0116 0v3h-5"/><circle cx="15" cy="16" r="2.5"/><path d="M4 13v3h6"/>',
+  chart:'<path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16l3-4 3 2 5-7"/>',
+  cash:'<rect x="3" y="7" width="18" height="11" rx="1.5"/><circle cx="12" cy="12.5" r="2.6"/><path d="M6.5 10v.01M17.5 15v.01"/>',
+};
+function ico(n,sz,st){const p=ICO_P[n];if(!p)return '';
+  return `<svg class="ico" viewBox="0 0 24 24" width="${sz||16}" height="${sz||16}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ${st?`style="${st}"`:''} aria-hidden="true">${p}</svg>`;}
+
+/* ---- breaking-news banner (replaces trade toasts) ---- */
+function showBreaking(title,sub){
+  const old=document.getElementById('brknews');if(old)old.remove();
+  const d=document.createElement('div');d.id='brknews';d.className='brknews';
+  d.innerHTML=`<span class="tag">${ico('siren',11)} BREAKING · THE WIRE</span><b>${title}</b>${sub?`<span>${sub}</span>`:''}`;
+  document.body.appendChild(d);sfx('coin');hap(15);
+  setTimeout(()=>{try{d.classList.add('out');setTimeout(()=>d.remove(),400);}catch(e){}},3600);
+}
+
+/* ---- generated memos: the spreadsheet, narrated ---- */
+function fmMemoWinter(){
+  const lines=[];
+  const pay=payroll(G.roster),proj=warToWins(teamWAR(G.roster));
+  const exp=G.roster.filter(p=>p.loc==="mlb"&&p.years<=1&&p.ovr>=76);
+  const prospect=G.farm.slice().sort((a,b)=>(b.pot||0)-(a.pot||0))[0];
+  if(G.mode!=='survivor'&&G.year<=2)lines.push(`Year ${G.year} of 6. Nobody expects wins yet — they expect <b>a plan</b>.`);
+  else if(G.mode!=='survivor'&&G.year>=4)lines.push(`Year ${G.year} of 6. The rebuild is over when you say it is — but the grade is coming.`);
+  if(exp.length)lines.push(`${exp.length===1?`<b>${exp[0].name}</b> is`:`<b>${exp.length} veterans</b> are`} on expiring deals — trade value that expires with ${exp.length===1?'it':'them'}.`);
+  if(prospect&&prospect.pot>=84)lines.push(`Scouting on <b>${prospect.name}</b> (${prospect.pos}, farm): "ceiling ${prospect.pot} — it looks real."`);
+  if(pay>170)lines.push(`Payroll sits at <b>$${pay}M</b> — the luxury tax will cost you wins.`);
+  else if(pay<95&&proj<75)lines.push(`Payroll is light ($${pay}M). Losing cheap is a strategy — losing accidentally isn't.`);
+  if(G.faSigns!=null&&G.year>=3)lines.push(`Free agency: <b>${Math.max(0,4-(G.faSigns||0))} of 4</b> winter signings left.`);
+  return lines.slice(0,3).join('<br>');
+}
+function fmMemoHTML(from,html){
+  if(!html)return '';
+  return `<div class="fmemo"><div class="from">${ico('memo',10)} ${from}</div>${html}</div>`;
+}
+
+/* ---- solo-open behavior for desk panels ---- */
+function fmSolo(el){if(!el.open)return;document.querySelectorAll('details.deskp[open]').forEach(d=>{if(d!==el)d.open=false;});}
+
+/* ============================================================
+   SEASON TICKER — narrates the sim result month by month
+   ============================================================ */
+function fmTickerData(prevWins,madePO){
+  const me=(G.standings||[]).find(e=>e.me)||{wins:81,losses:81};
+  const W=me.wins,L=me.losses,months=['APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER'];
+  let rem=W,splits=[];
+  for(let i=0;i<6;i++){
+    const g=27,left=(5-i)*27;
+    let w=i===5?rem:clamp(Math.round(W/162*g+gauss(0,2.4)),Math.max(0,rem-left),Math.min(g,rem));
+    splits.push({m:months[i],g,w,l:g-w});rem-=w;
+  }
+  const hl=[];
+  const best=splits.reduce((a,b)=>b.w>a.w?b:a),worst=splits.reduce((a,b)=>b.w<a.w?b:a);
+  if(best.w>=17)hl.push([best.m,`A ${ri(7,9)}-game win streak has the town buzzing`]);
+  else if(best.w>=15)hl.push([best.m,`${G.teamName} rip off a ${best.w}-win month`]);
+  if(worst.w<=9)hl.push([worst.m,`A ${worst.l}-loss month tests the clubhouse`]);
+  const rook=G.roster.filter(p=>p.loc==="mlb"&&p.age<=25&&(p.mlbYears||0)<=1).sort((a,b)=>b.ovr-a.ovr)[0];
+  if(rook&&rook.ovr>=74&&hl.length<3)hl.push([pick(['MAY','JUNE','JULY']),`Rookie ${rook.name} is turning heads every night`]);
+  const ace=G.roster.filter(p=>p.loc==="mlb"&&p.pos==="SP").sort((a,b)=>b.ovr-a.ovr)[0];
+  if(ace&&ace.ovr>=88&&hl.length<3)hl.push([pick(['JUNE','AUGUST']),`${ace.name} flirts with a no-hitter into the 8th`]);
+  const diff=prevWins!=null?W-prevWins:null;
+  let stamp,stampCls;
+  if(madePO){stamp='OCTOBER · CLINCHED';stampCls='ok';}
+  else if(W>=84){stamp='MISSED BY A HAIR';stampCls='bad';}
+  else if(W<=64){stamp='TOP PICK SECURED';stampCls='plan';}
+  else{stamp='NO OCTOBER';stampCls='bad';}
+  return {W,L,splits,hl,diff,stamp,stampCls};
+}
+function showSeasonTicker(prevWins,madePO,next){
+  let T;try{T=fmTickerData(prevWins,madePO);}catch(e){next();return;}
+  const old=document.getElementById('fmtick');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='fmtick';ov.className='fmtick';
+  ov.innerHTML=`<span class="skip" onclick="fmTickSkip()">SKIP ▸▸</span>
+    <div class="tk-club">${esc(G.teamName)} · SEASON ${G.year}</div>
+    <div class="tk-mon" id="tkmon">APRIL</div>
+    <div class="tk-rec" id="tkrec">0–0</div>
+    <div class="tk-pace" id="tkpace">GAME 1 OF 162</div>
+    <div class="tk-bars" id="tkbars">${T.splits.map(()=>'<i></i>').join('')}</div>
+    <div class="tk-hl" id="tkhl"><small></small><span></span></div>
+    <div class="tk-fin" id="tkfin">
+      <div class="rec">${T.W}–${T.L}</div>
+      ${T.diff!=null?`<div class="tk-pace">${T.diff>=0?'+':''}${T.diff} vs LAST SEASON</div>`:''}
+      <div class="tk-stamp ${T.stampCls}">${T.stamp}</div>
+      <button class="btn primary" style="margin-top:14px" onclick="fmTickDone()">Continue ▸</button>
+    </div>`;
+  document.body.appendChild(ov);
+  window._fmT={timers:[],next,T,done:false};
+  let w=0,l=0;const bars=ov.querySelectorAll('#tkbars i');
+  T.splits.forEach((s,i)=>{
+    window._fmT.timers.push(setTimeout(()=>{
+      const mo=document.getElementById('tkmon');if(!mo)return;
+      mo.textContent=s.m;sfx('tap');
+      let g=0;const iv=setInterval(()=>{if(g>=s.g){clearInterval(iv);return;}
+        if(g<s.w)w++;else l++;g++;
+        const r=document.getElementById('tkrec');if(r)r.textContent=w+'–'+l;
+        const p=document.getElementById('tkpace');if(p)p.textContent='ON PACE: '+Math.round((w/Math.max(1,w+l))*162)+' WINS';
+      },24);
+      window._fmT.timers.push(iv);
+      bars[i].style.height=Math.max(6,Math.round(s.w/27*52))+'px';
+      bars[i].classList.add('show');if(s.l>s.w)bars[i].classList.add('bad');
+      const h=T.hl.find(x=>x[0]===s.m);
+      if(h){const el=document.getElementById('tkhl');if(el){el.querySelector('small').textContent='THE WIRE · '+s.m;el.querySelector('span').textContent=h[1];el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');sfx('coin');}}
+    },i*1200));
+  });
+  window._fmT.timers.push(setTimeout(fmTickFinale,6*1200+500));
+}
+function fmTickFinale(){
+  const t=window._fmT;if(!t||t.done)return;t.done=true;
+  t.timers.forEach(x=>{clearTimeout(x);clearInterval(x);});
+  ['tkmon','tkrec','tkpace','tkbars','tkhl'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  const f=document.getElementById('tkfin');if(f)f.style.display='flex';
+  const T=t.T;sfx(T.stampCls==='ok'?'win':T.stampCls==='plan'?'coin':'lose');hap(T.stampCls==='ok'?[40,60,90]:25);
+}
+function fmTickSkip(){fmTickFinale();}
+function fmTickDone(){const t=window._fmT;const ov=document.getElementById('fmtick');if(ov)ov.remove();window._fmT=null;if(t&&t.next)t.next();}
+
+
+/* ============================================================
+   SEGMENTED SEASON — the season sims in chunks between the real
+   break screens; your record at each stop reflects the roster
+   you actually had, and mid-season moves change the stretch run.
+   ============================================================ */
+function fmSeasonInit(){G._season={g:0,w:0,l:0,mw:[0,0,0,0,0,0],mg:[0,0,0,0,0,0],finW:null};}
+function fmSegSim(n){
+  const pct=clamp(warToWins(teamWAR(G.roster))/162,0.22,0.78);
+  return clamp(Math.round(pct*n+gauss(0,Math.sqrt(n)*.42)),Math.round(n*.1),Math.round(n*.9));
+}
+const FM_MON=['APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER'];
+function fmMonthOf(g){return Math.min(5,Math.floor(Math.max(0,g-1)/27));}
+function fmLiveStandings(){   // my division, approximated current records
+  const S=G._season;if(!S||!S.g)return [];
+  const rows=[{name:G.teamName,me:true,w:S.w,l:S.l}];
+  (G.ai||[]).forEach(t=>{
+    if(t.league===G.league&&t.div===G.div){
+      const seed=String(t.id||t.name).split('').reduce((a,c)=>a+c.charCodeAt(0),0)+G.year*131;
+      const r=bwM32(seed)();
+      const pct=clamp(warToWins(t.war)/162+(r-0.5)*0.07,0.2,0.8);
+      const w=clamp(Math.round(pct*S.g),0,S.g);
+      rows.push({name:t.name,w,l:S.g-w});
+    }});
+  rows.sort((a,b)=>b.w-a.w);return rows;
+}
+function fmStandStrip(){
+  const rows=fmLiveStandings();if(!rows.length)return '';
+  return `<div class="fmstrip" onclick="fmStandFull()" title="Tap for the full picture">${ico('flag',11)} <b>${esc(G.div||'DIVISION')}</b> ${rows.map((r,i)=>`<span class="${r.me?'me':''}">${i+1}. ${esc(String(r.name).split(' ').slice(-1)[0])} <i>${r.w}–${r.l}</i></span>`).join('')}</div>`;
+}
+function fmStandFull(){
+  const old=document.getElementById('fmstand');if(old){old.remove();return;}
+  const d=document.createElement('div');d.id='fmstand';d.className='fmtick';
+  let inner='';try{inner=`<div class="scroll" style="max-height:60vh">${dlStandings()}</div>`;}catch(e){inner='<p class="muted">Standings unavailable.</p>';}
+  d.innerHTML=`<div class="tk-club">LEAGUE PICTURE · PROJECTED</div>
+    <div class="panel" style="max-width:560px;width:94%;text-align:left">${inner}</div>
+    <button class="btn primary" onclick="document.getElementById('fmstand').remove()">Close ▸</button>`;
+  document.body.appendChild(d);
+}
+function fmSegHeadline(segW,n){
+  if(Math.random()<0.45){
+    const hot=segW/n>=0.62,cold=segW/n<=0.36;
+    if(hot)return `A ${ri(6,9)}-game win streak has the town buzzing`;
+    if(cold)return `A ${ri(5,8)}-game skid tests the clubhouse`;
+    const rook=G.roster.filter(p=>p.loc==="mlb"&&p.age<=25&&(p.mlbYears||0)<=1).sort((a,b)=>b.ovr-a.ovr)[0];
+    if(rook&&rook.ovr>=72&&Math.random()<0.5)return `Rookie ${rook.name} is turning heads every night`;
+    const ace=G.roster.filter(p=>p.loc==="mlb"&&p.pos==="SP").sort((a,b)=>b.ovr-a.ovr)[0];
+    if(ace&&ace.ovr>=86)return `${ace.name} takes a no-hitter into the 8th`;
+  }
+  return null;
+}
+function fmTickShell(){
+  let ov=document.getElementById('fmtick');
+  if(ov)return ov;
+  ov=document.createElement('div');ov.id='fmtick';ov.className='fmtick';
+  document.body.appendChild(ov);return ov;
+}
+function fmSeasonTick(toGame,stop){
+  if(!G._season)fmSeasonInit();
+  const S=G._season,from=S.g,n=toGame-from;
+  if(n<=0)return fmTickStop(toGame,stop);
+  const segW=(stop==null&&S.finW!=null)?clamp(S.finW-S.w,0,n):fmSegSim(n);
+  // shuffled win/loss sequence for a lifelike count-up
+  const seq=[];for(let i=0;i<n;i++)seq.push(i<segW?1:0);
+  for(let i=seq.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seq[i],seq[j]]=[seq[j],seq[i]];}
+  const ov=fmTickShell();
+  ov.innerHTML=`${fmStandStrip()}
+    <div class="tk-club">${esc(G.teamName)} · SEASON ${G.year}</div>
+    <div class="tk-mon" id="tkmon">${FM_MON[fmMonthOf(from+1)]}</div>
+    <div class="tk-rec" id="tkrec">${S.w}–${S.l}</div>
+    <div class="tk-pace" id="tkpace">GAME ${from} OF 162</div>
+    <div class="tk-bars" id="tkbars">${S.mw.map((w,i)=>`<i class="${S.mg[i]?'show':''} ${S.mg[i]&&S.mw[i]*2<S.mg[i]?'bad':''}" style="height:${Math.max(6,Math.round(w/27*52))}px"></i>`).join('')}</div>
+    <div class="tk-hl" id="tkhl"><small></small><span></span></div>
+    <div id="tkstop"></div>`;
+  const hl=fmSegHeadline(segW,n);
+  const hlAt=from+Math.floor(n*0.55);
+  let k=0,g=from,w=S.w,l=S.l;
+  if(window._fmTk)clearInterval(window._fmTk);
+  window._fmTk=setInterval(()=>{
+    if(k>=n){clearInterval(window._fmTk);window._fmTk=null;
+      S.g=toGame;S.w=w;S.l=l;try{saveGame();}catch(e){}
+      fmTickStop(toGame,stop);return;}
+    g++;const mi=fmMonthOf(g);
+    if(seq[k])w++;else l++;
+    S.mg[mi]++;if(seq[k])S.mw[mi]++;
+    k++;
+    const r=document.getElementById('tkrec'),p=document.getElementById('tkpace'),mo=document.getElementById('tkmon');
+    if(!r){clearInterval(window._fmTk);window._fmTk=null;S.g=toGame;S.w=w;S.l=l;fmTickStop(toGame,stop);return;}
+    r.textContent=w+'–'+l;
+    p.textContent='GAME '+g+' · ON PACE: '+Math.round(w/Math.max(1,g)*162)+' W';
+    if(mo)mo.textContent=FM_MON[mi];
+    const bars=document.querySelectorAll('#tkbars i');
+    if(bars[mi]){bars[mi].classList.add('show');bars[mi].style.height=Math.max(6,Math.round(S.mw[mi]/27*52))+'px';if(S.mw[mi]*2<S.mg[mi]&&S.mg[mi]>8)bars[mi].classList.add('bad');else bars[mi].classList.remove('bad');}
+    if(hl&&g===hlAt){const el=document.getElementById('tkhl');if(el){el.querySelector('small').textContent='THE WIRE · '+FM_MON[mi];el.querySelector('span').textContent=hl;el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');sfx('coin');}}
+  },34);
+}
+function fmTickStop(atGame,stop){
+  const box=document.getElementById('tkstop');
+  if(stop==null){return;}   // finale handled by fmSeasonFinale
+  window._fmStop=stop;sfx('tap');
+  const strip=document.querySelector('#fmtick .fmstrip');if(strip)strip.outerHTML=fmStandStrip();
+  if(box)box.innerHTML=`<div class="tk-stopcard">
+      <div class="sc-g">GAME ${atGame} OF 162</div>
+      <div class="sc-n">${stop.name}</div>
+      ${stop.sub?`<div class="sc-s">${stop.sub}</div>`:''}
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+        <button class="btn primary" onclick="fmTickEnter()">⏸ ${stop.enterLab||'Make moves'} ▸</button>
+        <button class="btn" onclick="fmTickSkipStop()">▶ Keep simming</button>
+      </div></div>`;
+}
+function fmTickEnter(){const s=window._fmStop;fmTickClose();window._fmStop=null;if(s&&s.enter)s.enter();}
+function fmTickSkipStop(){const s=window._fmStop;window._fmStop=null;const box=document.getElementById('tkstop');if(box)box.innerHTML='';if(s&&s.skip)s.skip();}
+function fmTickClose(){if(window._fmTk){clearInterval(window._fmTk);window._fmTk=null;}const ov=document.getElementById('fmtick');if(ov)ov.remove();}
+function fmAllStarDev(){if(G._allStarYear!==G.year){try{computeAllStars();G._asDevNotes=developInSeason(0.45);}catch(e){}G._allStarYear=G.year;saveGame();}}
+function fmToAllStar(){fmSeasonTick(81,{name:'ALL-STAR BREAK',sub:'Call-ups, lineup changes — and the half-season development report.',enterLab:'Take the break',
+  enter:()=>{G.seasonStage=1.7;saveGame();screenAllStar();},
+  skip:()=>{fmAllStarDev();G.seasonStage=1.7;saveGame();afterAllStar();}})}
+function fmToDeadline(){fmSeasonTick(110,{name:'TRADE DEADLINE',sub:'Buyers overpay for now; sellers get youth. Last chance to shape this season.',enterLab:'Work the phones',
+  enter:()=>{G.seasonStage=1;saveGame();screenDeadline();},
+  skip:()=>{_dlMode=false;doSeason();}})}
+function fmSeasonFinale(prevWins,madePO,next){
+  const S=G._season;
+  const doneUI=()=>{
+    const ov=fmTickShell();
+    const W=S?S.w:(G.standings.find(e=>e.me)||{}).wins,L=162-W;
+    const diff=prevWins!=null?W-prevWins:null;
+    let stamp,cls;
+    if(madePO){stamp='OCTOBER · CLINCHED';cls='ok';}
+    else if(W>=84){stamp='MISSED BY A HAIR';cls='bad';}
+    else if(W<=64){stamp='TOP PICK SECURED';cls='plan';}
+    else{stamp='NO OCTOBER';cls='bad';}
+    ov.innerHTML=`${fmStandStrip()}
+      <div class="tk-club">${esc(G.teamName)} · FINAL</div>
+      <div class="tk-fin" style="display:flex">
+        <div class="rec">${W}–${L}</div>
+        ${diff!=null?`<div class="tk-pace">${diff>=0?'+':''}${diff} vs LAST SEASON</div>`:''}
+        <div class="tk-stamp ${cls}">${stamp}</div>
+        <button class="btn primary" style="margin-top:14px" onclick="fmTickClose();(window._fmNext||function(){})()">Continue ▸</button>
+      </div>`;
+    window._fmNext=next;
+    sfx(cls==='ok'?'win':cls==='plan'?'coin':'lose');hap(cls==='ok'?[40,60,90]:25);
+  };
+  if(S&&S.g<162){
+    fmSeasonTick(162,null);
+    // watch for the segment to finish, then show the card
+    const watch=setInterval(()=>{if(!window._fmTk){clearInterval(watch);doneUI();}},120);
+  } else doneUI();
+}
+
+/* ============================================================
+   CAMP REPORTS — top movers deal out as cards before the table
+   ============================================================ */
+function showCampReports(devList,next){
+  const prog=(devList||[]).filter(e=>e.prog);
+  const rest=(devList||[]).filter(e=>!e.prog&&e.d!==0).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+  const movers=prog.concat(rest).slice(0,Math.max(5,Math.min(6,prog.length+3)));
+  if(movers.length<2){next();return;}
+  const old=document.getElementById('fmcamp');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='fmcamp';ov.className='fmtick';
+  ov.innerHTML=`<div class="tk-club">SPRING CAMP · REPORTS COMING IN</div>
+    <div id="fmcampcard" style="min-height:240px;display:flex;align-items:center;justify-content:center"></div>
+    <div class="camp-dots" id="fmcampdots"></div>
+    <button class="btn primary" id="fmcampbtn" onclick="fmCampNext()">Open the first report ▸</button>
+    <button class="btn ghost sm" style="margin-top:8px" onclick="fmCampDone()">Skip to full report</button>`;
+  document.body.appendChild(ov);
+  window._fmC={list:movers,i:-1,next};
+}
+function fmCampNext(){
+  const c=window._fmC;if(!c)return;c.i++;
+  if(c.i>=c.list.length){fmCampDone();return;}
+  const e=c.list[c.i],up=e.d>0;
+  const stamp=e.prog?(e.progOK===false?'BACKFIRED':e.progOK===true?'PAID OFF':'PROGRAM'):(e.broke||e.d>=5?'BREAKOUT':e.bust?'BUST':e.d<=-5?'DECLINE':null);
+  const verdict=e.progNote?e.progNote:e.broke?'The tools clicked. Scouts are done doubting him.':e.bust?'The ceiling was a mirage. It happens.':up?(e.farm?'Turning heads on the back fields.':'Came to camp in the best shape of his life.'):(e.age>=33?'Father Time is undefeated.':'A step back. The staff isn’t worried yet.');
+  document.getElementById('fmcampbtn').textContent=c.i===c.list.length-1?'Close camp ▸':'Next report ▸';
+  document.getElementById('fmcampdots').innerHTML=c.list.map((_,j)=>`<i class="${j<=c.i?'on':''}"></i>`).join('');
+  document.getElementById('fmcampcard').innerHTML=`<div class="ccard">
+    ${stamp?`<div class="bstamp ${(stamp==='BREAKOUT'||stamp==='PAID OFF')?'':stamp==='BACKFIRED'||stamp==='BUST'?'gray':'gray'}">${stamp}</div>`:''}
+    <div class="ch"><span>${e.prog?esc(e.prog):'CAMP REPORT'}</span><span>${esc(e.pos)}${e.farm?' · FARM':''}</span></div>
+    <div class="nm">${esc(e.name)}</div><div class="role">AGE ${e.age}</div>
+    <div class="jump"><span class="o">${e.b}</span><span class="a">→</span><span class="n" id="fmcnum">${e.b}</span></div>
+    <div class="verdict">${verdict}</div></div>`;
+  sfx('flip');if(stamp==='BREAKOUT'){setTimeout(()=>{sfx('rare');hap([20,40,20]);},700);}
+  const el=document.getElementById('fmcnum');let v=e.b;
+  const iv=setInterval(()=>{if(!document.getElementById('fmcnum')){clearInterval(iv);return;}
+    v+=up?1:-1;el.textContent=v;el.style.color=up?'var(--phos)':'var(--red)';if(v===e.a)clearInterval(iv);},110);
+}
+function fmCampDone(){const c=window._fmC;const ov=document.getElementById('fmcamp');if(ov)ov.remove();window._fmC=null;if(c&&c.next)c.next();}
+
+/* ============================================================
+   CLUBHOUSE DECISIONS — 1 per season at the All-Star break
+   ============================================================ */
+function fmBumpHappy(p,d){if(!p)return;p.happy=clamp((p.happy==null?70:p.happy)+d,5,100);}
+function fmChemAll(d,only){const mlb=G.roster.filter(p=>p.loc==='mlb');mlb.forEach(p=>{if(!only||only(p))fmBumpHappy(p,d);});}
+function fmFan(d){if(G.mode==='survivor'&&typeof fanChange==='function'){try{fanChange(d,'GM decision');return true;}catch(e){}}return false;}
+function fmOctEdge(v){G._octEdge=(G._octEdgeYear===G.year?(G._octEdge||0):0)+v;G._octEdgeYear=G.year;}
+/* effect chips: [label, delta|null(text-only), kind] — kind colors the chip */
+function fmPickDecision(){
+  const mlb=G.roster.filter(p=>p.loc==='mlb');
+  const ace=mlb.filter(p=>p.pos==='SP').sort((a,b)=>b.ovr-a.ovr)[0];
+  const closer=mlb.filter(p=>p.pos==='RP').sort((a,b)=>b.ovr-a.ovr)[0];
+  const vet=mlb.filter(p=>p.age>=33&&p.ovr>=74).sort((a,b)=>b.age-a.age)[0];
+  const star=mlb.slice().sort((a,b)=>b.ovr-a.ovr)[0];
+  const kid=G.farm.slice().sort((a,b)=>(b.pot||0)-(a.pot||0))[0];
+  const young=mlb.filter(p=>p.age<=25);
+  const surv=G.mode==='survivor';
+  const E=[];
+  const ev=(id,t,aLab,aSub,aFx,bLab,bSub,bFx)=>E.push({id,t,a:{lab:aLab,sub:aSub,fx:aFx},b:{lab:bLab,sub:bSub,fx:bFx}});
+  if(ace)ev('ace',`<b>${esc(ace.name)} is furious</b> after an early hook in a blowout. The beat writers are circling. Back your manager publicly, or smooth it over with your ace behind closed doors?`,
+    'Back the manager','clubhouse discipline',()=>{fmBumpHappy(ace,-9);fmChemAll(2,p=>p!==ace);return {msg:`The room respects it. ${ace.name} stews.`,eff:[['Team chemistry',2],[esc(ace.name)+' morale',-9]]};},
+    'Protect the ace','keep him happy',()=>{fmBumpHappy(ace,8);fmChemAll(-1,p=>p!==ace);return {msg:`${ace.name} cools off. A few vets grumble about a double standard.`,eff:[[esc(ace.name)+' morale',8],['Team chemistry',-1]]};});
+  if(kid&&kid.pot>=80)ev('kid',`<b>${esc(kid.name)}</b> (your top prospect) is tearing up the minors and his agent wants a September promise. Promise the call-up, or preach patience?`,
+    'Promise September','he plays with house money',()=>{kid.pot=clamp((kid.pot||70)+1,40,99);fmBumpHappy(kid,10);return {msg:`${kid.name} relaxes and rakes.`,eff:[[esc(kid.name)+' ceiling',1],[esc(kid.name)+' morale',10]]};},
+    'Preach patience','no promises',()=>{fmBumpHappy(kid,-8);return {msg:`${kid.name} presses for a week, then settles.`,eff:[[esc(kid.name)+' morale',-8]]};});
+  if(vet)ev('vet',`<b>${esc(vet.name)}</b> (age ${vet.age}) asks to mentor the young guys instead of chasing at-bats. Give him the role?`,
+    'Give him the role','team-first move',()=>{fmChemAll(4,p=>p.age<=25);fmBumpHappy(vet,6);return {msg:'The kids gravitate to him.',eff:[['Young players morale',4],[esc(vet.name)+' morale',6]]};},
+    'He plays to earn it','no free roles',()=>{fmBumpHappy(vet,-6);return {msg:`${vet.name} nods and grinds.`,eff:[[esc(vet.name)+' morale',-6]]};});
+  ev('little',`The club can host a <b>Little League day</b> — kids on the field, autographs, the works. The vets would rather have the off-day.`,
+    'Host it','the town remembers',()=>{const f=fmFan(6);fmChemAll(1);return {msg:'The photos run for a week.',eff:f?[['Fan favor',6],['Team chemistry',1]]:[['Team chemistry',1],['The town remembers',null]]};},
+    'Rest the vets','162 is long',()=>{fmChemAll(3,p=>p.age>=30);const f=fmFan(-2);return {msg:'Fresh legs in August. Talk radio grumbles.',eff:f?[['Veteran morale',3],['Fan favor',-2]]:[['Veteran morale',3]]};});
+  if(closer)ev('closer',`<b>${esc(closer.name)}</b> has thrown 4 days straight and says he's fine. The trainers disagree. Ride your closer, or shut him down for a week?`,
+    'Shut him down','trust the trainers',()=>{fmBumpHappy(closer,-4);fmOctEdge(0.02);return {msg:'He sulks — but his arm is live in September.',eff:[['October edge','+2%'],[esc(closer.name)+' morale',-4]]};},
+    'Ride him','saves win jobs',()=>{fmBumpHappy(closer,6);fmChemAll(-1,p=>p.pos==='RP'&&p!==closer);return {msg:'He keeps slamming doors. The rest of the pen carries the load.',eff:[[esc(closer.name)+' morale',6],['Bullpen morale',-1]]};});
+  ev('analytics',`The analytics department wants to fund a <b>biometric sleep program</b>. The old-school coaches call it "pillow science."`,
+    'Fund it','the future is rest',()=>{fmChemAll(2,p=>p.age<=27);fmOctEdge(0.02);return {msg:'The young guys buy in. Fewer dead legs in October.',eff:[['October edge','+2%'],['Young players morale',2]]};},
+    'Pass','spend it on fungoes',()=>{fmChemAll(2,p=>p.age>=32);return {msg:'The vets appreciate the old ways.',eff:[['Veteran morale',2]]};});
+  if(star)ev('doc',`A streaming crew wants <b>all-access clubhouse footage</b> for a documentary. Great for the brand — annoying for the players.`,
+    'Let them in','free marketing',()=>{const f=fmFan(5);fmChemAll(-2,p=>p.age>=30);return {msg:'The trailer alone trends for a day.',eff:f?[['Fan favor',5],['Veteran morale',-2]]:[['The brand grows',null],['Veteran morale',-2]]};},
+    'Close the doors','sanctuary first',()=>{fmChemAll(2);return {msg:'The room stays a room.',eff:[['Team chemistry',2]]};});
+  if(star)ev('rumor',`A trade rumor about <b>${esc(star.name)}</b> is everywhere. He hasn't said anything. Yet.`,
+    'Kill it publicly','"he\'s not going anywhere"',()=>{fmBumpHappy(star,7);return {msg:`${star.name} posts a flexed-arm emoji. Crisis over.`,eff:[[esc(star.name)+' morale',7]]};},
+    'Stay quiet','never negotiate with rumors',()=>{fmBumpHappy(star,-6);return {msg:'The silence gets read as a yes. He hears it.',eff:[[esc(star.name)+' morale',-6]]};});
+  ev('prank',`A rookie hazing prank (mascot costume, karaoke, the whole thing) has gone <b>viral</b>. HR is asking questions; the fans think it's hilarious.`,
+    'Laugh it off','boys will be boys',()=>{const f=fmFan(4);fmChemAll(2,p=>p.age<=25);return {msg:'The karaoke clip hits a million views.',eff:f?[['Fan favor',4],['Young players morale',2]]:[['Young players morale',2]]};},
+    'Shut it down','professionalism',()=>{fmChemAll(-2,p=>p.age<=25);fmOctEdge(0.01);return {msg:'The room tightens up. Slightly too much.',eff:[['October edge','+1%'],['Young players morale',-2]]};});
+  if(young.length>=2)ev('swing',`Your new swing coach and the old hitting coach are <b>openly feuding</b> about launch angles. Pick a lane.`,
+    'Back the new school','data wins',()=>{const yp=pick(young);if(yp){yp.pot=clamp((yp.pot||70)+1,40,99);fmBumpHappy(yp,5);}fmChemAll(-2,p=>p.age>=33);return {msg:`${yp?yp.name:'A young hitter'}'s exit velo jumps within weeks.`,eff:[[yp?esc(yp.name)+' ceiling':'A young ceiling',1],['Veteran morale',-2]]};},
+    'Back the old school','feel beats data',()=>{fmChemAll(3,p=>p.age>=33);return {msg:'The cage goes back to feel and film.',eff:[['Veteran morale',3]]};});
+  ev('travel',`The players' committee asks for a <b>charter upgrade</b> — better sleep on the road, worse for the budget.`,
+    'Approve it','rest is a weapon',()=>{fmChemAll(3);fmOctEdge(0.01);return {msg:'Nobody naps in the clubhouse anymore.',eff:[['Team chemistry',3],['October edge','+1%']]};},
+    'Deny it','fly commercial, kids',()=>{fmChemAll(-2);return {msg:'Someone leaks the email. Not a great look.',eff:[['Team chemistry',-2]]};});
+  ev('charity',`Your equipment manager suggests auctioning <b>game-worn jerseys</b> for the children's hospital. The club usually keeps memorabilia revenue.`,
+    'Auction everything','it all goes',()=>{const f=fmFan(5);fmChemAll(2);return {msg:'The auction triples its goal.',eff:f?[['Fan favor',5],['Team chemistry',2]]:[['Team chemistry',2],['The town notices',null]]};},
+    'Keep the revenue','business is business',()=>{return {msg:'The books look better. The story writes itself anyway.',eff:[['Nothing changes',null]]};});
+  // avoid repeats until the pool is exhausted
+  G._decSeen=G._decSeen||[];
+  let pool=E.filter(e=>G._decSeen.indexOf(e.id)<0);
+  if(!pool.length){G._decSeen=[];pool=E;}
+  const chosen=pick(pool);
+  G._decSeen.push(chosen.id);
+  return chosen;
+}
+function showDecision(next){
+  let ev;try{ev=fmPickDecision();}catch(e){next();return;}
+  if(!ev){next();return;}
+  const old=document.getElementById('fmdec');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='fmdec';ov.className='fmtick';
+  window._fmD={ev,next};
+  ov.innerHTML=`<div class="tk-club">${ico('siren',12)} CLUBHOUSE · MID-SEASON DECISION</div>
+    <div class="decbox">
+      <p>${ev.t}</p>
+      <div class="opts">
+        <button class="btn" onclick="fmDecide('a')">${ev.a.lab}<small>${ev.a.sub}</small></button>
+        <button class="btn" onclick="fmDecide('b')">${ev.b.lab}<small>${ev.b.sub}</small></button>
+      </div>
+      <div class="decout" id="fmdecout"></div>
+    </div>`;
+  document.body.appendChild(ov);
+}
+function fmDecide(k){
+  const d=window._fmD;if(!d)return;
+  let r={msg:'',eff:[]};try{r=d.ev[k].fx()||r;saveGame();}catch(e){}
+  const chips=(r.eff||[]).map(([lab,v])=>{
+    if(v==null)return `<span class="pill" style="margin:2px">${lab}</span>`;
+    const num=typeof v==='number';
+    const good=num?v>=0:String(v).indexOf('-')!==0;
+    return `<span class="pill ${good?'green':'red'}" style="margin:2px">${lab} ${num?(v>=0?'+':'')+v:v}</span>`;
+  }).join('');
+  const out=document.getElementById('fmdecout');
+  if(out){out.innerHTML=`<div class="small" style="margin-top:12px;color:var(--dim)">${r.msg||''}</div>
+    <div style="margin-top:10px;display:flex;flex-wrap:wrap;justify-content:center;gap:2px">${chips}</div>
+    <button class="btn primary" style="margin-top:12px" onclick="fmDecideDone()">Back to the season ▸</button>`;}
+  document.querySelectorAll('#fmdec .opts .btn').forEach(b=>b.disabled=true);
+  sfx('coin');
+}
+function fmDecideDone(){const d=window._fmD;const ov=document.getElementById('fmdec');if(ov)ov.remove();window._fmD=null;if(d&&d.next)d.next();}
+
+/* ============================================================
+   OCTOBER WAR ROOM — interactive playoffs. Coaching allocation
+   = advance-scouting intel on each opponent + dugout tokens.
+   The bracket result is scripted here, then the official engine
+   replays it verbatim (G._octScript) so records/rewards flow
+   through the exact same code as always.
+   ============================================================ */
+function coachPct(){const r=G.resources||{};return Math.round(((r.coaching!=null?r.coaching:0.333))*100);}
+function coachTier(){const c=coachPct();return c<10?0:c<30?1:c<50?2:c<75?3:4;}
+const OCT_TENDS=[
+ {k:'power',lab:'a power-heavy lineup',counter:'pitch'},
+ {k:'speed',lab:'a contact-and-speed offense',counter:'defense'},
+ {k:'arms',lab:'an elite pitching staff',counter:'grind'},
+ {k:'pen',lab:'a shutdown bullpen',counter:'early'},
+ {k:'patient',lab:'a grinding, patient lineup',counter:'zone'},
+ {k:'launch',lab:'a homer-or-bust launch-angle crew',counter:'low'}];
+const OCT_PLANS=[
+ {k:'pitch',lab:'Pitch backwards',sub:'soft stuff away — starve the power'},
+ {k:'defense',lab:'Lock down the run game',sub:'infield tight, quick slide steps'},
+ {k:'grind',lab:'Grind every at-bat',sub:'run the pitch counts, get into their pen'},
+ {k:'early',lab:'Ambush the starters',sub:'jump early counts before the pen slams the door'},
+ {k:'zone',lab:'Pound the zone',sub:'strike one, quick outs — no free passes to grinders'},
+ {k:'low',lab:'Keep the ball down',sub:'sinkers at the knees — kill the launch angle'}];
+const OCT_ROUNDS={wc:{name:'WILD CARD',need:2},ds:{name:'DIVISION SERIES',need:3},cs:{name:'CHAMPIONSHIP SERIES',need:4},ws:{name:'WORLD SERIES',need:4}};
+function fmOctoberRun(next){
+  const po=G._po||{};const entries=po.entries||G.standings;
+  const me=entries.find(e=>e.me);
+  if(!me||!me.playoff){next();return;}
+  me.war=teamWAR(G.roster);   // same refresh the engine will do
+  const field=mlbPlayoffField(entries);
+  const cb=1+(((G.resources?G.resources.coaching:0.333)-0.333)*0.32);
+  const dm=1+(teamDawg()-50)/50*0.10;
+  const chem=1+(teamChem()-60)/40*0.08;
+  const edge=(G._octEdgeYear===G.year)?(G._octEdge||0):0;
+  const paOf=(a,b)=>{const sa=(a.war+22)*(a.me?cb*dm*chem:1),sb=(b.war+22)*(b.me?cb*dm*chem:1);
+    let pa=clamp(sa/(sa+sb),0.30,0.68);
+    if(a.me)pa=clamp(pa+edge,0.25,0.75);else if(b.me)pa=clamp(pa-edge,0.25,0.75);
+    return pa;};
+  const t=coachTier();
+  const O={next,script:[],queue:[],tokens:[0,1,1,2,3][t],tier:t,alive:true,paOf,
+    auto(a,b){if(!a)return b;if(!b)return a;const w=Math.random()<paOf(a,b)?a:b;O.script.push(w===a);return w;}};
+  // build the series schedule in EXACTLY the engine's order; user series become interactive stops
+  field.forEach(({league,teams})=>{
+    const s={};teams.forEach(x=>s[x.lgSeed]=x);
+    O.queue.push({lg:league,st:'wcA',get:()=>[s[3],s[6]],rk:'wc'});
+    O.queue.push({lg:league,st:'wcB',get:()=>[s[4],s[5]],rk:'wc'});
+  });
+  window._fmO=O;O.field=field;O.stage=0;
+  fmOctNext();
+}
+function fmOctNext(){
+  const O=window._fmO;if(!O)return;
+  // stage 0: wild cards per league; stage 1: DS; stage 2: LCS; stage 3: WS; then done
+  if(!O._built){O._built={};O._winners={};}
+  const F=O.field;
+  const stages=[
+    ()=>{ // wild cards
+      F.forEach(f=>{const s={};f.teams.forEach(x=>s[x.lgSeed]=x);O._built[f.league]={s};});
+      O._pend=[];
+      F.forEach(f=>{const s=O._built[f.league].s;
+        O._pend.push({a:s[3],b:s[6],rk:'wc',lg:f.league,key:'wcA'});
+        O._pend.push({a:s[4],b:s[5],rk:'wc',lg:f.league,key:'wcB'});});
+    },
+    ()=>{ // division series
+      O._pend=[];
+      F.forEach(f=>{const B=O._built[f.league];const s=B.s;
+        const wcW=[B.wcA,B.wcB].sort((a,b)=>a.lgSeed-b.lgSeed);
+        O._pend.push({a:s[1],b:wcW[wcW.length-1],rk:'ds',lg:f.league,key:'dsA'});
+        O._pend.push({a:s[2],b:wcW[0],rk:'ds',lg:f.league,key:'dsB'});});
+    },
+    ()=>{ // league championships
+      O._pend=[];
+      F.forEach(f=>{const B=O._built[f.league];
+        O._pend.push({a:B.dsA,b:B.dsB,rk:'cs',lg:f.league,key:'cs'});});
+    },
+    ()=>{ // world series
+      const al=O._built[F[0].league].cs,nl=O._built[F[1]?F[1].league:F[0].league].cs;
+      O._pend=[{a:al,b:nl,rk:'ws',lg:'WS',key:'ws'}];
+    }];
+  while(true){
+    if(!O._pend||!O._pend.length){
+      if(O.stage>=stages.length){ // bracket complete
+        window._fmO=null;G._octScript=O.script;const n=O.next;fmOctClose();n();return;}
+      stages[O.stage]();O.stage++;
+    }
+    const m=O._pend.shift();
+    const a=m.a,b=m.b;
+    if(!a||!b){const w=a||b;O._built[m.lg]=O._built[m.lg]||{};O._built[m.lg][m.key]=w;continue;}
+    const userIn=(a.me||b.me);
+    if(!userIn){const w=Math.random()<O.paOf(a,b)?a:b;O.script.push(w===a);O._built[m.lg]=O._built[m.lg]||{};O._built[m.lg][m.key]=w;continue;}
+    // interactive series
+    O._cur=m;fmOctSeries(m);return;
+  }
+}
+function fmOctSeries(m){
+  const O=window._fmO,me=(m.a.me?m.a:m.b),opp=(m.a.me?m.b:m.a);
+  const R=OCT_ROUNDS[m.rk];
+  const tend=pick(OCT_TENDS);
+  // 3 plans on the table: the true counter + 2 decoys, shuffled
+  const decoys=shuffle(OCT_PLANS.filter(p=>p.k!==tend.counter)).slice(0,2);
+  const shown=shuffle([OCT_PLANS.find(p=>p.k===tend.counter)].concat(decoys));
+  const shownTends=shown.map(p=>OCT_TENDS.find(x=>x.counter===p.k));
+  O._series={m,me,opp,R,tend,shown,plan:null,delta:0,gw:0,gl:0,boost:0,over:false};
+  const t=O.tier;
+  let intel;
+  if(t>=4)intel=`Advance scouts are certain: they're <b>${tend.lab}</b>.`;
+  else if(t===3){const truthy=Math.random()<0.8;const st=truthy?tend:pick(shownTends.filter(x=>x.k!==tend.k));intel=`Scouts are fairly confident (not certain): they look like <b>${st.lab}</b>.`;}
+  else if(t===2){const ruled=pick(shownTends.filter(x=>x.k!==tend.k));intel=`Scouts rule one thing out: they are <b>not</b> ${ruled.lab}.`;O._series.ruled=ruled.counter;}
+  else if(t===1){const truthy=Math.random()<0.55;const st=truthy?tend:pick(shownTends.filter(x=>x.k!==tend.k));intel=`A thin report — one scout <i>thinks</i> they're ${st.lab}.`;}
+  else intel='No advance scouting budget. You are flying blind.';
+  const ov=fmTickShell();
+  ov.innerHTML=`<div class="tk-club">${ico('trophy',12)} OCTOBER · ${R.name}</div>
+    <div class="oct-vs"><span class="you">${esc(G.teamName)}</span><i>VS</i><span>${esc(opp.name)} · ${opp.wins}W</span></div>
+    <div class="fmemo" style="max-width:440px;text-align:left"><div class="from">${ico('binoc',10)} ADVANCE SCOUTING · COACHING AT ${coachPct()}%</div>${intel}</div>
+    <div class="tk-pace" style="margin-top:2px">PICK THE SERIES GAME PLAN</div>
+    <div class="oct-plans">${shown.map(p=>`<button class="btn oct-plan ${O._series.ruled===p.k?'ruled':''}" onclick="fmOctPlan('${p.k}')"><b>${p.lab}</b><small>${p.sub}</small></button>`).join('')}</div>
+    <div id="octgames"></div>`;
+  sfx('tap');
+}
+function fmOctPlan(k){
+  const O=window._fmO,S=O._series;if(!S||S.plan)return;
+  S.plan=k;
+  S.delta=(k===S.tend.counter)?0.08:-0.03;
+  document.querySelectorAll('.oct-plan').forEach(b=>b.disabled=true);
+  const right=k===S.tend.counter;
+  const pa=clamp(O.paOf(S.m.a,S.m.b)+((S.m.a.me?1:-1)*S.delta),0.25,0.75);
+  S.pa=pa;
+  const box=document.getElementById('octgames');
+  if(box)box.innerHTML=`<div class="small" style="color:${right?'var(--green)':'var(--red)'};margin:8px 0">${right?'✔ The plan fits — they were '+S.tend.lab+'.':'✘ Bad read — they were '+S.tend.lab+'.'}</div>
+    <div class="oct-score"><span id="octw">0</span><i>–</i><span id="octl">0</span></div>
+    <div class="tk-pace">FIRST TO ${S.R.need}</div>
+    <div class="oct-chips" id="octchips"></div>
+    <div id="octact" style="margin-top:10px"></div>`;
+  sfx(right?'coin':'lose');
+  setTimeout(fmOctGame,900);
+}
+function fmOctGame(){
+  const O=window._fmO,S=O&&O._series;if(!S||S.over)return;
+  const meIsA=S.m.a.me;
+  let pg=clamp(0.5+(S.pa-0.5)*0.85,0.22,0.8);
+  if(!meIsA)pg=1-pg;   // pg = MY per-game win chance
+  if(S.boost){pg=clamp(pg+0.15,0.05,0.92);S.boost=0;}
+  const win=Math.random()<pg;
+  if(win)S.gw++;else S.gl++;
+  const chips=document.getElementById('octchips');
+  if(chips)chips.innerHTML+=`<span class="oc ${win?'w':'l'}">${win?'W':'L'}</span>`;
+  const w=document.getElementById('octw'),l=document.getElementById('octl');
+  if(w)w.textContent=S.gw;if(l)l.textContent=S.gl;
+  sfx(win?'single':'out');hap(win?12:8);
+  const act=document.getElementById('octact');
+  if(S.gw>=S.R.need||S.gl>=S.R.need){S.over=true;const won=S.gw>=S.R.need;
+    if(act)act.innerHTML=`<div class="tk-stamp ${won?'ok':'bad'}" style="margin:8px auto 0;display:inline-block">${won?(S.m.rk==='ws'?'WORLD CHAMPIONS':'SERIES WON')+' '+S.gw+'–'+S.gl:'ELIMINATED '+S.gl+'–'+S.gw}</div>
+      <div style="margin-top:14px"><button class="btn primary" onclick="fmOctSeriesDone(${won?'true':'false'})">${won?(S.m.rk==='ws'?'Raise the trophy ▸':'Next round ▸'):'Face the winter ▸'}</button></div>`;
+    sfx(won?(S.m.rk==='ws'?'win':'levelup'):'lose');hap(won?[40,60,90]:30);
+    return;
+  }
+  if(act){
+    const behind=S.gl>S.gw;
+    act.innerHTML=`${behind&&O.tokens>0?`<button class="btn" onclick="fmOctToken()">${ico('rank',13)} Fire up the dugout <small style="color:var(--dim)">+15% next game · ${O.tokens} left</small></button> `:''}
+      <button class="btn primary sm" onclick="fmOctGame()">Play Game ${S.gw+S.gl+1} ▸</button>`;
+  }
+}
+function fmOctToken(){
+  const O=window._fmO,S=O&&O._series;if(!S||!O.tokens)return;
+  O.tokens--;S.boost=1;sfx('coin');hap(20);
+  toast('The dugout is on its feet — momentum next game.');
+  fmOctGame();
+}
+function fmOctSeriesDone(won){
+  const O=window._fmO,S=O._series;
+  const aWon=S.m.a.me?won:!won;
+  O.script.push(aWon);
+  O._built[S.m.lg]=O._built[S.m.lg]||{};O._built[S.m.lg][S.m.key]=aWon?S.m.a:S.m.b;
+  O._series=null;
+  fmOctNext();
+}
+function fmOctClose(){const ov=document.getElementById('fmtick');if(ov)ov.remove();}
+
+/* ============================================================
+   WINTER PROGRAM — development allocation buys focus slots.
+   Safe reps or a risky overhaul; results land in camp reports.
+   ============================================================ */
+function devPct(){const r=G.resources||{};return Math.round(((r.development!=null?r.development:0.333))*100);}
+function devTier(){const d=devPct();return d<10?0:d<30?1:d<50?2:d<75?3:4;}
+function wpSlots(){return [1,2,2,3,4][devTier()];}
+function wpCandidates(){
+  const pool=G.roster.filter(p=>p.loc==='mlb'&&p.age<=27).concat(G.farm||[]);
+  return pool.filter(p=>(p.realCeil||p.pot||p.ovr)>p.ovr).sort((a,b)=>(b.pot||0)-(a.pot||0)).slice(0,8);
+}
+function wpProgName(p,mode){
+  const pit=isPit(p);
+  return mode==='over'?(pit?'PITCH LAB OVERHAUL':'SWING REBUILD'):(pit?'VELO CAMP':'POWER LAB');
+}
+let _wp=null;
+function showWinterProgram(next){
+  const cands=wpCandidates();
+  if(!cands.length){next();return;}
+  _wp={next,picks:{},slots:wpSlots()};
+  const ov=fmTickShell();
+  const row=p=>`<div class="wp-row" id="wp_${p.id}">
+      <div class="wp-info"><b>${esc(p.name)}</b><span class="small muted"> ${esc(p.pos)} · ${p.age} · ${p.ovr} OVR · ceil ${p.pot}${p.loc==='farm'?' · farm':''}</span></div>
+      <div class="wp-btns">
+        <button class="btn sm" onclick="wpSet('${p.id}','reps')">Reps</button>
+        <button class="btn sm" onclick="wpSet('${p.id}','over')">Overhaul</button>
+      </div></div>`;
+  ov.innerHTML=`<div class="tk-club">${ico('wrench',12)} WINTER PROGRAM · DEVELOPMENT AT ${devPct()}%</div>
+    <div class="fmemo" style="max-width:470px;text-align:left"><div class="from">PLAYER DEVELOPMENT DEPT</div>
+      You can fund <b>${_wp.slots} focus slot${_wp.slots>1?'s':''}</b> this winter.
+      <b>Reps</b> = a safe, guaranteed step forward. <b>Overhaul</b> = swing-for-the-fences: a real chance at a leap, a real chance it backfires.</div>
+    <div class="wp-list" style="max-width:470px;width:94%">${cands.map(row).join('')}</div>
+    <div class="tk-pace" style="margin-top:8px"><span id="wpleft">${_wp.slots}</span> SLOT(S) LEFT</div>
+    <div style="margin-top:10px"><button class="btn primary" onclick="wpRun()">Run the winter program ▸</button>
+    <button class="btn ghost sm" onclick="wpRun()">Skip</button></div>`;
+}
+function wpSet(pid,mode){
+  if(!_wp)return;
+  const cur=_wp.picks[pid];
+  const used=Object.keys(_wp.picks).length;
+  if(cur===mode){delete _wp.picks[pid];}
+  else if(cur){_wp.picks[pid]=mode;}
+  else{if(used>=_wp.slots){toast('No slots left — tap a selected player to free one.');return;}_wp.picks[pid]=mode;}
+  const rowEl=document.getElementById('wp_'+pid);
+  if(rowEl){rowEl.querySelectorAll('.btn').forEach(b=>b.classList.remove('primary'));
+    if(_wp.picks[pid])rowEl.querySelector(_wp.picks[pid]==='reps'?'.btn:first-child':'.btn:last-child').classList.add('primary');}
+  const lf=document.getElementById('wpleft');if(lf)lf.textContent=_wp.slots-Object.keys(_wp.picks).length;
+  sfx('tap');
+}
+function wpRun(){
+  const w=_wp;_wp=null;
+  G._winterFocus=w?w.picks:{};saveGame();
+  const ov=document.getElementById('fmtick');if(ov)ov.remove();
+  if(w&&w.next)w.next();
+}
+function wpApply(res){   // post-process development with the funded programs
+  const picks=G._winterFocus||{};G._winterFocus=null;
+  const t=devTier();
+  Object.keys(picks).forEach(pid=>{
+    const p=G.roster.find(x=>x.id===pid)||(G.farm||[]).find(x=>x.id===pid);
+    if(!p)return;
+    const mode=picks[pid],before=p.ovr;
+    const cap=Math.max(p.ovr,p.realCeil||p.pot||p.ovr);
+    let note='';
+    let ok=null;
+    if(mode==='reps'){const g=ri(1,2);p.ovr=clamp(p.ovr+g,20,cap);ok=p.ovr>before?true:null;note=p.ovr>before?'Winter reps paid off — a clean step forward.':'Worked all winter — already at his ceiling.';}
+    else{
+      const odds=0.40+t*0.06;
+      if(Math.random()<odds){const g=ri(3,5);p.ovr=clamp(p.ovr+g,20,cap);ok=true;
+        if(Math.random()<0.25&&p.pot<99){p.pot=clamp(p.pot+1,40,99);}
+        note=p.ovr>before?'THE OVERHAUL WORKED. He looks like a different player.':'Rebuilt everything — the ceiling was the limit.';}
+      else{const g=ri(1,2);p.ovr=clamp(p.ovr-g,20,99);ok=false;note='The overhaul backfired — he lost his feel and has to find it again.';}
+    }
+    const d=p.ovr-before;
+    const dl=(res.devList=res.devList||[]);
+    const ex=dl.find(e=>e.name===p.name);
+    const prog=wpProgName(p,mode);
+    if(ex){ex.a=p.ovr;ex.d=(ex.d||0)+d;ex.prog=prog;ex.progNote=note;ex.progOK=ok;}
+    else dl.push({name:p.name,pos:p.pos,b:before,a:p.ovr,d,age:p.age,farm:p.loc==='farm',prog,progNote:note,progOK:ok});
+  });
+  saveProfile&&0;saveGame();
+  return res;
 }
 /* boot */
 (localStorage.getItem(WELCOME_KEY)?screenTitle:screenWelcome)();
