@@ -15,7 +15,9 @@ function screenSeason(){
      <p class="sub">Roster locked. Two in-season decision points are coming up — a <b>service-time call-up window</b> (game 20) and the <b>trade deadline</b> (game 110) — before the season plays out.</p>
      <button class="btn primary" style="font-size:16px;padding:14px 26px" onclick="beginSeason()">▶ Start the season</button></div>`);
 }
-function beginSeason(){if(G.hard&&G._injRolled!==G.year)rollSeasonInjuries();G.seasonStage=0;saveGame();screenServiceTime();}
+function beginSeason(){if(G.hard&&G._injRolled!==G.year)rollSeasonInjuries();G.seasonStage=0;G._prevWins=G.lastWins;fmSeasonInit();saveGame();
+  fmSeasonTick(20,{name:'SERVICE-TIME WINDOW',sub:'Call up a prospect now and his clock starts — wait, and you keep the extra year of control.',enterLab:'Review call-ups',
+    enter:()=>screenServiceTime(),skip:()=>afterServiceTime()});}
 // Injured List — long-term injuries that take a player off the active roster
 function ilSection(){
   const il=G.roster.filter(p=>p.loc==="mlb"&&p._il);
@@ -59,10 +61,14 @@ function promoteService(pid){const p=G.farm.find(x=>x.id===pid);if(!p)return;G.f
   toast(`${p.name} called up — service-time hold (no year burned)`);screenServiceTime();}
 function afterServiceTime(){
   if(G.mode==="survivor"&&!G.owner&&G.year>=2&&!G._mediaAnswered&&Math.random()<0.6){
-    G.seasonStage=1.5;G._mediaQ=pickMediaQuestion();G._mediaAnswered=false;saveGame();return screenMedia();
+    G._mediaQ=pickMediaQuestion();saveGame();
+    return fmSeasonTick(45,{name:'PRESS CONFERENCE',sub:'The beat writers want a word. Skipping reads as “no comment” — fans notice.',enterLab:'Take the podium',
+      enter:()=>{G.seasonStage=1.5;G._mediaAnswered=false;saveGame();screenMedia();},
+      skip:()=>{try{const fd=fanChange(-3,"Press conference"),od=favorChange(-2,"Press conference");}catch(e){}G._mediaAnswered=true;saveGame();fmToAllStar();}});
   }
-  if(G.hard){G.seasonStage=0.7;saveGame();return screenEarlyBreak();}   // Hard: an early roster check before the All-Star break
-  G.seasonStage=1.7;saveGame();screenAllStar();}
+  if(G.hard)return fmSeasonTick(50,{name:'ROSTER CHECK',sub:'Hard Mode wears a roster down — injuries and cover need managing.',enterLab:'Check the trainer’s room',
+    enter:()=>{G.seasonStage=0.7;saveGame();screenEarlyBreak();},skip:()=>fmToAllStar()});
+  fmToAllStar();}
 /* ---- mid-season stop ~1.7: All-Star Break (game 81) + in-season development ---- */
 function developInSeason(mult){   // a half-season of reps: young players grow toward their ceiling mid-year too
   const dev=(G.resources?G.resources.development:0.333);const notes=[];
@@ -117,7 +123,13 @@ function screenAllStar(){
       <button class="btn primary" onclick="afterAllStar()">Continue to the trade deadline ▶</button></div>`);
 }
 function asCallUp(pid){promoteCore(pid);screenAllStar();}
-function afterAllStar(){_rosterMode='';if(G.hard){G.seasonStage=1.3;saveGame();return screenHardBreak();}G.seasonStage=1;saveGame();screenDeadline();}
+function afterAllStar(){_rosterMode='';
+  const go=()=>{
+    if(G.hard)return fmSeasonTick(95,{name:'ROSTER CHECK',sub:'Down the stretch — patch holes and reset the lineup before the deadline.',enterLab:'Check the trainer’s room',
+      enter:()=>{G.seasonStage=1.3;saveGame();screenHardBreak();},skip:()=>fmToDeadline()});
+    fmToDeadline();};
+  if(G._decideYear!==G.year){G._decideYear=G.year;saveGame();try{return showDecision(go);}catch(e){}}
+  go();}
 // shared Hard Mode roster-check break (injury report + IL + call-ups + adjust roster)
 function rosterCheckBreak(o){
   const farm=G.farm.slice().sort((a,b)=>b.ovr-a.ovr);
@@ -140,11 +152,11 @@ function rosterCheckBreak(o){
 function screenEarlyBreak(){rosterCheckBreak({pill:'🔥 ROSTER CHECK · Game 50 of 162',title:'The grind sets in',
   sub:'Hard Mode wears a roster down. Check the injury report, call up cover, and set your lineup before the All-Star break.',
   backMode:'earlybreak',reRender:'screenEarlyBreak',continueLabel:'On to the All-Star Break ▶',
-  onContinue:"(function(){_rosterMode='';G.seasonStage=1.7;saveGame();screenAllStar();})()"});}
+  onContinue:"(function(){_rosterMode='';fmToAllStar();})()"});}
 function screenHardBreak(){rosterCheckBreak({pill:'🔥 ROSTER CHECK · Game 95 of 162',title:'Down the stretch',
   sub:'Patch the holes, call up reinforcements, and reset your lineup before the trade deadline.',
   backMode:'hardbreak',reRender:'screenHardBreak',continueLabel:'On to the trade deadline ▶',
-  onContinue:"(function(){_rosterMode='';G.seasonStage=1;saveGame();screenDeadline();})()"});}
+  onContinue:"(function(){_rosterMode='';fmToDeadline();})()"});}
 /* ---- mid-season stop 1.5 (Survivor): media press conference ---- */
 function mediaSituation(){const proj=projWinsNow(),pay=payroll(G.roster);
   if(proj>=90||G.lastPlayoffYear===G.year-1)return 'contend';
@@ -249,7 +261,7 @@ function screenMediaResult(){
       <div class="row" style="gap:18px;margin-top:10px;font-size:15px"><span>📣 Fans ${chip(r.fan)}</span><span>🪑 Owner ${chip(r.owner)}</span></div>
       ${r.expect?'<div class="pill gold" style="margin-top:10px;display:inline-block">📈 You raised the stakes — reach the playoffs this year or pay for the promise</div>':''}
     </div>
-    <div class="center"><button class="btn primary" onclick="(function(){G.seasonStage=1.7;saveGame();screenAllStar();})()">On to the All-Star Break ▶</button></div>`);}
+    <div class="center"><button class="btn primary" onclick="fmToAllStar()">Back to the season ▶</button></div>`);}
 /* ---- mid-season stop 2: trade deadline (game 110) ---- */
 function computeDeadlineStances(){
   const arr=G.ai.map(t=>({t,w:warToWins(t.war)}));
@@ -323,22 +335,40 @@ function screenDeadline(){
   _sugg=null;
   const proj=warToWins(teamWAR(G.roster)),ms=G._myStance;
   const head=ms==='buyer'?'You\'re in the hunt — be a BUYER':ms==='seller'?'Out of the race — time to SELL':'On the bubble — buy, sell, or stand pat';
+  const stanceMemo=ms==='buyer'
+    ?`The math says you're <b>in the hunt</b> (proj ${proj} W). Contenders overpay in July — including you, if you're not careful. Rentals cost prospects; cost-controlled stars cost a fortune.`
+    :ms==='seller'
+    ?`The math says the race is gone (proj ${proj} W). Good news: <b>your veterans are worth more today than they'll ever be again.</b> Sell the expiring deals, stack youth and picks.`
+    :`Proj ${proj} W — right on the bubble. Buy, sell, or stand pat; just don't half-do all three.`;
   render(`${header()}
-   <div class="panel center" style="border-color:var(--gold)">
-     <div class="pill gold">⏳ TRADE DEADLINE · Game 110 of 162</div>
-     <h2 style="margin:6px 0">${head}</h2>
-     <p class="sub">Projected <b>${proj}</b> wins. Deadline values shift: <b>current production is king</b>, ceilings cool off, and <b>contract control matters more</b> (rentals cheap, cost-controlled stars pricey). Contenders overpay for win-now help; sellers give up expiring vets for youth.</p></div>
-   ${dlStancePanel()}
-   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📊 Current standings <span class="small muted">(who's buying & selling)</span></summary><div style="margin-top:8px"><div class="scroll">${dlStandings()}</div></div></details>
-   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster</summary><div style="margin-top:8px">${rosterMini()}</div></details>
-   <div class="panel"><h3>🎖️ Front Office Resources <span class="small muted">(adjust your strategy for the stretch run)</span></h3>
-     <div id="resbox">${renderResources()}</div></div>
-   <div class="panel"><h3>🛠️ Make a deadline deal</h3>
-     <p class="sub">Buyers overpay for your big-league talent; sellers hand you rentals cheap for prospects and picks.${infoDot('The accept / reject bar already reflects who you are dealing with — an even-value swap is always accepted.')}</p>
+   ${G._season?`<div style="display:flex;justify-content:center;margin:4px 0 10px"><div class="fmstrip" style="position:static;transform:none" onclick="fmStandFull()">${ico('flag',11)} <b>${esc(G.div||'DIVISION')}</b> ${fmLiveStandings().map((r,i)=>`<span class="${r.me?'me':''}">${i+1}. ${esc(String(r.name).split(' ').slice(-1)[0])} <i>${r.w}–${r.l}</i></span>`).join('')}</div></div>`:''}
+   <div class="panel center" style="border-color:var(--gold);padding:12px">
+     <div class="pill gold">${ico('siren',11)} TRADE DEADLINE · GAME 110 OF 162</div>
+     <h2 style="margin:6px 0 0">${head}</h2></div>
+   ${fmMemoHTML('DEADLINE DESK · THE SITUATION',stanceMemo)}
+
+   <details class="deskp pri" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('binoc',20)}</span><div class="dtx"><b>Suggested deadline deal</b><span>built for a ${ms||'bubble'} club — respin freely</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><div id="suggbox">${renderSuggestion()}</div></div>
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('swap',20)}</span><div class="dtx"><b>Make a deadline deal</b><span>buyers overpay for now-help; sellers hand you rentals cheap</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><p class="sub">The accept/reject bar already reflects who you're dealing with — an even-value swap is always accepted. Deadline values shift: <b>current production is king</b>, ceilings cool off, contract control matters more.</p>
      <div id="builder">${renderBuilder()}</div></div>
-   <div class="panel"><h3>💡 Suggested deadline deal <span class="small muted">(respin freely)</span></h3>
-     <div id="suggbox">${renderSuggestion()}</div></div>
-   <div class="center" style="margin-top:14px"><button class="btn primary" style="font-size:16px;padding:12px 22px" onclick="afterDeadline()">Set roster &amp; play out the season ▶</button></div>`);
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('chart',20)}</span><div class="dtx"><b>The market</b><span>who's buying, who's selling — full standings</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody">${dlStancePanel()}<div class="scroll" style="margin-top:8px">${dlStandings()}</div></div>
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('rank',20)}</span><div class="dtx"><b>Resources</b><span>adjust the strategy for the stretch run</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><div id="resbox">${renderResources()}</div></div>
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('clip',20)}</span><div class="dtx"><b>Clipboard — current roster</b><span>updates after each deal</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody">${rosterMini()}</div>
+   </details>
+   <div class="deskcta"><button class="btn primary" style="font-size:15px;padding:13px 28px" onclick="afterDeadline()">Set roster & play out the season ▸</button></div>`);
 }
 function afterDeadline(){_dlMode=false;G.seasonStage=2;_rosterMode='deadline';saveGame();screenRoster();}
 function weakStartSpots(){   // count starting spots that are empty or filled by a sub-70 OVR player
@@ -350,13 +380,21 @@ function weakStartSpots(){   // count starting spots that are empty or filled by
 }
 function doSeason(){
   _dlMode=false;
+  const prevWins=G._prevWins!=null?G._prevWins:G.lastWins;
   const reg=simulateRegularSeason();
-  if(reg.madePO&&!G.owner){G.seasonStage=2.8;saveGame();return screenPlayoffRoster();}   // made the playoffs → set your October roster first (the GM handles it in Owner Mode)
-  finishSeason();   // missed October (or owner mode) → straight to the bracket + results
+  const after=()=>{
+    G._season=null;G._prevWins=null;
+    if(reg.madePO&&!G.owner){G.seasonStage=2.8;saveGame();return screenPlayoffRoster();}
+    finishSeason();
+  };
+  try{
+    if(!G.owner&&G._season&&G._season.g>0)fmSeasonFinale(prevWins,!!reg.madePO,after);
+    else showSeasonTicker(prevWins,!!reg.madePO,after);
+  }catch(e){after();}
 }
 // the player reached the postseason — let them set their playoff roster before the bracket runs
 function screenPlayoffRoster(){_rosterMode='playoff';G.phase=1;screenRoster();}
-function startPlayoffs(){finishSeason();}
+function startPlayoffs(){try{fmOctoberRun(()=>finishSeason());}catch(e){finishSeason();}}
 function finishSeason(){
   _res=runPlayoffsAndFinish();
   _res.awards=computeAwards();

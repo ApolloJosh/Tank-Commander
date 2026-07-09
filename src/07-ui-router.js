@@ -16,9 +16,9 @@ function ensureNavBtns(){
 function ensureSaveBtn(){ensureNavBtns();}
 function goHome(){try{saveGame();}catch(e){}screenTitle();}
 function homeBtn(){return `<button class="btn ghost sm" onclick="goHome()" title="Back to the home menu (your game is saved)">🏠</button> `;}
-const PHASES=["Trade Hub","Set Roster","Play Season","Draft","Develop"];
+const PHASES=["Winter","Camp","Season","Draft","Develop"];
 function stepbar(a){const ph=(G.mode!=="survivor"&&G.year>=6)?PHASES.slice(0,3):PHASES;
-  return `<div class="stepbar">${ph.map((s,i)=>`<div class="step ${i<a?'done':''} ${i===a?'on':''}">${i+1}. ${s}</div>`).join("")}</div>`;}
+  return `<div class="cmap">${ph.map((s,i)=>`<div class="leg ${i<a?'done':''} ${i===a?'on':''}"><span class="dot"></span><span class="lb">${s}</span></div>`).join("")}</div>`;}
 function mandate(){if(G.year<=2)return{cls:'blue',txt:'Mandate: Rebuild — losing is OK'};
   if(G.year===3)return{cls:'gold',txt:'Mandate: Turn the corner'};return{cls:'green',txt:'Mandate: CONTEND now'};}
 // shared branded top bar: wide logo (left) + home/right controls

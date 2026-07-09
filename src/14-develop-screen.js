@@ -4,9 +4,19 @@
 let _devRes=null;
 function screenDevelop(){
   if(G._devDoneYear===G.year){_devRes=_devRes||{fa:G.leftAsFA||[],notes:[],devList:[],cuts:[],retired:[]};return renderDevelopSummary();}   // reload-safe: don't age twice
-  const res=developAll();G._devDoneYear=G.year;saveGame();_devRes=res;
-  if((res.retired||[]).length)return screenRetirements();
-  renderDevelopSummary();
+  if(G._wpYear!==G.year){
+    G._wpYear=G.year;saveGame();
+    try{return showWinterProgram(()=>screenDevelopRun());}catch(e){}
+  }
+  screenDevelopRun();
+}
+function screenDevelopRun(){
+  if(G._devDoneYear===G.year){_devRes=_devRes||{fa:[],notes:[],devList:[],cuts:[],retired:[]};return renderDevelopSummary();}
+  let res=developAll();
+  try{res=wpApply(res);}catch(e){}
+  G._devDoneYear=G.year;saveGame();_devRes=res;
+  const after=()=>{if((res.retired||[]).length)return screenRetirements();renderDevelopSummary();};
+  try{showCampReports(res.devList,after);}catch(e){after();}
 }
 function screenRetirements(){
   const ret=(_devRes&&_devRes.retired||[]).slice().sort((a,b)=>(b._teamYears||0)-(a._teamYears||0));

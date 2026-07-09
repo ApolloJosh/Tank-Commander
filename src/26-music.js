@@ -27,6 +27,12 @@ const MUSIC=[
  ['music/Ob-La-Di_Ob-La-Da.mp3','Ob-La-Di, Ob-La-Da'],
  ['music/Born_This_Way_Organ_Version.mp3','Born This Way (Organ)'],
  ['music/California_Girls.mp3','California Girls'],
+ ['music/Sukiyaki_Ue_o_Muite_Arukou_Nancy_Bea_Hefley.mp3','Sukiyaki (Nancy Bea)'],
+ ['music/Funiculi_Funicula.mp3','Funiculì, Funiculà'],
+ ['music/Shes_Like_the_Wind_Dirty_Dancing_-_Ballpark_Organ.mp3',"She's Like the Wind (Organ)"],
+ ['music/Las_Chiapanecas_Mexican_Hat_Dance_-_Nancy_Bea.mp3','Las Chiapanecas (Nancy Bea)'],
+ ['music/In_the_Good_old_Summertime.mp3','In the Good Old Summertime'],
+ ['music/Here_Comes_the_King.mp3','Here Comes the King'],
 ];
 const MUS_KEY='tankCommander_music';
 let _mus=null,_musEl=null,_musStarted=false,_musErr=0,_musDead=false;
@@ -113,7 +119,7 @@ if(typeof document!=='undefined'&&document.addEventListener)
   setTimeout(()=>{try{ensureMusBar();musTryAutoplay();}catch(e){}},0);
 
 /* ---- sampled SFX (with synth fallback) ---- */
-const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',strikeout:['sfx/strikeout.mp3','sfx/strikeout-2.mp3'],yourout:['sfx/youre-out-1.mp3','sfx/youre-out-2.mp3','sfx/out.mp3']};
+const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',deal:'sfx/card-deal.mp3',flipcard:['sfx/card-flip-1.mp3','sfx/card-flip-2.mp3','sfx/card-flip-3.mp3','sfx/card-flip-4.mp3','sfx/card-flip-5.mp3'],strikeout:['sfx/strikeout.mp3','sfx/strikeout-2.mp3'],yourout:['sfx/youre-out-1.mp3','sfx/youre-out-2.mp3','sfx/out.mp3']};
 const _smp={};
 function _smpOne(path,vol){   // one sample file, cached; false once known-bad
   let a=_smp[path];

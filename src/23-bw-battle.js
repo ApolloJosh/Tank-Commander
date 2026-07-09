@@ -170,7 +170,8 @@ function bwbRefill(s){
   while(s.phand.length<(s._edgeHand||3)&&s.peds.length)s.phand.push(s.peds.shift());   // edges finite per battle (Deep Bench coach grows the hand)
 }
 function bwbStart(youDeck,cpuDeck,meta){
-  setTimeout(()=>{try{sfx('playball');}catch(e){}},250);
+  setTimeout(()=>{try{sfx('deal');}catch(e){}},120);
+  setTimeout(()=>{try{sfx('playball');}catch(e){}},750);
   clearTimers();
   BW={you:bwbMkSide(bwTeam().name,youDeck),cpu:bwbMkSide(meta.oppName||'Rivals',cpuDeck),inning:1,half:'top',outs:0,bases:[null,null,null],phase:'pitch',committedPitch:null,pdEdge:null,selHitter:null,selEdge:null,last:null,pending:null,over:false,winner:null,meta,_rewarded:false,_pitchLog:{FB:0,OFF:0,BR:0},_cpuPitchLog:{FB:0,OFF:0,BR:0}};
   BW.you.coach=youDeck.coach||null;BW.cpu.coach=cpuDeck.coach||null;bwbInitCoach(BW.you);bwbInitCoach(BW.cpu);

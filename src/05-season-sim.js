@@ -51,6 +51,11 @@ function simulateRegularSeason(){
   if(G.owner&&G.owner.homeEdge){const m=entries.find(e=>e.me);m.wins=clamp(m.wins+Math.round(G.owner.homeEdge),40,118);m.losses=162-m.wins;}   // a rowdy die-hard home crowd
   if(G.owner&&G.owner.parkFactor){const {bal,pf}=ownerParkSynergy();const m=entries.find(e=>e.me);   // outfield dimensions: park that suits your roster wins you games at home
     m.wins=clamp(m.wins+Math.round(clamp(pf*clamp(bal/8,-0.5,0.5)*6,-3,3)),40,118);m.losses=162-m.wins;}
+  if(!G.owner&&G._season&&G._season.g>0){   // segmented season: keep the record you actually built; sim only the stretch run
+    const m=entries.find(e=>e.me),left=162-G._season.g;
+    const lw=clamp(Math.round((m.wins/162)*left+gauss(0,1.8)),Math.round(left*0.08),Math.round(left*0.92));
+    m.wins=clamp((G._season.w||0)+lw,40,118);m.losses=162-m.wins;G._season.finW=m.wins;
+  }
   entries.sort((a,b)=>b.wins-a.wins);entries.forEach((e,i)=>e.seed=i+1);   // overall seed = draft order (worst drafts #1)
   const field=mlbPlayoffField(entries);          // 12 playoff teams, seeded 1–6 within each league
   const me=entries.find(e=>e.me);
@@ -73,6 +78,7 @@ function runPlayoffsAndFinish(){
   const wonWS=champ&&champ.me;if(wonWS){G.champions++;G.roster.filter(p=>p.loc==="mlb").forEach(p=>p._rings=(p._rings||0)+1);}
   const NT=G.ai.length+1;const mySlot=NT+1-me.seed;   // worst overall record drafts #1
   G.ownedPicks.forEach(pk=>{if(pk.future&&pk.fromMe){pk.slot=mySlot;pk.future=false;}});
+  G._octScript=null;
   generateSeasonStats();   // each big-leaguer gets this year's stat line
   G.history.push({year:G.year,wins:me.wins,losses:me.losses,seed:me.seed,playoffs:madePO,champ:wonWS,division:`${me.league} ${me.div}`,divRank:me.divRank});
   G._po=null;
@@ -104,9 +110,12 @@ function runMLBPlayoffs(field){
   const dm=1+(teamDawg()-50)/50*0.10;
   const chem=1+(teamChem()-60)/40*0.08;   // a happy clubhouse: chemistry is a small October edge
   _poInfo={reachedWS:false,rounds:0};
+  const scr=Array.isArray(G._octScript)?G._octScript.slice():null;   // interactive October already decided this bracket
   const series=(a,b)=>{ if(!a)return b; if(!b)return a;
-    const sa=(a.war+22)*(a.me?cb*dm*chem:1), sb=(b.war+22)*(b.me?cb*dm*chem:1);
-    const pa=clamp(sa/(sa+sb),0.30,0.68); const w=Math.random()<pa?a:b;
+    let w;
+    if(scr&&scr.length){w=scr.shift()?a:b;}
+    else{const sa=(a.war+22)*(a.me?cb*dm*chem:1), sb=(b.war+22)*(b.me?cb*dm*chem:1);
+      const pa=clamp(sa/(sa+sb),0.30,0.68); w=Math.random()<pa?a:b;}
     if((a.me||b.me)&&w.me)_poInfo.rounds++;
     return w; };
   const champ={};

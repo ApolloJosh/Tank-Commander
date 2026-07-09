@@ -12,6 +12,8 @@ function screenTrade(){
   const proj=warToWins(teamWAR(G.roster));
   const expiring=G.roster.filter(p=>p.loc==="mlb"&&p.years<=1).sort((a,b)=>b.ovr-a.ovr);
   const tutFr=(!(PROFILE.gamesPlayed||0)&&!PROFILE._tutFr)?`<div class="small" style="display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line2);border-left:3px solid var(--gold);border-radius:4px;padding:8px 10px;margin:10px 0"><span style="flex:1;min-width:0">🎓 <b>Your first rebuild.</b> This club is old and expensive. A classic year 1: trade veterans on expiring deals for <b>prospects and draft picks</b>, eat some losses, then build through the draft. The steps above are one season — you have six.</span><button class="btn ghost sm" style="flex-shrink:0" onclick="PROFILE._tutFr=1;saveProfile();screenTrade()">Got it</button></div>`:'';
+  const ns=needsSurplus();
+  const faLeft=Math.max(0,4-(G.faSigns||0));
   render(`${header()}${stepbar(0)}${tutFr}
    <div class="grid4">
      <div class="kpi"><div class="big">${proj}</div><div class="lbl">Proj Wins</div></div>
@@ -19,34 +21,38 @@ function screenTrade(){
      <div class="kpi"><div class="big">${G.ownedPicks.length}</div><div class="lbl">Draft Picks</div></div>
      <div class="kpi"><div class="big">$${payroll(G.roster)}M</div><div class="lbl">Payroll</div></div>
    </div>
-   <div class="panel"><h3>🎖️ Front Office Resources <span class="small muted">(set your allocation for the year ahead)</span></h3>
-     <div id="resbox">${renderResources()}</div></div>
-   <details class="panel" style="padding:12px"><summary style="cursor:pointer;font-weight:700">📋 Current roster <span class="small muted">(updates after each trade)</span></summary>
-     <div style="margin-top:8px">${rosterMini()}</div></details>
-   ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0">
-     <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none — roster is balanced</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span>
-     ${luxuryTax()>0?`<div class="small" style="color:var(--red);margin-top:4px">⚠ Payroll over $300M — luxury tax will cost ~${luxuryTax()} win${luxuryTax()>1?'s':''} this season.</div>`:''}</div>`;})()}
-   ${expiring.length?`<div class="panel" style="border-color:var(--red)">
-     <h3>⏳ Expiring contracts — extend or trade before they walk</h3>
-     <table><tbody>${expiring.map(p=>`<tr>
+   ${fmMemoHTML('FRONT OFFICE MEMO · WINTER, YEAR '+G.year,fmMemoWinter())}
+   ${luxuryTax()>0?`<div class="small" style="color:var(--red);margin:0 0 10px">⚠ Payroll over $300M — luxury tax will cost ~${luxuryTax()} win${luxuryTax()>1?'s':''} this season.</div>`:''}
+   <details class="deskp pri" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('binoc',20)}</span><div class="dtx"><b>Scout's suggested trade</b><span>built around both clubs' needs — respin freely</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><div id="suggbox">${renderSuggestion()}</div></div>
+   </details>
+   ${expiring.length?`<details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('siren',20)}</span><div class="dtx"><b>Expiring contracts <span style="color:var(--red)">· ${expiring.length}</span></b><span>${esc(expiring[0].name)}${expiring.length>1?` and ${expiring.length-1} more`:''} — extend or trade before they walk</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><table><tbody>${expiring.map(p=>`<tr>
        <td><span class="pos">${p.pos}</span> ${p.name} <span class="small muted">age ${p.age} • ${p.ovr} OVR • ${p.years} yr left</span></td>
        <td class="num">${extendSelect(p.id)}</td>
-     </tr>`).join("")}</tbody></table></div>`:""}
-   <div class="panel">
-     <h3>🛠️ Build your own trade</h3>
-     <p class="sub">Click ＋ to add your assets and a partner's assets. Draft picks are tradeable. Ceiling colors: <span class="pill gold" style="padding:0 6px">elite</span> <span class="pill green" style="padding:0 6px">high</span> <span class="pill blue" style="padding:0 6px">solid</span>.</p>
-     <div id="builder">${renderBuilder()}</div>
-   </div>
-   <div class="panel">
-     <h3>💡 Suggested trade <span class="small muted">(built around both clubs' needs — respin freely)</span></h3>
-     <div id="suggbox">${renderSuggestion()}</div>
-   </div>
-   ${G.year>=3?`<div class="panel">
-     <h3>✍️ Free agents</h3>
-     <p class="sub">Veterans on the open market — sign with cash, no prospects required.${infoDot('Salaries push toward the $300M luxury-tax line, and leaning on free agency hurts your homegrown grade.')}</p>
-     <div id="falist" class="scroll">${renderFA()}</div>
-   </div>`:''}
-   <div class="center" style="margin-top:14px"><button class="btn primary" onclick="${G._ownerTakeover?'ownerDoneTakeover()':'goPhase(1)'}">${G._ownerTakeover?'✅ Done — back to the owner\'s box':'Done trading → Set roster'}</button></div>`);
+     </tr>`).join("")}</tbody></table></div>
+   </details>`:''}
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('swap',20)}</span><div class="dtx"><b>Trade desk</b><span>build any deal — players and picks, every club</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><p class="sub">Click ＋ to add your assets and a partner's assets. Draft picks are tradeable. Ceiling colors: <span class="pill gold" style="padding:0 6px">elite</span> <span class="pill green" style="padding:0 6px">high</span> <span class="pill blue" style="padding:0 6px">solid</span>.</p>
+     <div id="builder">${renderBuilder()}</div></div>
+   </details>
+   ${G.year>=3?`<details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('pen',20)}</span><div class="dtx"><b>Free agency <span style="color:var(--gold)">· ${faLeft} of 4 left</span></b><span>veterans on the open market — cash, not prospects</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><p class="sub">Salaries push toward the $300M luxury-tax line, and leaning on free agency hurts your homegrown grade.</p>
+     <div id="falist" class="scroll">${renderFA()}</div></div>
+   </details>`:''}
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('rank',20)}</span><div class="dtx"><b>Front office resources</b><span>scouting / development / coaching for the year ahead</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody"><div id="resbox">${renderResources()}</div></div>
+   </details>
+   <details class="deskp" ontoggle="fmSolo(this)">
+     <summary><span class="dic">${ico('clip',20)}</span><div class="dtx"><b>Clipboard — roster, needs & surplus</b><span><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'none'} · <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'none'}</span></div><span class="dgo">▸</span></summary>
+     <div class="dbody">${rosterMini()}</div>
+   </details>
+   <div class="deskcta"><button class="btn primary" style="font-size:15px;padding:13px 28px" onclick="${G._ownerTakeover?'ownerDoneTakeover()':'goPhase(1)'}">${G._ownerTakeover?"✅ Done — back to the owner's box":'Break camp → Set roster ▸'}</button></div>`);
 }
 // Owner Mode: step in and run the front office yourself for the offseason — the GM stands down (he'll still get the trade deadline)
 function ownerTakeover(){const o=G.owner;G._ownerTakeover=true;G.phase=0;_offers=null;_custom=null;_sugg=null;
@@ -295,7 +301,7 @@ function refreshOffers(){if(G.tradeTries<=0)return;G.tradeTries--;_offers=genOff
 function acceptOffer(oid){const o=_offers.find(x=>x.id===oid);if(!o)return;
   o.give.forEach(giveAsset);o.get.forEach(getAsset);
   _offers=_offers.filter(x=>x.id!==oid);_custom=null;
-  toast(`Trade with ${o.team.name} complete`);screenTrade();}
+  showBreaking(`${G.teamName} strike a deal with ${o.team.name}`,'The clubhouse takes notice.');screenTrade();}
 
 /* ---- custom builder: Option 2 segmented + Option D rows ---- */
 const ATTR_EMO={contact:"🎯",power:"💥",speed:"🏃",eye:"👁️",defense:"🧤",velocity:"🔥",control:"🎛️",spin:"🌀",whiff:"💨"};
@@ -401,7 +407,7 @@ function proposeCustom(){
   const nm=teamNameOf(_custom.partner);
   const dl=_dlMode;
   _custom={giveIds:new Set(),getIds:new Set(),partner:null,seg:_custom.seg,search:'',posF:'all',sort:_custom.sort};
-  _sugg=null;toast(`Trade with ${nm} complete`);
+  _sugg=null;showBreaking(`${G.teamName} strike a deal with ${nm}`,'The scout who pitched it takes a bow.');
   if(dl)screenDeadline();else screenTrade();}
 
 /* ---- need-based trade suggestion (one at a time, respin freely, auto-respins after accept) ---- */
@@ -462,4 +468,4 @@ function acceptSuggestion(){
   if(give.length!==s.give.length||get.length!==s.get.length){toast("Offer expired — respinning");respinSuggestion();return;}
   give.forEach(giveAsset);get.forEach(getAsset);
   const sh=teamShortOf(s.team);_sugg=null;
-  toast(`Trade with ${sh} complete`);if(_dlMode)screenDeadline();else screenTrade();}
+  showBreaking(`${G.teamName} strike a deal with ${sh}`,_dlMode?'A deadline move — the town holds its breath.':'The clubhouse takes notice.');if(_dlMode)screenDeadline();else screenTrade();}

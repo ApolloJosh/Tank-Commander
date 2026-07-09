@@ -293,5 +293,5 @@ function pickLabel(pk){if(pk.comp)return '🎟️ Comp Pick (R1.5)';const s=pick
 function mkFuturePick(rd){return {id:uid(),round:rd||1,slot:9,future:true,fromMe:true};}
 function freshDraftPicks(){return (typeof G!=="undefined"&&G&&(G.mode==="survivor"||G.hard))
   ?[mkFuturePick(1),mkFuturePick(2),mkFuturePick(3),mkFuturePick(4),mkFuturePick(5)]   // 5 rounds in Career Mode AND Hard 6-Year (deeper farm to cover injuries)
-  :[mkFuturePick(1),mkFuturePick(2),mkFuturePick(3)];}
+  :[mkFuturePick(1),mkFuturePick(2),mkFuturePick(3),mkFuturePick(4)];}   // 6-Year Sprint: 4 rounds
 

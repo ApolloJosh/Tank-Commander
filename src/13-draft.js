@@ -4,7 +4,7 @@
 const POSALL=["C","1B","2B","3B","SS","LF","CF","RF","DH","SP","SP","RP"];
 let _dq=null,_dpicks=null,_board=null;
 function screenDraft(){
-  if(!_dq){_dq=[...G.ownedPicks].sort((a,b)=>(a.round-b.round)||(pickResolvedSlot(a)-pickResolvedSlot(b)));_dpicks=[];}
+  if(!_dq){_dq=[...G.ownedPicks].sort((a,b)=>(a.round-b.round)||(pickResolvedSlot(a)-pickResolvedSlot(b)));_dpicks=[];_board=null;_dfl=null;}
   if(!_dq.length)return draftDone();
   const pk=_dq[0],slot=pickResolvedSlot(pk),rd=pk.round||1;
   // Survivor: fixed per-round odds, identical every year (no "draft MLB-ready late in a short rebuild" scaling).
@@ -12,8 +12,19 @@ function screenDraft(){
   const advChance = G.mode==="survivor"
     ? ({1:0.08,2:0.15,3:0.22,4:0.30,5:0.38}[rd]||0.2)
     : (rd>=3?(G.year>=4?0.75:0.5):rd===2?(G.year>=4?0.6:0.3):(G.year>=4?0.5:G.year===3?0.25:0.08));
-  const ps=[...POSALL];for(let i=ps.length-1;i>0;i--){const j=ri(0,i);[ps[i],ps[j]]=[ps[j],ps[i]];}
-  _board=[];for(let i=0;i<10;i++)_board.push(draftee(slot,rd,Math.random()<advChance,ps[i%ps.length]));
+  if(!_board){
+    const ps=[...POSALL];for(let i=ps.length-1;i>0;i--){const j=ri(0,i);[ps[i],ps[j]]=[ps[j],ps[i]];}
+    const nOpts=G.owner?10:8;
+    _board=[];for(let i=0;i<nOpts;i++)_board.push(draftee(slot,rd,Math.random()<advChance,ps[i%ps.length]));
+    if(!G.owner){
+      const t=draftTier();
+      _board.forEach(p=>{
+        if(t===3){const lo=clamp(p.pot-ri(1,4),40,94);p._sc={lo,hi:lo+5};}
+        else if(t===2){const lo=clamp(p.pot-ri(2,13),30,84);p._sc={lo,hi:lo+15};}
+      });
+      _dfl={flipped:[],left:t>=4?_board.length:t===3?5:4,tier:t};
+    }
+  }
   // Owner Mode: the GM recommends a pick (best ceiling, weighted toward roster needs + his scouting tier)
   if(G.owner){G.ownerStage='draft';
     const ns=needsSurplus();const want=new Set(ns.needs);const tier=G.owner.gmTier||0;
@@ -22,6 +33,23 @@ function screenDraft(){
     if(G._gmAutoDraft)return draftPick(best);
   }
   const rec=G.owner?G._gmRec:-1;
+  if(!G.owner){
+    const t=_dfl.tier,pct=draftScoutPct();
+    render(`${header()}${stepbar(3)}
+     ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:4px;padding:10px;margin:12px 0">
+       <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span></div>`;})()}
+     <div class="panel" style="padding:14px">
+       <h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${ico('scope',18)} Draft — <span class="pill gold">${pk.comp?'🎟️ Comp Pick':'Round '+rd+' · Pick #'+slot}</span> <span class="small muted">(${_dq.length} selection${_dq.length>1?'s':''} left)</span></h3>
+       <p class="sub" style="margin:4px 0 2px">${ico('binoc',13)} <b>Scouting dept at ${pct}%</b> — ${DRAFT_TIER_DESC[t]}.</p>
+       <p class="sub" style="margin:2px 0 10px">${_dfl.left>0?`<b style="color:var(--gold)">${_dfl.left} scouting trip${_dfl.left>1?'s':''} left</b> — flip the files you want opened, then draft one of them.`:`<b style="color:var(--amber)">Trips exhausted</b> — draft from the opened files. Ceiling is a projection, not a promise.`}</p>
+       ${draftCardsHTML()}
+     </div>
+     <details class="deskp" ontoggle="fmSolo(this)">
+       <summary><span class="dic">${ico('clip',20)}</span><div class="dtx"><b>Clipboard — current roster</b><span>draft to fill your needs</span></div><span class="dgo">▸</span></summary>
+       <div class="dbody">${rosterMini()}</div>
+     </details>`);
+    return;
+  }
   render(`${header()}${stepbar(3)}
    ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0">
      <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none — roster is balanced</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span></div>`;})()}
@@ -39,8 +67,44 @@ function screenDraft(){
         <div style="flex:1;text-align:right"><span class="pill ${ceilClass(p.pot)}">Ceiling ${p.pot}</span>
           <button class="btn primary sm" onclick="draftPick(${i})">Draft</button></div></div></div>`).join("")}</div></div>`);
 }
+
+/* ---- scouting-driven draft cards: your scouting budget decides what the file shows ---- */
+let _dfl=null;
+function draftScoutPct(){const r=G.resources||{};return Math.round(((r.scouting!=null?r.scouting:0.334))*100);}
+function draftTier(){const s=draftScoutPct();return s<10?0:s<30?1:s<50?2:s<75?3:4;}
+const DRAFT_TIER_DESC=['bare files — hitter or pitcher, nothing more','position only','position, age, ceiling ±15','position, age, ceiling ±5 — and a 5th flip','full files — exact ceilings, flip everything'];
+function draftFlip(i){
+  if(!_dfl||_dfl.flipped.indexOf(i)>=0)return;
+  if(_dfl.left<=0){toast('No scouting trips left — draft from the flipped files.');return;}
+  _dfl.flipped.push(i);_dfl.left--;sfx('flip');
+  screenDraft();
+}
+function draftCardsHTML(){
+  const t=_dfl.tier;
+  const dealing=!_dfl.dealt;
+  if(dealing){_dfl.dealt=true;sfx('deal');}
+  return `<div class="dgrid">${_board.map((p,i)=>{
+    const dealCls=dealing?` dealin" style="animation-delay:${(i*0.09).toFixed(2)}s`:'';
+    const flipped=_dfl.flipped.indexOf(i)>=0;
+    if(flipped)return `<div class="dcard front"><div class="d-top"><span>${esc(p.pos)} · ${p.age}</span><b>${p.ovr}</b></div>
+      <div class="d-name">${esc(p.name)}</div><div class="d-col">${esc(p.college||'')}</div>
+      <div class="d-tags"><span class="pill ${ceilClass(p.pot)}">Ceil ${p.pot}</span>${p.advanced?'<span class="pill green">MLB-Ready</span>':'<span class="pill blue">Project</span>'}</div>
+      <button class="btn primary sm" style="margin:4px 0 10px" onclick="draftPick(${i})">Draft ▸</button></div>`;
+    const lines=[isPit(p)?'PITCHER':'HITTER'];
+    if(t>=1)lines.push('POS '+p.pos);
+    if(t>=2)lines.push('AGE '+p.age);
+    if(t>=4)lines.push('CEILING '+p.pot);
+    else if(t>=2&&p._sc)lines.push('CEIL '+p._sc.lo+'–'+p._sc.hi);
+    return `<div class="dcard back ${_dfl.left>0?'can':'dead'}${dealCls}" onclick="draftFlip(${i})">
+      <div class="d-file">${ico('binoc',15)}<br>PROSPECT FILE ${String(i+1).padStart(2,'0')}</div>
+      <div class="d-lines">${lines.map(x=>`<span>${x}</span>`).join('')}</div>
+      <div class="d-hint">${_dfl.left>0?'TAP TO SCOUT':'FILE SEALED'}</div></div>`;
+  }).join('')}</div>`;
+}
 function draftPick(i){
+  if(!G.owner&&_dfl&&_dfl.flipped.indexOf(i)<0){toast('You can only draft an opened file.');return;}
   const p=_board[i];p.loc="farm";p.src="draft";G.farm.push(p);_dpicks.push(p);
+  _board=null;_dfl=null;
   const pk=_dq[0]||{},rd=pk.round||1,slot=pickResolvedSlot(pk)||0;
   _dq.shift();
   if(G._gmAutoDraft){screenDraft();return;}
