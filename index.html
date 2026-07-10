@@ -136,6 +136,10 @@
   .fmstrip span.me i{color:var(--phos)}
   .dcard.dealin{animation:dealin .5s cubic-bezier(.25,1.2,.4,1) both}
   @keyframes dealin{0%{transform:translate(0,-120px) rotate(-7deg) scale(.55);opacity:0}70%{opacity:1}100%{transform:none;opacity:1}}
+  .octprob{display:flex;align-items:center;gap:9px;margin:8px auto 2px;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+  .octprob .you{color:var(--phos)}
+  .octprob .track{flex:1;height:9px;border:1px solid var(--line2);border-radius:5px;background:linear-gradient(90deg,rgba(224,101,74,.18),rgba(224,101,74,.18));overflow:hidden;position:relative}
+  .octprob .track i{display:block;height:100%;background:linear-gradient(90deg,#5a7a2a,var(--phos));transition:width .7s cubic-bezier(.3,1,.4,1)}
   .oct-vs{display:flex;align-items:center;gap:12px;font-family:var(--stencil);font-size:19px}
   .oct-vs i{font-family:var(--disp);font-style:normal;color:var(--gold);font-size:14px;letter-spacing:.1em}
   .oct-vs .you{color:var(--gold)}
@@ -2042,7 +2046,7 @@ function screenTitle(){
       <div class="row"><span class="v">${r.owner?fmtB(r.clubValue||0)+' value':r.mode==='survivor'?'Score '+(r.score||0):(r.champions||0)+'× 🏆'}</span><button class="rbtn" onclick="resumeRun('${r.id}')">Resume</button></div>
     </div>`;
   const runsHtml=runs.length?runs.slice(0,5).map(runCard).join(''):'<p class="small muted" style="margin:0">No franchises yet — start one from the left.</p>';
-  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v10.0</span>`;
+  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v10.0.1</span>`;
   render(`
    <div class="tdash">
      <div class="tdash-top"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="tdash-top-r">${topR}</div></div>
@@ -2106,7 +2110,7 @@ function screenTitle(){
          </div>
        </aside>
      </div>
-     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.0.0</span></div>
+     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.0.1</span></div>
    </div>
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
@@ -5636,7 +5640,7 @@ function bwShowPack(cards,tier){
   const tc=(TIER_C[tier]||TIER_C.bronze)[0],td=(TIER_C[tier]||TIER_C.bronze)[1];
   const ov=document.createElement('div');ov.id='packov';ov.className='packov';
   ov.innerHTML=`<div class="disp" style="font-weight:700;letter-spacing:.12em;color:${tc};font-size:20px">${tier.toUpperCase()} PACK</div>
-    <div class="ripwrap" id="ripwrap" onclick="bwRipPack()" style="--tc:${tc};--td:${td}">
+    <div class="ripwrap" id="ripwrap" onclick="bwRipPack()" data-step="${step}" data-count="${order.length}" style="--tc:${tc};--td:${td}">
       <div class="ripstub"><b>bWARfare</b><small>SET ONE · 8 CARDS</small></div>
       <div class="ripbody">
         <div class="riplogo">★</div>
@@ -5660,10 +5664,12 @@ function bwRipPack(){
     s.style.left=(15+Math.random()*70)+'%';s.style.top='20%';
     if(s.animate)s.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d+80}px) rotate(${Math.round(Math.random()*520-260)}deg)`,opacity:0}],{duration:650+Math.random()*380,easing:'cubic-bezier(.2,.7,.4,1)'});
     setTimeout(()=>s.remove(),1100);}
+  const stepS=parseFloat(w.dataset.step||'0.45'),nCards=parseInt(w.dataset.count||'8',10);
   setTimeout(()=>{
     const rev=document.getElementById('packrev');
     w.style.display='none';
     if(rev)rev.style.display='flex';
+    for(let i=0;i<nCards;i++)setTimeout(()=>{try{sfx('flip');}catch(e){}},i*stepS*1000);
   },520);
 }
 function bwFlipHof(i){
@@ -6784,9 +6790,11 @@ function sfx(n){try{if(!sndOn())return;const f=_SFX[n];if(f)f();}catch(e){}}
 function hap(p){try{if(sndOn()&&navigator.vibrate)navigator.vibrate(p);}catch(e){}}
 // unlock audio on first gesture + soft tick on any button press
 if(typeof document!=='undefined'&&document.addEventListener){
+  let _warmed=false;
   document.addEventListener('pointerdown',e=>{
     _ctx();if(_ac&&_ac.state==='suspended')_ac.resume();
     try{musAutoStart();}catch(e2){}
+    if(!_warmed){_warmed=true;try{smpWarm();}catch(e3){}}
     const el=e.target&&e.target.closest&&e.target.closest('.btn,.tmi,.bwb-ped');
     if(el&&!el.disabled)sfx('tap');
   },{passive:true});
@@ -6931,6 +6939,16 @@ if(typeof document!=='undefined'&&document.addEventListener)
 /* ---- sampled SFX (with synth fallback) ---- */
 const SFX_FILES={crack:'sfx/bat-impact.mp3',crackhit:'sfx/bat-impact-hit.mp3',dice:'sfx/dice-roll.mp3',pack:'sfx/pack-rip.mp3',playball:'sfx/play-ball.mp3',deal:'sfx/card-deal.mp3',flipcard:['sfx/card-flip-1.mp3','sfx/card-flip-2.mp3','sfx/card-flip-3.mp3','sfx/card-flip-4.mp3','sfx/card-flip-5.mp3'],strikeout:['sfx/strikeout.mp3','sfx/strikeout-2.mp3'],yourout:['sfx/youre-out-1.mp3','sfx/youre-out-2.mp3','sfx/out.mp3']};
 const _smp={};
+function smpWarm(){   // pre-create every sample on first tap: caches the files and trips
+  if(typeof Audio==='undefined')return;   // 404 flags early so synth fallbacks engage from the start
+  Object.keys(SFX_FILES).forEach(n=>{
+    const f=SFX_FILES[n];(Array.isArray(f)?f:[f]).forEach(path=>{
+      if(_smp[path]||_smp[path]===false)return;
+      const a=new Audio(AUDIO_BASE+path);a.preload='auto';
+      a.addEventListener('error',()=>{_smp[path]=false;});
+      _smp[path]=a;
+    });});
+}
 function _smpOne(path,vol){   // one sample file, cached; false once known-bad
   let a=_smp[path];
   if(a===false)return false;
@@ -7412,61 +7430,69 @@ function fmOctoberRun(next){
     let pa=clamp(sa/(sa+sb),0.30,0.68);
     if(a.me)pa=clamp(pa+edge,0.25,0.75);else if(b.me)pa=clamp(pa-edge,0.25,0.75);
     return pa;};
-  const t=coachTier();
-  const O={next,script:[],queue:[],tokens:[0,1,1,2,3][t],tier:t,alive:true,paOf,
-    auto(a,b){if(!a)return b;if(!b)return a;const w=Math.random()<paOf(a,b)?a:b;O.script.push(w===a);return w;}};
-  // build the series schedule in EXACTLY the engine's order; user series become interactive stops
-  field.forEach(({league,teams})=>{
-    const s={};teams.forEach(x=>s[x.lgSeed]=x);
-    O.queue.push({lg:league,st:'wcA',get:()=>[s[3],s[6]],rk:'wc'});
-    O.queue.push({lg:league,st:'wcB',get:()=>[s[4],s[5]],rk:'wc'});
-  });
-  window._fmO=O;O.field=field;O.stage=0;
+  // one flat plan in the engine's exact series() call order:
+  // for each league (field order): wcA, wcB, dsA, dsB, cs — then WS (champ.AL vs champ.NL)
+  const steps=[];
+  field.forEach(f=>{['wcA','wcB','dsA','dsB','cs'].forEach(key=>steps.push({lg:f.league,key,rk:key==='cs'?'cs':key[0]==='w'?'wc':'ds'}));});
+  steps.push({lg:'WS',key:'ws',rk:'ws'});
+  const O={next,script:[],steps,i:0,built:{},tokens:[0,1,1,2,3][coachTier()],tier:coachTier(),paOf,field};
+  field.forEach(f=>{const s={};f.teams.forEach(x=>s[x.lgSeed]=x);O.built[f.league]={s};});
+  window._fmO=O;
   fmOctNext();
+}
+function fmOctPair(O,st){   // the exact matchup the engine will see for this step
+  if(st.key==='ws'){
+    const al=(O.built.AL||{}).cs,nl=(O.built.NL||{}).cs;
+    return [al,nl];
+  }
+  const B=O.built[st.lg],s=B.s;
+  if(st.key==='wcA')return [s[3],s[6]];
+  if(st.key==='wcB')return [s[4],s[5]];
+  const wcW=[B.wcA,B.wcB].sort((a,b)=>a.lgSeed-b.lgSeed);
+  if(st.key==='dsA')return [s[1],wcW[wcW.length-1]];
+  if(st.key==='dsB')return [s[2],wcW[0]];
+  return [B.dsA,B.dsB];   // cs
 }
 function fmOctNext(){
   const O=window._fmO;if(!O)return;
-  // stage 0: wild cards per league; stage 1: DS; stage 2: LCS; stage 3: WS; then done
-  if(!O._built){O._built={};O._winners={};}
-  const F=O.field;
-  const stages=[
-    ()=>{ // wild cards
-      F.forEach(f=>{const s={};f.teams.forEach(x=>s[x.lgSeed]=x);O._built[f.league]={s};});
-      O._pend=[];
-      F.forEach(f=>{const s=O._built[f.league].s;
-        O._pend.push({a:s[3],b:s[6],rk:'wc',lg:f.league,key:'wcA'});
-        O._pend.push({a:s[4],b:s[5],rk:'wc',lg:f.league,key:'wcB'});});
-    },
-    ()=>{ // division series
-      O._pend=[];
-      F.forEach(f=>{const B=O._built[f.league];const s=B.s;
-        const wcW=[B.wcA,B.wcB].sort((a,b)=>a.lgSeed-b.lgSeed);
-        O._pend.push({a:s[1],b:wcW[wcW.length-1],rk:'ds',lg:f.league,key:'dsA'});
-        O._pend.push({a:s[2],b:wcW[0],rk:'ds',lg:f.league,key:'dsB'});});
-    },
-    ()=>{ // league championships
-      O._pend=[];
-      F.forEach(f=>{const B=O._built[f.league];
-        O._pend.push({a:B.dsA,b:B.dsB,rk:'cs',lg:f.league,key:'cs'});});
-    },
-    ()=>{ // world series
-      const al=O._built[F[0].league].cs,nl=O._built[F[1]?F[1].league:F[0].league].cs;
-      O._pend=[{a:al,b:nl,rk:'ws',lg:'WS',key:'ws'}];
-    }];
-  while(true){
-    if(!O._pend||!O._pend.length){
-      if(O.stage>=stages.length){ // bracket complete
-        window._fmO=null;G._octScript=O.script;const n=O.next;fmOctClose();n();return;}
-      stages[O.stage]();O.stage++;
+  while(O.i<O.steps.length){
+    const st=O.steps[O.i];
+    const [a,b]=fmOctPair(O,st);
+    if(!a||!b){O.built[st.lg]=O.built[st.lg]||{};O.built[st.lg][st.key]=a||b;O.i++;continue;}
+    if(!(a.me||b.me)){
+      const w=Math.random()<O.paOf(a,b)?a:b;
+      O.script.push(w===a);
+      O.built[st.lg]=O.built[st.lg]||{};O.built[st.lg][st.key]=w;O.i++;continue;
     }
-    const m=O._pend.shift();
-    const a=m.a,b=m.b;
-    if(!a||!b){const w=a||b;O._built[m.lg]=O._built[m.lg]||{};O._built[m.lg][m.key]=w;continue;}
-    const userIn=(a.me||b.me);
-    if(!userIn){const w=Math.random()<O.paOf(a,b)?a:b;O.script.push(w===a);O._built[m.lg]=O._built[m.lg]||{};O._built[m.lg][m.key]=w;continue;}
-    // interactive series
-    O._cur=m;fmOctSeries(m);return;
+    O._cur={a,b,rk:st.rk,lg:st.lg,key:st.key};
+    fmOctSeries(O._cur);return;
   }
+  window._fmO=null;G._octScript=O.script;const n=O.next;fmOctClose();n();
+}
+
+function fmSeriesProb(pg,needW,needL,boostNext){   // chance I win the series from here
+  const memo={};
+  const f=(w,l)=>{if(w<=0)return 1;if(l<=0)return 0;const k=w+'_'+l;if(memo[k]!=null)return memo[k];
+    return memo[k]=pg*f(w-1,l)+(1-pg)*f(w,l-1);};
+  if(boostNext){const pgB=clamp(pg+0.15,0.05,0.92);return clamp(pgB*f(needW-1,needL)+(1-pgB)*f(needW,needL-1),0,1);}
+  return f(needW,needL);
+}
+function fmOctProbHTML(){
+  const O=window._fmO,S=O&&O._series;if(!S)return '';
+  let pct;
+  if(!S.plan){const pa=O.paOf(S.m.a,S.m.b);pct=S.m.a.me?pa:1-pa;}
+  else{
+    const meIsA=S.m.a.me;let pg=clamp(0.5+(S.pa-0.5)*0.85,0.22,0.8);if(!meIsA)pg=1-pg;
+    pct=fmSeriesProb(pg,S.R.need-S.gw,S.R.need-S.gl,!!S.boost);
+  }
+  pct=Math.round(pct*100);
+  return `<div class="octprob"><span class="you">${esc(String(G.teamName).split(' ').slice(-1)[0])} ${pct}%</span>
+    <div class="track"><i id="octbar" style="width:${pct}%"></i></div>
+    <span>${esc(String(S.opp.name).split(' ').slice(-1)[0])} ${100-pct}%</span></div>`;
+}
+function fmOctProbPaint(){
+  const O=window._fmO,S=O&&O._series;if(!S)return;
+  const wrap=document.getElementById('octprobwrap');if(wrap)wrap.innerHTML=fmOctProbHTML();
 }
 function fmOctSeries(m){
   const O=window._fmO,me=(m.a.me?m.a:m.b),opp=(m.a.me?m.b:m.a);
@@ -7487,6 +7513,7 @@ function fmOctSeries(m){
   const ov=fmTickShell();
   ov.innerHTML=`<div class="tk-club">${ico('trophy',12)} OCTOBER · ${R.name}</div>
     <div class="oct-vs"><span class="you">${esc(G.teamName)}</span><i>VS</i><span>${esc(opp.name)} · ${opp.wins}W</span></div>
+    <div id="octprobwrap" style="width:min(440px,92%)">${fmOctProbHTML()}</div>
     <div class="fmemo" style="max-width:440px;text-align:left"><div class="from">${ico('binoc',10)} ADVANCE SCOUTING · COACHING AT ${coachPct()}%</div>${intel}</div>
     <div class="tk-pace" style="margin-top:2px">PICK THE SERIES GAME PLAN</div>
     <div class="oct-plans">${shown.map(p=>`<button class="btn oct-plan ${O._series.ruled===p.k?'ruled':''}" onclick="fmOctPlan('${p.k}')"><b>${p.lab}</b><small>${p.sub}</small></button>`).join('')}</div>
@@ -7507,7 +7534,7 @@ function fmOctPlan(k){
     <div class="tk-pace">FIRST TO ${S.R.need}</div>
     <div class="oct-chips" id="octchips"></div>
     <div id="octact" style="margin-top:10px"></div>`;
-  sfx(right?'coin':'lose');
+  sfx(right?'coin':'lose');fmOctProbPaint();
   setTimeout(fmOctGame,900);
 }
 function fmOctGame(){
@@ -7522,7 +7549,7 @@ function fmOctGame(){
   if(chips)chips.innerHTML+=`<span class="oc ${win?'w':'l'}">${win?'W':'L'}</span>`;
   const w=document.getElementById('octw'),l=document.getElementById('octl');
   if(w)w.textContent=S.gw;if(l)l.textContent=S.gl;
-  sfx(win?'single':'out');hap(win?12:8);
+  sfx(win?'single':'out');hap(win?12:8);fmOctProbPaint();
   const act=document.getElementById('octact');
   if(S.gw>=S.R.need||S.gl>=S.R.need){S.over=true;const won=S.gw>=S.R.need;
     if(act)act.innerHTML=`<div class="tk-stamp ${won?'ok':'bad'}" style="margin:8px auto 0;display:inline-block">${won?(S.m.rk==='ws'?'WORLD CHAMPIONS':'SERIES WON')+' '+S.gw+'–'+S.gl:'ELIMINATED '+S.gl+'–'+S.gw}</div>
@@ -7538,16 +7565,16 @@ function fmOctGame(){
 }
 function fmOctToken(){
   const O=window._fmO,S=O&&O._series;if(!S||!O.tokens)return;
-  O.tokens--;S.boost=1;sfx('coin');hap(20);
+  O.tokens--;S.boost=1;sfx('coin');hap(20);fmOctProbPaint();
   toast('The dugout is on its feet — momentum next game.');
-  fmOctGame();
+  setTimeout(fmOctGame,600);
 }
 function fmOctSeriesDone(won){
   const O=window._fmO,S=O._series;
   const aWon=S.m.a.me?won:!won;
   O.script.push(aWon);
-  O._built[S.m.lg]=O._built[S.m.lg]||{};O._built[S.m.lg][S.m.key]=aWon?S.m.a:S.m.b;
-  O._series=null;
+  O.built[S.m.lg]=O.built[S.m.lg]||{};O.built[S.m.lg][S.m.key]=aWon?S.m.a:S.m.b;
+  O._series=null;O.i++;
   fmOctNext();
 }
 function fmOctClose(){const ov=document.getElementById('fmtick');if(ov)ov.remove();}
