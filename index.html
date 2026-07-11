@@ -1625,6 +1625,9 @@ let _atTitle=false;
 let _fxSkip=false;
 function render(h){_atTitle=false;try{document.body.classList.toggle("ownermode",!!((typeof G!=="undefined"&&G&&G.owner)||(typeof window!=="undefined"&&window._ownSetup)));}catch(e){}app().innerHTML="";app().appendChild($(`<div class="${_fxSkip?'':'scr-in'}">${h}</div>`));_fxSkip=false;ensureNavBtns();}
 function ensureNavBtns(){
+  // the title/home + bWARfare hubs mark themselves with _atTitle — they must never wear the Owner Mode skin,
+  // even when an owner franchise is still loaded in memory. (render() sets the class from G.owner; we clear it here.)
+  try{if(_atTitle)document.body.classList.remove('ownermode');}catch(e){}
   const inGame=(typeof G!=="undefined"&&G&&!_atTitle);
   let s=document.getElementById('savebtn');
   if(!s){s=document.createElement('button');s.id='savebtn';s.className='savebtn';s.innerHTML='💾 Save';s.onclick=showSavePanel;document.body.appendChild(s);}
@@ -2163,7 +2166,7 @@ function screenTitle(){try{window._ownSetup=false;}catch(e){}
          </div>
        </aside>
      </div>
-     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.3.0</span></div>
+     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.3.1</span></div>
    </div>
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
@@ -3318,6 +3321,7 @@ function ownerSponsorInterest(){
   return clamp(s,1,5);
 }
 function genSponsorOffers(){
+  (G.owner._sponsorOffers||[]).forEach(o=>{if(!o.id)o.id=uid();});   // backfill ids on offers from older builds/saves so Review-contract works this year too
   if(G.owner._sponsorYear===G.year)return;
   G.owner._sponsorYear=G.year;
   ownerPruneSponsors();
