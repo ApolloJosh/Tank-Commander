@@ -2082,6 +2082,7 @@ function screenNewFranchise(k){
   _atTitle=true;ensureNavBtns();
 }
 function screenTitle(){try{window._ownSetup=false;}catch(e){}
+  try{bwState();}catch(e){}   // guarantee PROFILE.bw exists before the dashboard reads PROFILE.bw.deck / .packs (else the welcome button's screenTitle() throws and looks dead)
   if(_titleName==null)_titleName=warPun();
   const MODES=TITLE_MODES;
   const m=MODES[_titleMode]||MODES.career;
@@ -2166,7 +2167,7 @@ function screenTitle(){try{window._ownSetup=false;}catch(e){}
          </div>
        </aside>
      </div>
-     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.3.4</span></div>
+     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.3.5</span></div>
    </div>
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
