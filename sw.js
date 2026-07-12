@@ -1,6 +1,6 @@
 /* Tank Commander service worker — offline play + installability.
    Bump CACHE_V on every deploy so players get the new build. */
-const CACHE_V='tc-v10.3.3';
+const CACHE_V='tc-v10.3.4';
 const CORE=['./','./index.html'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE_V).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));
