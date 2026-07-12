@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Tank Commander — Baseball Rebuild GM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Saira+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Saira+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Marcellus&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#191b12; --panel:#20231a; --panel2:#262a1b; --line:#4a4c35; --line2:#5f6142;
@@ -61,6 +61,58 @@
   .tpitch-row{display:flex;gap:10px;align-items:flex-start;margin:9px 0;line-height:1.4}
   .tpitch-row .ic{font-size:22px;line-height:1.2;flex-shrink:0}
   .tnote summary::-webkit-details-marker{display:none}
+  /* ---- the commander's club (owner mode skin) ---- */
+  body.ownermode{--bg:#141210;--panel:#1c1915;--panel2:#242019;--line:#3a342a;--line2:#544b3a;
+    --ink:#ece5d4;--dim:#9c8f76;--gold:#c9a44c;--phos:#d8b45c;--khaki:#b09a75;
+    background-color:#111010;
+    background-image:radial-gradient(ellipse 70% 45% at 50% -10%, rgba(201,164,76,.05), transparent 60%),
+      radial-gradient(ellipse 55% 40% at 85% 108%, rgba(40,50,38,.25), transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.5' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .45 0 0 0 0 .38 0 0 0 .035 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E")}
+  body.ownermode .btn.primary{background:linear-gradient(180deg,#d8b45c,#a98a3e);border-color:#8a7434;color:#231a08;box-shadow:0 1px 0 rgba(255,240,200,.55) inset,0 3px 8px rgba(0,0,0,.4)}
+  body.ownermode .btn.primary:not(.sm)::after{display:none}
+  body.ownermode .panel{border-top:2px solid #8a7434}
+  body.ownermode .kpi{border-top-color:rgba(201,164,76,.5)}
+  body.ownermode .kpi .big{color:#d8b45c}
+  body.ownermode .fmemo{border-left-color:#c9a44c;background:linear-gradient(175deg,#efe6d0,#e4d7ba);color:#2d2214}
+  body.ownermode .fmemo .from{color:#7a6845}
+  body.ownermode .cmap .leg.on .dot,body.ownermode .fiscal .leg.on .dot{box-shadow:0 0 10px rgba(201,164,76,.6)}
+  .oprow{display:flex;align-items:center;gap:12px;margin:7px 0}
+  .oprow .opn{flex:0 0 108px;font-size:12px;color:var(--dim)}
+  .oprow b{flex:0 0 48px;text-align:right;font-family:var(--mono);font-size:13px;color:var(--gold);font-variant-numeric:tabular-nums}
+  .oprow input[type=range]{flex:1;min-width:80px;-webkit-appearance:none;appearance:none;height:22px;background:transparent;cursor:pointer}
+  .oprow input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,#564b32,#8a7434 55%,#c9a44c)}
+  .oprow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:radial-gradient(circle at 35% 32%,#f6ecd0,#c9a44c 58%,#7a662e);border:1px solid #5f5026;margin-top:-6.5px;box-shadow:0 2px 6px rgba(0,0,0,.55)}
+  .oprow input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:linear-gradient(90deg,#564b32,#8a7434 55%,#c9a44c)}
+  .oprow input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 32%,#f6ecd0,#c9a44c 58%,#7a662e);border:1px solid #5f5026;box-shadow:0 2px 6px rgba(0,0,0,.55)}
+  .opsticky{position:sticky;top:0;z-index:6;padding:6px 0 2px;background:var(--panel)}
+  .odemand .odm-att,.odemand .odm-rev{font-variant-numeric:tabular-nums}
+  .odemand .odm-att{min-width:52px}
+  .odemand .odm-rev{min-width:158px;text-align:right}
+  .ochoice{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  @media(max-width:680px){.ochoice{grid-template-columns:1fr}}
+  .ocard{border:1px solid var(--line2);border-top:2px solid #8a7434;border-radius:4px;background:linear-gradient(170deg,var(--panel2),var(--panel) 65%);padding:15px 14px;display:flex;flex-direction:column;gap:8px;text-align:center;transition:transform .12s,border-color .12s}
+  .ocard:hover{transform:translateY(-2px);border-color:var(--gold)}
+  .ocard .ot{font-family:var(--disp);text-transform:uppercase;letter-spacing:.04em;font-size:16px;color:var(--ink)}
+  .ocard .ox{font-family:var(--mono);font-size:11px;color:var(--gold)}
+  .ocard .od{font-size:12px;color:var(--dim);flex:1}
+  .fmstrip2{position:absolute;top:46px;left:50%;transform:translateX(-50%);max-width:94vw;white-space:nowrap;display:flex;gap:14px;font-family:var(--mono);font-size:10px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 12px}
+  .fmstrip2 b{color:var(--gold);font-weight:600}
+  .grancorner{position:absolute;bottom:14px;left:14px;font-family:var(--disp);font-weight:700;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:var(--panel2);border:1px solid var(--line2);color:var(--dim);border-radius:14px;padding:6px 12px;cursor:pointer}
+  .grancorner:hover{color:var(--gold);border-color:var(--gold)}
+  .contract{background:linear-gradient(175deg,#f0e8d4,#e2d5b6);color:#2d2214;border-radius:3px;padding:20px 22px;max-width:520px;width:94%;max-height:74vh;overflow:auto;text-align:left;font-size:13px;box-shadow:0 14px 40px rgba(0,0,0,.6);position:relative}
+  .contract::before{content:"";position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,#8a7434,#c9a44c,#8a7434)}
+  .contract h3{font-family:'Marcellus',serif;font-size:17px;letter-spacing:.06em;text-align:center;margin-bottom:4px;color:#2d2214}
+  .contract .csub{font-family:var(--mono);font-size:9px;letter-spacing:.2em;text-align:center;color:#7a6845;margin-bottom:12px}
+  .contract .clause{margin:8px 0;padding-left:10px;border-left:2px solid #b9a67e}
+  .contract .clause b{font-family:var(--mono);font-size:10px;color:#7a6845}
+  .contract .sigline{margin-top:16px;border-top:1px solid #7a6845;padding-top:6px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+  .contract .sig{font-family:'Marcellus',serif;font-style:italic;font-size:22px;color:#3a2c14;min-height:30px;transform:rotate(-2deg)}
+
+  .odemand{display:flex;align-items:center;gap:10px}
+  .odemand .odm-att{font-family:var(--mono);font-weight:600;font-size:20px;color:#5a4526}
+  .odemand .odm-track{flex:1;height:9px;border:1px solid #b9a67e;border-radius:5px;overflow:hidden;background:#d8cba8}
+  .odemand .odm-track i{display:block;height:100%;background:linear-gradient(90deg,#8a7434,#5a4526);transition:width .4s}
+  .odemand .odm-rev{font-family:var(--mono);font-size:11px;color:#5a4526}
   /* ---- franchise moments (v9.9) ---- */
   .ico{vertical-align:-2.5px}
   .cmap{display:flex;align-items:flex-start;margin:10px 0 16px}
@@ -1187,7 +1239,7 @@ function simulateRegularSeason(){
   if(G.owner&&G.owner.homeEdge){const m=entries.find(e=>e.me);m.wins=clamp(m.wins+Math.round(G.owner.homeEdge),40,118);m.losses=162-m.wins;}   // a rowdy die-hard home crowd
   if(G.owner&&G.owner.parkFactor){const {bal,pf}=ownerParkSynergy();const m=entries.find(e=>e.me);   // outfield dimensions: park that suits your roster wins you games at home
     m.wins=clamp(m.wins+Math.round(clamp(pf*clamp(bal/8,-0.5,0.5)*6,-3,3)),40,118);m.losses=162-m.wins;}
-  if(!G.owner&&G._season&&G._season.g>0){   // segmented season: keep the record you actually built; sim only the stretch run
+  if(G._season&&G._season.g>0){   // segmented season: keep the record you actually built; sim only the stretch run
     const m=entries.find(e=>e.me),left=162-G._season.g;
     const lw=clamp(Math.round((m.wins/162)*left+gauss(0,1.8)),Math.round(left*0.08),Math.round(left*0.92));
     m.wins=clamp((G._season.w||0)+lw,40,118);m.losses=162-m.wins;G._season.finW=m.wins;
@@ -1571,8 +1623,11 @@ function extend(pid){extendDo(pid,5);}   // legacy default
 const app=()=>document.getElementById('app');
 let _atTitle=false;
 let _fxSkip=false;
-function render(h){_atTitle=false;app().innerHTML="";app().appendChild($(`<div class="${_fxSkip?'':'scr-in'}">${h}</div>`));_fxSkip=false;ensureNavBtns();}
+function render(h){_atTitle=false;try{document.body.classList.toggle("ownermode",!!((typeof G!=="undefined"&&G&&G.owner)||(typeof window!=="undefined"&&window._ownSetup)));}catch(e){}app().innerHTML="";app().appendChild($(`<div class="${_fxSkip?'':'scr-in'}">${h}</div>`));_fxSkip=false;ensureNavBtns();}
 function ensureNavBtns(){
+  // the title/home + bWARfare hubs mark themselves with _atTitle — they must never wear the Owner Mode skin,
+  // even when an owner franchise is still loaded in memory. (render() sets the class from G.owner; we clear it here.)
+  try{if(_atTitle)document.body.classList.remove('ownermode');}catch(e){}
   const inGame=(typeof G!=="undefined"&&G&&!_atTitle);
   let s=document.getElementById('savebtn');
   if(!s){s=document.createElement('button');s.id='savebtn';s.className='savebtn';s.innerHTML='💾 Save';s.onclick=showSavePanel;document.body.appendChild(s);}
@@ -1740,7 +1795,7 @@ function ownBudgetBar(){const left=ownLeft(),pct=clamp(Math.round(left/OWNER_BUD
 function ownStepBar(step){const steps=["Team","Ballpark","Upgrades","Facilities","Front office","Review"];
   return `<div class="row" style="gap:5px;margin:8px 0;flex-wrap:wrap">${steps.map((s,i)=>`<span class="pill ${i===step?'gold':''}" style="${i===step?'':'opacity:.5'};padding:2px 9px">${i+1}. ${s}</span>`).join("")}</div>`;}
 
-function ownerStartSetup(){ownInit();
+function ownerStartSetup(){window._ownSetup=true;ownInit();
   render(`<div class="hero">
     <div class="pill gold" style="margin-bottom:10px">💼 OWNER MODE</div>
     <h1>BUY THE BALLCLUB</h1>
@@ -1959,6 +2014,7 @@ function applyOwnerSetup(der,cashReserve){
 }
 function startOwnerYear(){
   if(G.draftOrderYear!==G.year)computeDraftOrder();
+  if(G._ownYearTick!==G.year){G._ownYearTick=G.year;try{ownerYearTick();}catch(e){}}
   G.survStage=1;G.stance='compete';G.agreedBar=null;
   G._ownerMsg=ownerSeasonMsg();
   saveGame();
@@ -1981,7 +2037,7 @@ function ownerSeasonMsg(){
 }
 function ownerHeader(){const o=G.owner||{};const v=o.clubValue||0;
   return `${topBar(`<button class="btn ghost sm" onclick="openFranchise()">📜 Franchise</button>`)}
-    <div style="margin-bottom:10px"><div class="fid">${G.teamName} <span class="pill gold" style="vertical-align:4px">💼 Owner</span></div>
+    <div style="margin-bottom:10px"><div class="fid">${G.teamName} <span class="pill gold" style="vertical-align:4px">💼 Owner</span>${ownerParkDisplay()?`<span class=\"small\" style=\"color:var(--gold)\"> · ${esc(ownerParkDisplay())}</span>`:''}</div>
       <span class="fmeta">${G.league||''} ${G.div||''} · Season ${G.year}${o.lifespanYears?' / '+o.lifespanYears:''} · Payroll $${payroll(G.roster)}M</span></div>
     <div class="grid4" style="margin-top:4px">
       <div class="kpi" style="padding:9px 8px"><div class="big" style="font-size:17px">${fmtB(v)}</div><div class="lbl">Club Value</div></div>
@@ -2025,7 +2081,7 @@ function screenNewFranchise(k){
     </div>`);
   _atTitle=true;ensureNavBtns();
 }
-function screenTitle(){
+function screenTitle(){try{window._ownSetup=false;}catch(e){}
   if(_titleName==null)_titleName=warPun();
   const MODES=TITLE_MODES;
   const m=MODES[_titleMode]||MODES.career;
@@ -2046,7 +2102,7 @@ function screenTitle(){
       <div class="row"><span class="v">${r.owner?fmtB(r.clubValue||0)+' value':r.mode==='survivor'?'Score '+(r.score||0):(r.champions||0)+'× 🏆'}</span><button class="rbtn" onclick="resumeRun('${r.id}')">Resume</button></div>
     </div>`;
   const runsHtml=runs.length?runs.slice(0,5).map(runCard).join(''):'<p class="small muted" style="margin:0">No franchises yet — start one from the left.</p>';
-  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v10.0.2</span>`;
+  const topR=`${authEnabled()?`<a onclick="screenAccount()">${authState()?(authState().username||'Account'):'Account'}</a>`:''}<a onclick="screenWelcome()">Guide</a><a onclick="showGameRules()">Rules</a><span class="ver">v10.3</span>`;
   render(`
    <div class="tdash">
      <div class="tdash-top"><img class="brandlogo" src="${LOGO_WIDE}" alt="Tank Commander"><div class="tdash-top-r">${topR}</div></div>
@@ -2110,7 +2166,7 @@ function screenTitle(){
          </div>
        </aside>
      </div>
-     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.0.2</span></div>
+     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.3.3</span></div>
    </div>
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
@@ -3128,11 +3184,12 @@ function doSeason(){
   const reg=simulateRegularSeason();
   const after=()=>{
     G._season=null;G._prevWins=null;
+    if(G.owner&&G._ownGran){const rank={weekly:3,monthly:2,skip:1};const eff=Math.min(rank[G._ownGran]||1,G._ownGranMin||rank[G._ownGran]||1);const xp={3:30,2:15,1:5}[eff];addXP(xp);toast(`🎖️ +${xp} GM XP — ${G._ownGran==='weekly'?'hands-on':G._ownGran==='monthly'?'boardroom':'absentee'} season`);G._ownGran=null;G._ownStops=null;}
     if(reg.madePO&&!G.owner){G.seasonStage=2.8;saveGame();return screenPlayoffRoster();}
     finishSeason();
   };
   try{
-    if(!G.owner&&G._season&&G._season.g>0)fmSeasonFinale(prevWins,!!reg.madePO,after);
+    if(G._season&&G._season.g>0)fmSeasonFinale(prevWins,!!reg.madePO,after);
     else showSeasonTicker(prevWins,!!reg.madePO,after);
   }catch(e){after();}
 }
@@ -3250,25 +3307,63 @@ function ownerPruneSponsors(){
   return dropped;
 }
 // each year, every OPEN inventory slot (no active contract) gets a fresh offer to sign or renew
+// success attracts suitors: a winning, valuable club draws more competing bids per slot
+function ownerSponsorInterest(){
+  let s=1;
+  try{
+    const fv=(typeof fanVal==='function')?fanVal():60;
+    if(fv>=68)s++; if(fv>=84)s++;
+    const last=(G.history||[]).slice(-1)[0];
+    if(last&&last.playoffs)s++;
+    if(last&&last.champ)s++;
+    if((G.owner.clubValue||0)>=1600)s++;
+  }catch(e){}
+  return clamp(s,1,5);
+}
 function genSponsorOffers(){
+  (G.owner._sponsorOffers||[]).forEach(o=>{if(!o.id)o.id=uid();});   // backfill ids on offers from older builds/saves so Review-contract works this year too
   if(G.owner._sponsorYear===G.year)return;
   G.owner._sponsorYear=G.year;
   ownerPruneSponsors();
   const activeT=new Set((G.owner.sponsors||[]).map(s=>s.type));
   const renew=new Set(G.owner._expiredTypes||[]);
-  G.owner._sponsorOffers=SPONSOR_CATALOG.filter(s=>!activeT.has(s.type)).map(s=>{
-    const wobble=0.85+Math.random()*0.4;                          // each negotiation lands a bit differently
-    const rev=Math.max(4,Math.round(s.rev*(G.owner.marketMult||1)*wobble));
-    return {type:s.type,slot:s.name,desc:s.desc,fanCost:s.fanCost,rev,term:ri(3,5),
-      brand:pick(SPONSOR_BRANDS),renew:renew.has(s.type)};
+  const interest=ownerSponsorInterest();
+  const applyProfile=(o2)=>{
+    o2.profile=pick(['stable','stable','legacy','volatile','performance']);
+    if(o2.profile==='volatile'){o2.rev=Math.round(o2.rev*1.9);o2.riskNote='⚠ pays huge — 15%/yr chance it collapses (dead money, fan backlash)';}
+    else if(o2.profile==='performance'){o2.rev=Math.max(3,Math.round(o2.rev*0.55));o2.riskNote='📈 low base + $10M playoff / $25M championship clauses';}
+    else if(o2.profile==='legacy'){o2.rev=Math.round(o2.rev*1.05);o2.riskNote='🏛️ steady legacy money';}
+    else o2.riskNote='🤝 reliable local money';
+    return o2;};
+  const usedBrands=new Set();
+  const freshBrand=()=>{let b,g=0;do{b=pick(SPONSOR_BRANDS);}while(usedBrands.has(b)&&++g<40);usedBrands.add(b);return b;};
+  // how many bidders show up for a given inventory slot — marquee slots draw a crowd when you're winning
+  const slotCount=type=>type==='naming'?clamp(interest,2,5):(type==='patch'||type==='outfield')?clamp(interest-1,1,3):1;
+  const mkOffer=base=>{
+    const lead=base.type==='naming';
+    const wobble=0.85+Math.random()*0.4;
+    const rev=lead?Math.max(14,Math.round(18*(G.owner.marketMult||1)*wobble)):Math.max(4,Math.round(base.rev*(G.owner.marketMult||1)*wobble));
+    return applyProfile({id:uid(),type:base.type,slot:lead?'Stadium Naming Rights':base.name,
+      desc:lead?'Their name over your door — you pick Park, Field, or Stadium. Fans grumble at first; the check is enormous.':base.desc,
+      fanCost:base.fanCost,rev,term:lead?ri(6,9):ri(3,5),brand:freshBrand(),renew:renew.has(base.type)});
+  };
+  const offers=[];
+  SPONSOR_CATALOG.filter(s=>!activeT.has(s.type)).forEach(s=>{
+    if(s.type==='naming'&&G.owner.parkName)return;   // already named the building
+    const n=slotCount(s.type);
+    for(let i=0;i<n;i++)offers.push(mkOffer(s));
   });
+  G.owner._sponsorOffers=offers;
 }
-function acceptSponsor(type){
-  const off=(G.owner._sponsorOffers||[]).find(s=>s.type===type);if(!off)return;
-  (G.owner.sponsors=G.owner.sponsors||[]).push({type:off.type,slot:off.slot,name:off.brand,rev:off.rev,term:off.term,signedYear:G.year});
+function acceptSponsor(id){
+  const list=G.owner._sponsorOffers||[];
+  const off=list.find(s=>s.id===id)||list.find(s=>s.type===id);if(!off)return;   // id-keyed; type fallback for safety
+  (G.owner.sponsors=G.owner.sponsors||[]).push({type:off.type,slot:off.slot,name:off.brand,rev:off.rev,term:off.term,signedYear:G.year,profile:off.profile});
   if(off.fanCost)fanChange(-off.fanCost,`Signed ${off.brand} (${off.slot.toLowerCase()}) — some fans grumbled`);
-  G.owner._sponsorOffers=G.owner._sponsorOffers.filter(s=>s.type!==type);
-  saveGame();ownerSuite();
+  G.owner._sponsorOffers=list.filter(s=>s.type!==off.type);   // signing this slot clears the competing bids for it
+  saveGame();try{sfx('moneyBig');}catch(e){}
+  if(off.type==='naming'){ownerChooseSuffix(off.brand);return;}
+  ownerSuite();
 }
 // recompute the franchise's derived modifiers from what it currently owns (called after any Suite purchase)
 // ---- Tier-2 Suite: showpiece attractions, fan experiences, and team programs (unlock once the ballpark & facilities are built out) ----
@@ -3301,7 +3396,7 @@ function suiteBuyAmenity(id){const o=G.owner,a=SUITE_PREMIUM.find(x=>x.id===id);
   if(a.cost>(o.cashReserve||0)){toast('Not enough cash on hand.');return;}
   o.cashReserve=Math.round((o.cashReserve-a.cost)*10)/10;(o.ownedAmenities=o.ownedAmenities||[]).push(id);
   if(a.fx.fan)fanChange(a.fx.fan,`Fans are buzzing about the ${a.name.toLowerCase()}`);
-  o.totalSpent=(o.totalSpent||0)+a.cost;ownerRecalc();saveGame();toast(`Added: ${a.name}`);ownerSuite();}
+  o.totalSpent=(o.totalSpent||0)+a.cost;ownerRecalc();sfx(a.cost>=100?'moneyBig':'moneySm');saveGame();toast(`Added: ${a.name}`);ownerSuite();}
 function ownerRecalc(){
   const o=G.owner;
   const ups=(o.ownedUpgrades||[]).map(id=>STADIUM_UPGRADES.find(x=>x.id===id)).filter(Boolean);
@@ -3450,14 +3545,18 @@ function ownerSuite(){
       <div class="row" style="align-items:center;justify-content:space-between;gap:8px">
         <div style="flex:1"><div style="font-weight:700">${s.renew?'♻️ ':''}${s.slot} — ${s.brand} <span class="small" style="color:var(--green)">+$${s.rev}M/yr</span> <span class="small muted">· ${s.term}-yr deal</span>${s.fanCost?` <span class="small" style="color:var(--red)">−${s.fanCost} fans</span>`:''}</div>
           <p class="small muted" style="margin:2px 0 0">${s.renew?'This slot just opened up — re-sign or take the new offer. ':''}${s.desc}</p></div>
-        <button class="btn primary sm" onclick="acceptSponsor('${s.type}')">Sign</button></div></div>`).join(""):'<p class="small muted">No open sponsorship slots — all your inventory is under contract.</p>';
+        <button class="btn primary sm" onclick="ownerContract('${s.id}')">📜 Review contract</button></div></div>`).join(""):'<p class="small muted">No open sponsorship slots — all your inventory is under contract.</p>';
   // Tier-2 premium attractions & programs (unlock once the ballpark + facilities are fully built out)
   const owAm=new Set(o.ownedAmenities||[]);
   const amTags=a=>[a.fx.fan?`📣 +${a.fx.fan}`:'',a.fx.rev?'💵 rev':'',a.fx.dev?'📈 dev':'',a.fx.farm?'🌱 farm':'',a.fx.heal?'🏥 health':'',a.fx.home?'🏟️ win edge':'',a.fx.merch?'🧢 merch':'',a.fx.trade?'🕵️ trade intel':'',a.fx.gate?'🎟️ gate':'',a.fx.ops?'💡 lower costs':'',a.fx.hof?'🏛️ HOF':'',a.fx.scout?'🔭 scouting':''].filter(Boolean).join(' &nbsp; ');
   let premH;
   if(!ownerTier2Unlocked()){
     const upLeft=STADIUM_UPGRADES.filter(u=>!owUp.has(u.id)).length,facLeft=FACILITY_OPTS.filter(f=>!owFac.has(f.id)).length;
-    premH=`<p class="small muted">🔒 Finish building out the ballpark and facilities to unlock showpiece attractions and team programs — <b>${upLeft} upgrade${upLeft===1?'':'s'}</b> and <b>${facLeft} facilit${facLeft===1?'y':'ies'}</b> to go.</p>`;
+    premH=`<p class="small muted">🔒 Finish building out the ballpark and facilities to unlock these — <b>${upLeft} upgrade${upLeft===1?'':'s'}</b> and <b>${facLeft} facilit${facLeft===1?'y':'ies'}</b> to go.</p>`+
+      SUITE_PREMIUM.map(a=>`<div class="panel2" style="border:1px solid var(--line);border-radius:4px;padding:10px;margin-bottom:7px;opacity:.5">
+        <div class="row" style="align-items:center;justify-content:space-between;gap:8px">
+          <div style="flex:1"><b>🔒 ${a.name}</b> <span class="small muted">· $${a.cost}M</span><p class="small muted" style="margin:2px 0 0">${a.desc}</p></div>
+          <span class="pill" style="padding:0 5px;font-size:9px">${a.cat}</span></div></div>`).join('');
   } else {
     const list=SUITE_PREMIUM.filter(a=>!owAm.has(a.id));
     premH=list.length?list.map(a=>item(a,a.cost<=cash,`suiteBuyAmenity('${a.id}')`,`<span class="pill" style="padding:0 5px;font-size:9px">${a.cat}</span> &nbsp; ${amTags(a)}`)).join(""):'<p class="small muted">You\'ve built every attraction and program — a true showplace. 🌟</p>';
@@ -3475,22 +3574,35 @@ function ownerSuite(){
       ${staffRow('scout','Scouting',SCOUT_TIERS,o.scoutTier)}
       ${staffRow('coach','Head coach',COACH_TIERS,o.coachTier)}
       <div class="small muted" style="margin-top:4px">Your GM (${o.gmName}) is hired separately — <a href="#" onclick="ownerReplaceGM();return false;" style="color:var(--gold)">replace him here</a>.</div></div>
-    <div class="panel" style="border-color:var(--gold)"><h3>🌟 Premium attractions &amp; programs <span class="small muted">— Tier 2</span></h3>${premH}</div>
     <div class="panel"><h3>🤝 Sponsorships <span class="small muted">— multi-year contracts that expire and reopen</span></h3>
       <div class="sectlbl">Active deals</div>${active}
       <div class="sectlbl" style="margin-top:8px">Open slots / offers</div>${offH}</div>
-    <div class="center" style="margin:8px 0"><button class="btn primary" onclick="ownerOffice()">← Back to the office</button></div>`);
+    <div class="center" style="margin:8px 0"><button class="btn primary" onclick="ownerOffice()">← Back to the office</button></div>
+    <div class="panel" style="border-color:var(--gold)"><h3>🌟 Premium attractions &amp; programs <span class="small muted">— Tier 2</span></h3>${premH}</div>
+   ${(function(){
+     const o=G.owner,unlocked=ownerTier3Unlocked();
+     const c=o.construction;
+     const row=t=>{const owned=(o.ownedT3||[]).includes(t.id);
+       return `<div class="panel2" style="border:1px solid ${owned?'var(--gold)':'var(--line)'};border-radius:4px;padding:10px;margin-bottom:7px;${owned?'':unlocked?'':'opacity:.55'}">
+         <div class="row" style="align-items:center;justify-content:space-between;gap:8px">
+           <div style="flex:1"><b>${t.name}</b> <span class="small muted">· $${t.cost}M</span><p class="small muted" style="margin:2px 0 0">${t.desc}</p></div>
+           ${owned?'<span class="pill gold">BUILT</span>':(c&&c.id===t.id)?`<span class="pill" style="color:var(--amber);border-color:var(--amber)">🏗️ ${c.weeks} wk</span>`:unlocked&&!c?`<button class="btn primary sm" onclick="ownerBuyT3('${t.id}')">Break ground</button>`:''}
+         </div></div>`;};
+     return `<div class="panel" style="border-color:var(--gold)"><h3>👑 Tier 3 — Legacy Projects <span class="small muted">${unlocked?'· one build at a time, rises over weeks':'· unlocks after 4 Tier-2 showpieces'}</span></h3>
+       ${c?`<p class="small" style="color:var(--amber)">🏗️ ${c.name} under construction — ${c.weeks} week${c.weeks>1?'s':''} to the ribbon.</p>`:''}
+       ${TIER3_OPTS.map(row).join('')}</div>`;})()}
+`);
 }
 function suiteBuyUpgrade(id){const o=G.owner,u=STADIUM_UPGRADES.find(x=>x.id===id);if(!u)return;
   if(u.cost>(o.cashReserve||0)){toast('Not enough cash on hand.');return;}
   o.cashReserve=Math.round((o.cashReserve-u.cost)*10)/10;(o.ownedUpgrades=o.ownedUpgrades||[]).push(id);
   if(u.fan)fanChange(u.fan,`Fans love the new ${u.name.toLowerCase()}`);
-  o.totalSpent=(o.totalSpent||0)+u.cost;ownerRecalc();saveGame();toast(`Built: ${u.name}`);ownerSuite();}
+  o.totalSpent=(o.totalSpent||0)+u.cost;ownerRecalc();sfx(u.cost>=100?'moneyBig':'moneySm');saveGame();toast(`Built: ${u.name}`);ownerSuite();}
 function suiteBuyFacility(id){const o=G.owner,f=FACILITY_OPTS.find(x=>x.id===id);if(!f)return;
   if(f.cost>(o.cashReserve||0)){toast('Not enough cash on hand.');return;}
   o.cashReserve=Math.round((o.cashReserve-f.cost)*10)/10;(o.ownedFacilities=o.ownedFacilities||[]).push(id);
   if(f.happy)fanChange(Math.round(f.happy*2),`A first-class ${f.name.toLowerCase()} lifts the club`);
-  o.totalSpent=(o.totalSpent||0)+f.cost;ownerRecalc();saveGame();toast(`Funded: ${f.name}`);ownerSuite();}
+  o.totalSpent=(o.totalSpent||0)+f.cost;ownerRecalc();sfx(f.cost>=100?'moneyBig':'moneySm');saveGame();toast(`Funded: ${f.name}`);ownerSuite();}
 function suiteUpgradeStaff(kind,tier){
   const o=G.owner,tiers={analytics:ANALYTICS_TIERS,scout:SCOUT_TIERS,coach:COACH_TIERS}[kind];
   const cur={analytics:o.analyticsTier,scout:o.scoutTier,coach:o.coachTier}[kind];if(!tiers||tier<=cur)return;
@@ -3498,13 +3610,15 @@ function suiteUpgradeStaff(kind,tier){
   if(cost>(o.cashReserve||0)){toast('Not enough cash on hand.');return;}
   o.cashReserve=Math.round((o.cashReserve-cost)*10)/10;
   if(kind==='analytics')o.analyticsTier=tier;else if(kind==='scout')o.scoutTier=tier;else o.coachTier=tier;
-  o.totalSpent=(o.totalSpent||0)+cost;ownerRecalc();saveGame();toast(`Upgraded ${kind}`);ownerSuite();}
+  o.totalSpent=(o.totalSpent||0)+cost;ownerRecalc();sfx('moneySm');saveGame();toast(`Upgraded ${kind}`);ownerSuite();}
 
+function _officePaint(){setTimeout(()=>{try{ownerDemandPaint();}catch(e){}},0);}
 function setMandate(m){G.owner.mandate=m;const presets=ownerBudgetPresets();
   // nudge the default budget toward the mandate when the owner hasn't overridden it
   const map={winNow:'aggressive',contend:'balanced',retool:'balanced',rebuild:'frugal'};
   G.owner.payrollBudget=(presets.find(p=>p.key===map[m])||presets[1]).cap;ownerOffice();}
 function setBudget(cap){G.owner.payrollBudget=cap;ownerOffice();}
+function setBudgetLive(v){G.owner.payrollBudget=Math.round(+v);const el=document.getElementById('budval');if(el)el.textContent='$'+G.owner.payrollBudget+'M';const pp=document.querySelectorAll('.budpreset');pp.forEach(b=>b.classList.toggle('primary',Math.abs((+b.dataset.cap)-G.owner.payrollBudget)<1));saveGame();}
 function toggleDirective(k){G.owner.directives[k]=!G.owner.directives[k];ownerOffice();}
 function ownerOffice(){
   G.ownerStage='office';G.phase=0;G._ownerTakeover=false;
@@ -3519,31 +3633,25 @@ function ownerOffice(){
       <p class="small muted" style="margin:3px 0 0">${m.desc}</p></div>`;}).join("");
   const presets=ownerBudgetPresets();
   const budOpt=presets.map(p=>{const sel=Math.abs((o.payrollBudget||0)-p.cap)<1;
-    return `<button class="btn ${sel?'primary':''} sm" onclick="setBudget(${p.cap})" title="${p.desc}">${p.name} · $${p.cap}M</button>`;}).join(" ");
+    return `<button class="btn budpreset ${sel?'primary':''} sm" data-cap="${p.cap}" onclick="setBudget(${p.cap})" title="${p.desc}">${p.name} · $${p.cap}M</button>`;}).join(" ");
   const dir=[['protectProspects','🛡️ Protect top prospects','GM won\'t trade your best farm talent.'],
     ['splurge','💰 Splurge on free agents','Prioritize signing the best available bats/arms.'],
     ['getYounger','🌱 Get younger','Favor youth; move aging veterans.'],
-    ['pitchingFirst','⚾ Pitching first','Address the rotation/bullpen before hitting.']];
+    ['pitchingFirst','⚾ Pitching first','Address the rotation/bullpen before hitting.'],
+    ['veteranPresence','🎖️ Value veteran presence','Keep the clubhouse leaders — the GM eases off selling proven vets.'],
+    ['hoardPicks','🎟️ Hoard draft picks','Squeeze extra picks out of every trade and stockpile them.'],
+    ['stayUnderTax','🧾 Stay under the luxury tax','Treat $300M as a hard ceiling, whatever the budget slider says.'],
+    ['analyticsEdge','🔬 Trust the analytics','Chase undervalued, cost-efficient signings other clubs overlook.']];
   const dirHtml=dir.map(([k,lbl,d])=>{const on=o.directives[k];
     return `<div class="panel2" style="border:1.5px solid ${on?'var(--gold)':'var(--line)'};border-radius:4px;padding:8px;cursor:pointer" onclick="toggleDirective('${k}')">
       <div style="font-weight:700">${on?'✓ ':''}${lbl}</div><p class="small muted" style="margin:2px 0 0">${d}</p></div>`;}).join("");
-  const priceRow=(cat,it)=>{
-    if(!ownerUnlocked(it.unlock)){const up=STADIUM_UPGRADES.find(u=>u.id===it.unlock)||SUITE_PREMIUM.find(u=>u.id===it.unlock);
-      return `<div class="row" style="opacity:.45;align-items:center;justify-content:space-between;padding:2px 0"><span class="small">🔒 ${it.name}</span><span class="small muted">build the ${up?up.name:it.unlock} in the Suite</span></div>`;}
-    const idx=priceIdx(cat,it.key);
-    return `<div class="row" style="align-items:center;justify-content:space-between;gap:6px;padding:2px 0">
-      <span class="small" style="flex:0 0 92px">${it.name}</span>
-      <span style="display:flex;gap:4px">${it.p.map((pr,i)=>`<button class="btn ${idx===i?'primary':''} sm" style="padding:2px 7px" title="${PRICE_LABELS[i]}" onclick="setPrice('${cat}','${it.key}',${i})">$${pr}</button>`).join("")}</span></div>`;};
-  const pricingHtml=`
-    <div class="sectlbl">🎟️ Tickets <span class="small muted">(by section)</span></div>${TICKET_SECTIONS.map(s=>priceRow('tickets',s)).join("")}
-    <div class="sectlbl" style="margin-top:8px">🍔 Concessions</div>${CONCESSION_ITEMS.map(it=>priceRow('conc',it)).join("")}
-    <div class="sectlbl" style="margin-top:8px">🧢 Merchandise</div>${MERCH_ITEMS.map(it=>priceRow('merch',it)).join("")}`;
+  const pricingHtml=ownerPricingHTML();
   const offers=(o._sponsorOffers||[]);
   const sponsorHtml=offers.length?offers.map(s=>`<div class="panel2" style="border:1px solid var(--line);border-radius:4px;padding:10px;margin-bottom:7px">
       <div class="row" style="align-items:center;justify-content:space-between;gap:8px">
-        <div style="flex:1"><div style="font-weight:700">${s.name} <span class="small" style="color:var(--green)">+$${s.rev}M/yr</span>${s.fanCost?` <span class="small" style="color:var(--red)">−${s.fanCost} fans</span>`:''}</div>
-          <p class="small muted" style="margin:2px 0 0">${s.desc}</p></div>
-        <button class="btn primary sm" onclick="acceptSponsor('${s.type}')">Accept</button></div></div>`).join(""):'<p class="small muted">No new sponsorship offers this year.</p>';
+        <div style="flex:1"><div style="font-weight:700">${s.slot} — ${s.brand} <span class="small" style="color:var(--green)">+$${s.rev}M/yr</span>${s.fanCost?` <span class="small" style="color:var(--red)">−${s.fanCost} fans</span>`:''}</div>
+          <p class="small muted" style="margin:2px 0 0">${s.desc}${s.riskNote?`<br><span style=\"color:var(--amber)\">${s.riskNote}</span>`:''}</p></div>
+        <button class="btn primary sm" onclick="ownerContract('${s.id}')">📜 Review contract</button></div></div>`).join(""):'<p class="small muted">No new sponsorship offers this year.</p>';
   render(`${ownerHeader()}
     <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">💼 OWNER'S OFFICE · SEASON ${G.year}</div>
       <p class="sub" style="margin-top:6px">Set the plan and the prices, then hand the baseball to <b>GM ${o.gmName}</b>. Your roster currently projects to <b>${proj} wins</b> on a <b>$${pay}M</b> payroll.</p></div>
@@ -3570,9 +3678,10 @@ function ownerOffice(){
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:stretch">${mandOpt}</div></div>
     <div class="panel"><h3>💵 Authorized payroll budget${infoDot('The GM will not exceed this. Set it below your current payroll to make him shed salary; set it above to let him spend on trades and free agents.')}</h3>
       <div style="margin:6px 0">${budOpt}</div>
-      <p class="small muted">Set to <b>$${o.payrollBudget}M</b> · current payroll <b>$${pay}M</b>.</p></div>
+      <input type="range" min="40" max="450" step="5" value="${o.payrollBudget}" oninput="setBudgetLive(this.value)" style="width:100%;margin:2px 0 4px" title="Fine-tune the exact payroll ceiling">
+      <p class="small muted">Set to <b id="budval">$${o.payrollBudget}M</b> · current payroll <b>$${pay}M</b>. <span style="opacity:.7">Use the presets or drag for an exact number.</span></p></div>
     <div class="panel"><h3>📋 Directives</h3><div class="grid2" style="gap:8px">${dirHtml}</div></div>
-    <div class="panel"><h3>🎟️ Pricing menu <span class="small muted">— Value / Standard / Premium</span>${infoDot('Premium prices earn more per fan but thin the crowd and cool the fan base. Value pricing fills seats and wins goodwill. Locked items unlock when you build the matching upgrade in the Suite.')}</h3>
+    <div class="panel"><h3>🎟️ Pricing menu <span class="small muted">— slide from value to premium</span>${infoDot('Premium prices earn more per fan but thin the crowd and cool the fan base. Value pricing fills seats and wins goodwill. Locked items unlock when you build the matching upgrade in the Suite.')}</h3>
       ${pricingHtml}
       <p class="small muted" style="margin-top:8px">~<b>${ownerAttendance().toLocaleString()}</b> fans/game · gate <b>$${rev.gate}M</b> · concessions <b>$${rev.conc}M</b> · merch <b>$${rev.merch}M</b>.</p></div>
     <div class="panel" style="border-color:var(--gold)"><div class="row" style="align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">🏛️ Owner's Suite${infoDot('Reinvest your cash reserve into ballpark upgrades, team facilities, front-office tiers, and multi-year sponsorship deals.')}</h3>
@@ -3582,6 +3691,7 @@ function ownerOffice(){
       <button class="btn" style="margin-right:6px" onclick="ownerTakeover()">🎮 ${acted?'Make more moves yourself':'Take over &amp; make moves yourself'}</button>
       <button class="btn primary" style="font-size:16px;padding:12px 26px" onclick="gmOffseason()">${acted?'▶ On to the season ⚾':'Hand it to GM '+o.gmName+' → ⚾'}</button>
       <p class="small muted" style="margin:7px 0 0">${acted?`You ran the front office yourself — ${o.gmName} stands down until the deadline.`:`Run it yourself, or hand the offseason to ${o.gmName}. Whoever runs it, the other stands down for the winter.`}</p></div>`);
+  _officePaint();
 }
 
 function gmFeedback(kind){const o=G.owner;if(o._feedbackYear===G.year)return;o._feedbackYear=G.year;
@@ -3590,47 +3700,69 @@ function gmFeedback(kind){const o=G.owner;if(o._feedbackYear===G.year)return;o._
   saveGame();ownerOffice();}
 let _gmMarket=null;
 function genGmMarket(){
-  const tierPlan=[0,1,1,2,2,3];                                 // a spread from budget to elite
+  const tierPlan=[0,1,1,2,2,3];
   const specials=GM_ARCHE_KEYS.filter(k=>k!=="generalist").slice();
   for(let i=specials.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[specials[i],specials[j]]=[specials[j],specials[i]];}
-  let si=0;
+  let si=0;const traitKeys=Object.keys(GM_TRAITS);
   const list=tierPlan.map((tier,idx)=>{
     const arche=idx===0?"generalist":specials[si++%specials.length];
-    return {tier,arche,name:gmFirstName()+' '+gmLastName(),cost:GM_TIERS[tier].cost+GM_ARCHES[arche].premium};
+    const poached=idx>=4?{club:(pick(G.ai)||{}).name||'a rival club'}:null;   // the best candidates already have jobs
+    return {tier,arche,name:gmFirstName()+' '+gmLastName(),
+      cost:GM_TIERS[tier].cost+GM_ARCHES[arche].premium+(poached?Math.round(GM_TIERS[tier].cost*0.5):0),
+      trait:pick(traitKeys),poached,interviewed:0,hints:[]};
   });
   list.sort((a,b)=>a.cost-b.cost);
   return list;
 }
-function ownerReplaceGM(){
+const GM_QUESTIONS=[
+ {q:'How do you build a farm?',k:0},
+ {q:'Your best trade?',k:1},
+ {q:'Handling the press?',k:2},
+ {q:'Analytics or instinct?',k:3}];
+function gmInterview(i,qi){
+  const c=(_gmMarket||[])[i];if(!c||c.interviewed>=2||c.hints.some(h=>h.qi===qi))return;
+  c.interviewed++;
+  const honest=Math.random()<0.8;
+  const shown=honest?c.trait:pick(Object.keys(GM_TRAITS).filter(k=>k!==c.trait));
+  c.hints.push({qi,line:GM_TRAITS[shown].tell});
+  sfx('tap');ownerReplaceGM(true);
+}
+function ownerReplaceGM(keep){
   const o=G.owner;
-  _gmMarket=genGmMarket();
+  if(!keep||!_gmMarket)_gmMarket=genGmMarket();
   const card=(c,i)=>{const cur=o.gmTier===c.tier&&gmArche()===c.arche,ar=GM_ARCHES[c.arche];
+    const qBtns=GM_QUESTIONS.map((q,qi)=>c.hints.some(h=>h.qi===qi)?'':`<button class="btn ghost sm" style="font-size:9px;padding:3px 7px" onclick="gmInterview(${i},${qi})">“${q.q}”</button>`).join('');
     return `<div class="panel2" style="border:1.5px solid ${cur?'var(--gold)':'var(--line)'};border-radius:4px;padding:11px;margin-bottom:8px">
       <div class="row" style="align-items:center;justify-content:space-between;gap:10px">
-        <div style="flex:1">
-          <div style="font-weight:700">${ar.icon} ${ar.name} <span class="small muted">· $${c.cost}M/yr</span>${cur?' <span class="pill gold" style="padding:0 5px;font-size:9px">CURRENT</span>':''}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700">${ar.icon} ${esc(c.name)} <span class="small muted">· ${ar.name} · $${c.cost}M/yr</span>${cur?' <span class="pill gold" style="padding:0 5px;font-size:9px">CURRENT</span>':''}${c.poached?` <span class="pill red" style="padding:0 5px;font-size:9px">UNDER CONTRACT · ${esc(c.poached.club)}</span>`:''}</div>
           <div class="disp small" style="color:var(--gold);letter-spacing:.04em;margin:3px 0 2px">${'★'.repeat(c.tier+1)}${'☆'.repeat(3-c.tier)} ${GM_TIERS[c.tier].name}</div>
-          <p class="small muted" style="margin:0">${ar.blurb}</p></div>
-        ${cur?'':`<button class="btn primary sm" onclick="doReplaceGM(${i})">Hire</button>`}</div></div>`;};
+          <p class="small muted" style="margin:0">${ar.blurb}</p>
+          ${c.hints.map(h=>`<p class="small" style="margin:4px 0 0;color:var(--amber)">🗣️ ${h.line}</p>`).join('')}
+          ${c.interviewed<2?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;align-items:center"><span class="small muted" style="font-size:10px">Interview (${2-c.interviewed} left):</span>${qBtns}</div>`:'<p class="small muted" style="margin-top:5px;font-size:10px">Interview concluded.</p>'}
+        </div>
+        ${cur?'':`<button class="btn primary sm" onclick="doReplaceGM(${i})">${c.poached?'Poach +$25M':'Hire'}</button>`}</div></div>`;};
   render(`${ownerHeader()}
-    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🔄 HIRE A NEW GM</div>
-      <p class="sub" style="margin-top:6px">Buy out ${o.gmName} and hire your own. Salary comes from your cash reserve (${fmtB(o.cashReserve||0)} on hand).${infoDot('Higher tiers make smarter moves and need fewer vetoes. Each GM also has a specialty that adds a real edge — pay more for a better, more specialized executive.')}</p></div>
-    <div class="sectlbl">This winter's candidates <span class="small muted">— cheapest to priciest</span></div>
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🔄 THE GM MARKET</div>
+      <p class="sub" style="margin-top:6px">Buy out ${o.gmName} and hire your own. Every candidate hides one trait — interviews give you a read (usually honest). Poaching an employed GM costs $25M compensation.${infoDot('Higher tiers make smarter moves and need fewer vetoes. The hidden trait reveals itself after a full season on the job.')}</p></div>
+    <div class="sectlbl">This winter's candidates <span class="small muted">— cash on hand ${fmtB(o.cashReserve||0)}</span></div>
     ${_gmMarket.map(card).join("")}
     <div class="center"><button class="btn ghost" onclick="ownerOffice()">← Back to the office</button></div>`);
 }
 function doReplaceGM(i){const o=G.owner,c=(_gmMarket||[])[i];if(!c)return;
+  const comp=c.poached?25:0;
+  if(comp&&(o.cashReserve||0)<comp){toast('Not enough cash for the compensation payment.');return;}
+  if(comp)o.cashReserve-=comp;
   o.gmTier=c.tier;o.gmArche=c.arche;o.gmName=c.name;o.gmMorale=74;o._gmGrade=null;
-  toast(`Hired ${o.gmName} — ${GM_ARCHES[c.arche].icon} ${GM_ARCHES[c.arche].name}.`);saveGame();ownerOffice();}
-
-// ---------- the GM makes his moves (auto), big ones go to you for a veto ----------
-let _vetoQ=[];   // pending big moves awaiting owner approval (transient)
-function gmTalent(){return G.owner?G.owner.gmTier:1;}   // 0..3
+  o.gmTrait={k:c.trait,revealed:false,hiredYear:G.year};
+  showBreaking(`${c.name} takes the corner office`,`${GM_ARCHES[c.arche].icon} ${GM_ARCHES[c.arche].name}${c.poached?' · poached — $25M compensation paid':''}`);
+  saveGame();ownerOffice();}
+function gmTalent(){return G.owner?gmEffTier():1;}   // 0..3, trait-adjusted
 function gmProjPayroll(){return payroll(G.roster);}
 function gmOffseason(){
   if(G.owner._gmYear===G.year)return gmReport();   // already ran this winter — show the digest
   if(G.year>=2&&G.faYear!==G.year){G.faMarket=genFAMarket();G.faYear=G.year;G.faSigns=0;}
-  const o=G.owner,tier=o.gmTier,mand=o.mandate,dir=o.directives,budget=o.payrollBudget||200;
+  const o=G.owner,tier=o.gmTier,mand=o.mandate,dir=o.directives,budget=Math.min(o.payrollBudget||200,dir.stayUnderTax?300:1e9);
   const applied=[],pending=[];_vetoQ=[];
   const ns=needsSurplus();let needs=ns.needs.slice();
   if(dir.pitchingFirst)needs.sort((a,b)=>((b==='SP'||b==='RP')?1:0)-((a==='SP'||a==='RP')?1:0));
@@ -3653,12 +3785,14 @@ function gmOffseason(){
   // 1) REBUILD / RETOOL / GET-YOUNGER: sell veterans for youth
   if(mand==='rebuild'||mand==='retool'||dir.getYounger){
     const vets=G.roster.filter(p=>p.loc==='mlb'&&p.age>=31&&p.ovr>=72&&!p._keeperYoung).sort((a,b)=>b.ovr-a.ovr);
-    const sellN=mand==='rebuild'?Math.min(3,vets.length):Math.min(1,vets.length);
+    let sellN=mand==='rebuild'?Math.min(3,vets.length):Math.min(1,vets.length);
+    if(dir.veteranPresence)sellN=Math.max(0,sellN-1);   // keep the clubhouse leaders
     vets.slice(0,sellN).forEach(p=>{
       const desc=`Trade ${p.age}-yo ${p.pos} ${p.name} (${p.ovr} OVR${p.years<=1?', expiring':''}) for a prospect package`;
       const fn=()=>{const idx=G.roster.indexOf(p);if(idx<0)return;G.roster.splice(idx,1);
         const haul=1+(tier>=2?1:0)+(p.ovr>=86?1:0)+gmTradeHaulBonus();for(let i=0;i<haul;i++){const pr=ficProspect();pr.pot=clamp(pr.pot+(tier*2)+(p.ovr-72),60,99);pr.loc='farm';pr.src='trade';G.farm.push(pr);}
-        if(p.ovr>=84&&(G.pendingComp=G.pendingComp||[])){G.pendingComp.push(mkFuturePick(2));}};
+        if(p.ovr>=84&&(G.pendingComp=G.pendingComp||[])){G.pendingComp.push(mkFuturePick(2));}
+        if(dir.hoardPicks)(G.pendingComp=G.pendingComp||[]).push(mkFuturePick(3));};
       if(big(p)||isFanFav(p))logP('🔻 '+desc,fn);else{fn();logA('🔻 '+desc);}
     });
   }
@@ -3684,10 +3818,10 @@ function gmOffseason(){
   const fas=(G.faMarket||[]).slice().sort((a,b)=>b.player.ovr-a.player.ovr);
   const wantPos=new Set(needs);
   const splurge=dir.splurge||mand==='winNow';
-  let signs=0,maxSigns=splurge?4:mand==='rebuild'?1:3;
+  let signs=0,maxSigns=(splurge?4:mand==='rebuild'?1:3)+(dir.analyticsEdge?1:0);
   for(const fa of fas){
     if(signs>=maxSigns)break;
-    const p=fa.player;const fits=wantPos.size===0||wantPos.has(p.pos)||(splurge&&p.ovr>=82);
+    const p=fa.player;const fits=wantPos.size===0||wantPos.has(p.pos)||(splurge&&p.ovr>=82)||(dir.analyticsEdge&&p.ovr>=78&&p.ovr<=86);
     if(!fits)continue;
     const years=p.ovr>=84?ri(3,5):ri(1,3);const aav=Math.round(termAAV(fa.aav,years)*gmFaDiscount()*10)/10;
     if(gmProjPayroll()+aav>budget)continue;                 // stay under the authorized budget
@@ -3720,16 +3854,28 @@ function gmOffseason(){
 function ownerVetoStep(){
   G.ownerStage='veto';
   if(!_vetoQ.length)return gmReport();
-  const m=_vetoQ[0],o=G.owner;
+  const o=G.owner;
+  if(o._noVetoYear===G.year){_vetoQ.slice().forEach(m=>{try{m.fn();}catch(e){}});_vetoQ=[];toast('You gave the GM the wheel — every move goes through.');return gmReport();}
   render(`${ownerHeader()}
-    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🛑 GM PROPOSES A BIG MOVE</div>
-      <h2 style="margin:8px 0;font-size:20px">${m.desc.replace(/^[^ ]+ /,'')}</h2>
-      <p class="sub">GM ${o.gmName} wants to pull the trigger. As the owner, you can approve it or kill it. ${_vetoQ.length>1?`(${_vetoQ.length} decisions pending)`:''}</p>
-      <div class="row" style="gap:10px;justify-content:center;margin-top:10px">
-        <button class="btn" style="border-color:#c0392b;color:#ff8a6b" onclick="vetoResolve(false)">🚫 Veto it</button>
-        <button class="btn primary" onclick="vetoResolve(true)">✅ Approve the move</button></div>
-    </div>`);
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🛑 THE GM'S PROPOSALS · ${_vetoQ.length} ON YOUR DESK</div>
+      <p class="sub" style="margin-top:6px">${esc(o.gmName)} wants to make these moves. Approve or kill each — then the winter proceeds.</p></div>
+    ${_vetoQ.map((m,i)=>`<div class="panel2" style="border:1px solid var(--line);border-radius:4px;padding:11px;margin-bottom:8px">
+      <div class="row" style="align-items:center;justify-content:space-between;gap:10px">
+        <div style="flex:1;min-width:0"><b>${m.desc.replace(/^[^ ]+ /,'')}</b></div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn sm" style="border-color:#c0392b;color:#ff8a6b" onclick="vetoResolveIdx(${i},false)">🚫 Veto</button>
+          <button class="btn primary sm" onclick="vetoResolveIdx(${i},true)">✅ Approve</button></div></div></div>`).join('')}
+    <div class="center"><button class="btn" onclick="vetoResolveAll(true)">✅ Approve everything remaining</button></div>`);
 }
+function vetoResolveIdx(i,approve){
+  const m=_vetoQ.splice(i,1)[0];if(!m)return ownerVetoStep();
+  if(approve){try{m.fn();}catch(e){}toast('Approved');}
+  else{try{if(m.undo)m.undo();}catch(e){}(G.owner._gmVetoed=G.owner._gmVetoed||[]).push(m.desc);G.owner.gmMorale=clamp((G.owner.gmMorale||72)-4,0,100);toast('Vetoed');}
+  saveGame();
+  if(_vetoQ.length)return ownerVetoStep();
+  gmReport();
+}
+function vetoResolveAll(approve){while(_vetoQ.length){const m=_vetoQ.shift();if(approve){try{m.fn();}catch(e){}}}saveGame();gmReport();}
 function vetoResolve(approve){
   const m=_vetoQ.shift();if(!m)return ownerVetoStep();
   if(approve){try{m.fn();}catch(e){}toast('Approved');}
@@ -3808,8 +3954,20 @@ function resolveDeadline(approve){
 function ownerPlaySeason(){
   // reload-safety: if this season already simulated, jump ahead to the draft instead of re-simming
   if((G.history||[]).some(h=>h.year===G.year))return goPhase(3);
-  G.ownerStage='season';G._gmVetoed=null;_dlMove=null;_dlMode=false;G.seasonStage=0;saveGame();
-  doSeason();
+  render(`${ownerHeader()}
+    <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">🗓️ HOW CLOSE DO YOU SIT TO THIS SEASON?</div>
+      <p class="sub" style="margin-top:6px">Hands-on owners earn more GM XP — and more chances to pull levers as the year unfolds. You can dial it down any time from the ⚙ corner.</p></div>
+    <div class="ochoice">
+      <div class="ocard"><div class="ot">Hands-On Owner</div><div class="ox">+30 GM XP · 15 STOPS</div>
+        <div class="od">Sim homestand by homestand. Adjust prices any week, take the calls, watch every dollar land.</div>
+        <button class="btn primary" onclick="ownerSeasonGo('weekly')">Sit courtside ▸</button></div>
+      <div class="ocard"><div class="ot">Boardroom Owner</div><div class="ox">+15 GM XP · 4 STOPS</div>
+        <div class="od">Monthly summaries with the important levers. Involved, not obsessed.</div>
+        <button class="btn primary" onclick="ownerSeasonGo('monthly')">Take the reports ▸</button></div>
+      <div class="ocard"><div class="ot">Absentee Owner</div><div class="ox">+5 GM XP · 0 STOPS</div>
+        <div class="od">Skip to the final record. The GM runs everything; you read about it in the paper.</div>
+        <button class="btn primary" onclick="ownerSeasonGo('skip')">Summer in Monaco ▸</button></div>
+    </div>`);
 }
 
 // ---- granular pricing: every line item has 3 price points; some unlock when you build the matching upgrade ----
@@ -3817,8 +3975,8 @@ const PRICE_LABELS=['Value','Standard','Premium'];
 const DEMAND_MULT=[1.15,1.0,0.85];      // value sells more, premium sells fewer (and cools fans)
 const FILL_ADJ=[0.06,0,-0.08];          // ticket-price elasticity per section
 const TICKET_SECTIONS=[
-  {key:'general', name:'General', unlock:null,         share:0,    bias:0,    p:[24,34,48]},   // general fills the remaining seats
-  {key:'outfield',name:'Outfield',unlock:null,         share:0.30, bias:0.04, p:[16,24,34]},
+  {key:'general', name:'General', unlock:null,         share:0,    bias:0,    p:[16,24,34]},   // general fills the remaining seats (cheapest walk-up)
+  {key:'outfield',name:'Outfield',unlock:null,         share:0.30, bias:0.04, p:[24,34,48]},   // outfield priced above general
   {key:'club',    name:'Club',    unlock:'clubLevel',  share:0.07, bias:-0.10,p:[70,95,130]},
   {key:'elite',   name:'Elite',   unlock:'eliteSeats', share:0.03, bias:-0.16,p:[120,175,250]}];
 const CONCESSION_ITEMS=[
@@ -3856,21 +4014,21 @@ function ownerTickets(){
   let rev=0,att=0;
   TICKET_SECTIONS.forEach(s=>{if(!ownerUnlocked(s.unlock))return;
     const n=seats[s.key];if(!n)return;
-    const idx=priceIdx('tickets',s.key);
-    const fill=clamp(draw+FILL_ADJ[idx]+s.bias,0.12,0.99);
-    const sold=n*fill;att+=sold;rev+=sold*s.p[idx]*81/1e6;});
+    const v=priceIdx('tickets',s.key);
+    const fill=clamp(draw+pInterp(FILL_ADJ,v)+s.bias,0.12,0.99);
+    const sold=n*fill;att+=sold;rev+=sold*pInterp(s.p,v)*81/1e6;});
   rev*=(o.gateMult||1);   // dynamic pricing lifts gate revenue without thinning the crowd
   return {rev:Math.round(rev*10)/10,att:Math.round(att)};
 }
 function ownerAttendance(){return ownerTickets().att;}
-function ownerPerFan(cat,items){let s=0;items.forEach(it=>{if(!ownerUnlocked(it.unlock))return;const idx=priceIdx(cat,it.key);s+=it.cap*it.p[idx]*DEMAND_MULT[idx];});return s;}
+function ownerPerFan(cat,items){let s=0;items.forEach(it=>{if(!ownerUnlocked(it.unlock))return;const v=priceIdx(cat,it.key);s+=it.cap*pInterp(it.p,v)*pInterp(DEMAND_MULT,v);});return s;}
 function ownerRevenue(){
   const o=G.owner;const tk=ownerTickets(),att=tk.att,games=81;
   const gate=tk.rev;
   const conc=Math.round(att*ownerPerFan('conc',CONCESSION_ITEMS)*games/1e6*10)/10;
   const merch=Math.round((att*ownerPerFan('merch',MERCH_ITEMS)*games/1e6*(0.55+fanVal()/180)+(G.champions||0)*2.5)*(o.marketMult||1)*(o.merchMult||1)*10)/10;
   const premium=Math.round((o.revWeight||1)*22*(o.marketMult||1)*(0.6+(att/(o.capacity||40000))*0.6)*10)/10;
-  const media=Math.round((55+(G.champions||0)*6)*(o.marketMult||1)*10)/10;
+  const media=Math.round((55+(G.champions||0)*6+(o.mediaBump||0))*(o.marketMult||1)*10)/10;
   const sponsor=Math.round(((o.sponsors||[]).reduce((s,d)=>s+d.rev,0))*10)/10;
   const total=Math.round((gate+conc+merch+premium+media+sponsor)*10)/10;
   return {gate,conc,merch,premium,media,sponsor,total,att};
@@ -3967,7 +4125,7 @@ function screenOwnerEnd(heirs){
     <div class="center" style="margin:10px 0"><button class="btn ghost" onclick="screenLeaderboard(true,'owner')">🏆 View leaderboard</button> <button class="btn ghost" onclick="goHome()">🏠 Home</button></div>`);
 }
 function celebrateWS(){
-  sfx('win');hap([40,60,120]);
+  sfx('win');sfx('cheer');hap([40,60,120]);
   const old=document.getElementById('wscele');if(old)old.remove();
   const ov=document.createElement('div');ov.id='wscele';
   const cols=['#d9822b','#e6c84e','#9bd84a','#f4ecd6','#e6b24a','#9fb0c8'];
@@ -4040,10 +4198,10 @@ function screenDraft(){
     : (rd>=3?(G.year>=4?0.75:0.5):rd===2?(G.year>=4?0.6:0.3):(G.year>=4?0.5:G.year===3?0.25:0.08));
   if(!_board){
     const ps=[...POSALL];for(let i=ps.length-1;i>0;i--){const j=ri(0,i);[ps[i],ps[j]]=[ps[j],ps[i]];}
-    const nOpts=G.owner?10:8;
+    const nOpts=(G.owner&&G._gmAutoDraft)?10:8;
     _board=[];for(let i=0;i<nOpts;i++)_board.push(draftee(slot,rd,Math.random()<advChance,ps[i%ps.length]));
-    if(!G.owner){
-      const t=draftTier();
+    if(!G._gmAutoDraft){   // interactive scouting board — non-owner, OR owner running the war room himself
+      const t=G.owner?(typeof ownerDraftTier==='function'?ownerDraftTier():1):draftTier();
       _board.forEach(p=>{
         if(t===3){const lo=clamp(p.pot-ri(1,4),40,94);p._sc={lo,hi:lo+5};}
         else if(t===2){const lo=clamp(p.pot-ri(2,13),30,84);p._sc={lo,hi:lo+15};}
@@ -4058,15 +4216,28 @@ function screenDraft(){
     G._gmRec=best;
     if(G._gmAutoDraft)return draftPick(best);
   }
-  const rec=G.owner?G._gmRec:-1;
-  if(!G.owner){
+  if(G.owner&&!G._gmAutoDraft&&G._ownDraftMode!=='self'){
+    return render(`${ownerHeader()}${(G._season||G.history)?'':''}
+      <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">${ico('scope',12)} THE DRAFT · ${_dq.length} SELECTION${_dq.length>1?'S':''}</div>
+        <p class="sub" style="margin-top:6px">Run the war room yourself, or let ${esc(G.owner.gmName||'your GM')} handle it. File visibility comes from your scouting department and GM — not from you.</p></div>
+      <div class="ochoice" style="grid-template-columns:repeat(2,1fr)">
+        <div class="ocard"><div class="ot">Run the War Room</div><div class="ox">SCOUTING TIER ${typeof ownerDraftTier==='function'?ownerDraftTier():1} / 4</div>
+          <div class="od">Face-down prospect files — your front office determines what the backs reveal and how many you may flip.</div>
+          <button class="btn primary" onclick="G._ownDraftMode='self';saveGame();screenDraft()">Take the room ▸</button></div>
+        <div class="ocard"><div class="ot">The GM Handles It</div><div class="ox">${'★'.repeat((G.owner.gmTier||0)+1)}${'☆'.repeat(3-(G.owner.gmTier||0))} JUDGMENT</div>
+          <div class="od">${esc(G.owner.gmName||'Your GM')} drafts for needs and ceiling. You read about it afterward.</div>
+          <button class="btn primary" onclick="G._gmAutoDraft=true;saveGame();screenDraft()">Delegate ▸</button></div>
+      </div>`);
+  }
+  const rec=G.owner&&G._gmAutoDraft?G._gmRec:-1;
+  if(!G.owner||G._ownDraftMode==='self'){
     const t=_dfl.tier,pct=draftScoutPct();
     render(`${header()}${stepbar(3)}
      ${(function(){const ns=needsSurplus();return `<div class="panel2" style="border:1px solid var(--line);border-radius:4px;padding:10px;margin:12px 0">
        <span class="small"><b style="color:var(--red)">Needs:</b> ${ns.needs.length?ns.needs.join(", "):'<span class="muted">none</span>'} &nbsp;•&nbsp; <b style="color:var(--green)">Surplus:</b> ${ns.surplus.length?ns.surplus.join(", "):'<span class="muted">none</span>'}</span></div>`;})()}
      <div class="panel" style="padding:14px">
        <h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${ico('scope',18)} Draft — <span class="pill gold">${pk.comp?'🎟️ Comp Pick':'Round '+rd+' · Pick #'+slot}</span> <span class="small muted">(${_dq.length} selection${_dq.length>1?'s':''} left)</span></h3>
-       <p class="sub" style="margin:4px 0 2px">${ico('binoc',13)} <b>Scouting dept at ${pct}%</b> — ${DRAFT_TIER_DESC[t]}.</p>
+       <p class="sub" style="margin:4px 0 2px">${ico('binoc',13)} <b>${G.owner?'Front office scouting — tier '+t+' of 4':'Scouting dept at '+pct+'%'}</b> — ${DRAFT_TIER_DESC[t]}.</p>
        <p class="sub" style="margin:2px 0 10px">${_dfl.left>0?`<b style="color:var(--gold)">${_dfl.left} scouting trip${_dfl.left>1?'s':''} left</b> — flip the files you want opened, then draft one of them.`:`<b style="color:var(--amber)">Trips exhausted</b> — draft from the opened files. Ceiling is a projection, not a promise.`}</p>
        ${draftCardsHTML()}
      </div>
@@ -4097,7 +4268,7 @@ function screenDraft(){
 /* ---- scouting-driven draft cards: your scouting budget decides what the file shows ---- */
 let _dfl=null;
 function draftScoutPct(){const r=G.resources||{};return Math.round(((r.scouting!=null?r.scouting:0.334))*100);}
-function draftTier(){const s=draftScoutPct();return s<10?0:s<30?1:s<50?2:s<75?3:4;}
+function draftTier(){if(G&&G.owner)return ownerDraftTier();const s=draftScoutPct();return s<10?0:s<30?1:s<50?2:s<75?3:4;}
 const DRAFT_TIER_DESC=['bare files — hitter or pitcher, nothing more','position only','position, age, ceiling ±15','position, age, ceiling ±5 — and a 5th flip','full files — exact ceilings, flip everything'];
 function draftFlip(i){
   if(!_dfl||_dfl.flipped.indexOf(i)>=0)return;
@@ -4175,7 +4346,7 @@ function draftReveal(p,rd,slot,next){
     setTimeout(show,2000);
   } else setTimeout(show,rd===2?500:120);
 }
-function draftDone(){
+function draftDone(){G._ownDraftMode=null;
   G._gmAutoDraft=false;G._gmRec=null;
   const got=_dpicks||[];G.ownedPicks=freshDraftPicks().concat(G.pendingComp||[]);G.pendingComp=[];_dq=null;_dpicks=null;saveGame();
   render(`${header()}${stepbar(3)}
@@ -4192,6 +4363,19 @@ function screenDevelop(){
   if(G._devDoneYear===G.year){_devRes=_devRes||{fa:G.leftAsFA||[],notes:[],devList:[],cuts:[],retired:[]};return renderDevelopSummary();}   // reload-safe: don't age twice
   if(G._wpYear!==G.year){
     G._wpYear=G.year;saveGame();
+    if(G.owner){
+      return render(`${ownerHeader()}
+        <div class="panel center" style="border-color:var(--gold)"><div class="pill gold">${ico('wrench',12)} WINTER DEVELOPMENT</div>
+          <p class="sub" style="margin-top:6px">Run the program yourself, or let the staff handle it. Slots come from your coaching department either way.</p></div>
+        <div class="ochoice" style="grid-template-columns:repeat(2,1fr)">
+          <div class="ocard"><div class="ot">Run It Yourself</div><div class="ox">${(G.owner.coachTier||0)+1} FOCUS SLOT${(G.owner.coachTier||0)?'S':''}</div>
+            <div class="od">Pick the players, pick reps or overhauls, live with the gambles.</div>
+            <button class="btn primary" onclick="showWinterProgram(()=>screenDevelopRun())">Roll up the sleeves ▸</button></div>
+          <div class="ocard"><div class="ot">The Staff Handles It</div><div class="ox">SAFE HANDS</div>
+            <div class="od">The GM assigns your best prospects to steady development reps. No overhauls, no surprises.</div>
+            <button class="btn primary" onclick="ownerAutoDevelop();screenDevelopRun()">Delegate ▸</button></div>
+        </div>`);
+    }
     try{return showWinterProgram(()=>screenDevelopRun());}catch(e){}
   }
   screenDevelopRun();
@@ -6779,6 +6963,10 @@ const _SFX={
   deal(){if(playSmp('deal'))return;for(let i=0;i<4;i++)_noise(.06,1800,1,.12,i*.07,'highpass');},
   rare(){[880,1108,1318,1760,2217].forEach((f,i)=>_tone(f,f,.24,'sine',.14,i*.07));},
   coin(){_tone(880,880,.07,'sine',.15);_tone(1320,1320,.12,'sine',.15,.07);},
+  moneySm(){if(playSmp('moneySm'))return;_SFX.coin();},                                   // small deal / purchase
+  moneyBig(){if(playSmp('moneyBig'))return;_SFX.coin();_tone(660,1320,.34,'sine',.14,.1);_tone(880,1760,.4,'sine',.1,.16);},   // big deal
+  cheer(){if(playSmp('cheer'))return;_noise(1.5,900,.4,.2,0,'lowpass');_noise(1.2,1800,.6,.1,.15,'bandpass');},                 // crowd roar (WS win)
+  sign(){if(playSmp('sign'))return;for(let i=0;i<6;i++)_tone(1200+Math.random()*400,900,.04,'triangle',.05,i*.05);},             // pen scratch
   levelup(){[523,659,784,1046].forEach((f,i)=>_tone(f,f,.16,'triangle',.16,i*.08));},
   win(){[392,523,659,784].forEach((f,i)=>_tone(f,f,.3,'sawtooth',.1,i*.11));_noise(1.2,900,.4,.14,.3,'lowpass');},
   lose(){_tone(330,262,.3,'triangle',.16);_tone(262,196,.42,'triangle',.16,.24);},
@@ -6824,7 +7012,20 @@ function countUp(id,to,prefix,dur){
    Degrades gracefully when the folder isn't deployed (player
    hides itself, SFX fall back to the v9.6 synth engine).
    ============================================================ */
-const AUDIO_BASE='audio/';
+// Build an absolute audio URL anchored to the apex host, stripping any leading "www." from the hostname.
+// This site's DNS only has the apex (tankcommanderbaseball.com) — the www subdomain doesn't resolve — yet a
+// host-injected <base> / www-canonical was sending relative "audio/" requests to www, where they 404'd with
+// ERR_NAME_NOT_RESOLVED. Forcing audio onto the apex host (which does resolve and serves the files) fixes it
+// no matter which URL the page itself was opened from. Falls back to a plain relative path if location is odd.
+const AUDIO_BASE=(function(){
+  try{
+    var l=location;
+    if(!/^https?:/.test(l.protocol))return l.href.split(/[?#]/)[0].replace(/[^/]*$/,'')+'audio/';   // file:// etc.
+    var host=l.host.replace(/^www\./i,'');
+    var dir=l.pathname.replace(/[^/]*$/,'');
+    return l.protocol+'//'+host+dir+'audio/';
+  }catch(e){return 'audio/';}
+})();
 const MUSIC=[
  ['music/Green_Onions.mp3','Green Onions'],
  ['music/Get_Lucky.mp3','Get Lucky'],
@@ -6946,7 +7147,11 @@ const SFX_FILES={   // each entry lists accepted filenames — clean name first,
  deal:['sfx/card-deal.mp3','sfx/Card Dealing.mp3'],
  flipcard:['sfx/card-flip-1.mp3','sfx/card-flip-2.mp3','sfx/card-flip-3.mp3','sfx/card-flip-4.mp3','sfx/card-flip-5.mp3','sfx/Card Flip 1.mp3','sfx/Card Flip 2.mp3','sfx/Card Flip 3.mp3','sfx/Card Flip 4.mp3','sfx/Card Flip 5.mp3'],
  strikeout:['sfx/strikeout.mp3','sfx/strikeout-2.mp3',"sfx/You're Out.mp3",'sfx/Strikeout.mp3'],
- yourout:['sfx/youre-out-1.mp3','sfx/youre-out-2.mp3','sfx/out.mp3',"sfx/You're Out 1.mp3","sfx/You're Out 2.mp3",'sfx/Out.mp3']};
+ yourout:['sfx/youre-out-1.mp3','sfx/youre-out-2.mp3','sfx/out.mp3',"sfx/You're Out 1.mp3","sfx/You're Out 2.mp3",'sfx/Out.mp3'],
+ moneySm:['sfx/money-small.mp3','sfx/Money Sound 1.mp3'],
+ moneyBig:['sfx/money-big.mp3','sfx/Money Sound 2.mp3'],
+ cheer:['sfx/crowd-cheer.mp3','sfx/Crowd Cheering 1.mp3'],
+ sign:['sfx/sign.mp3','sfx/Signing Sound.mp3']};
 const _smp={};
 function smpWarm(){   // pre-create every sample on first tap: caches the files and trips
   if(typeof Audio==='undefined')return;   // 404 flags early so synth fallbacks engage from the start
@@ -7184,6 +7389,8 @@ function fmSeasonTick(toGame,stop){
   for(let i=seq.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seq[i],seq[j]]=[seq[j],seq[i]];}
   const ov=fmTickShell();
   ov.innerHTML=`${fmStandStrip()}
+    ${(G.owner&&typeof fmOwnerPnL==='function')?fmOwnerPnL():''}
+    ${(G.owner&&G._ownGran)?`<button class="grancorner" id="grancorner" onclick="ownerCycleGran()">⚙ ${G._ownGran}</button>`:''}
     <div class="tk-club">${esc(G.teamName)} · SEASON ${G.year}</div>
     <div class="tk-mon" id="tkmon">${FM_MON[fmMonthOf(from+1)]}</div>
     <div class="tk-rec" id="tkrec">${S.w}–${S.l}</div>
@@ -7218,6 +7425,7 @@ function fmTickStop(atGame,stop){
   if(stop==null){return;}   // finale handled by fmSeasonFinale
   window._fmStop=stop;sfx('tap');
   const strip=document.querySelector('#fmtick .fmstrip');if(strip)strip.outerHTML=fmStandStrip();
+  if(box&&stop.body){box.innerHTML=`<div class="tk-stopcard">${stop.body()}</div>`;return;}
   if(box)box.innerHTML=`<div class="tk-stopcard">
       <div class="sc-g">GAME ${atGame} OF 162</div>
       <div class="sc-n">${stop.name}</div>
@@ -7596,7 +7804,7 @@ function fmOctClose(){const ov=document.getElementById('fmtick');if(ov)ov.remove
    ============================================================ */
 function devPct(){const r=G.resources||{};return Math.round(((r.development!=null?r.development:0.333))*100);}
 function devTier(){const d=devPct();return d<10?0:d<30?1:d<50?2:d<75?3:4;}
-function wpSlots(){return [1,2,2,3,4][devTier()];}
+function wpSlots(){if(G&&G.owner)return clamp((G.owner.coachTier||0)+1,1,4);return [1,2,2,3,4][devTier()];}
 function wpCandidates(){
   const pool=G.roster.filter(p=>p.loc==='mlb'&&p.age<=27).concat(G.farm||[]);
   return pool.filter(p=>(p.realCeil||p.pot||p.ovr)>p.ovr).sort((a,b)=>(b.pot||0)-(a.pot||0)).slice(0,8);
@@ -7672,6 +7880,333 @@ function wpApply(res){   // post-process development with the funded programs
   });
   saveProfile&&0;saveGame();
   return res;
+}
+
+/* ============================================================
+   THE COMMANDER'S CLUB — Owner Mode v2 (v10.1)
+   Granular season · owner decisions · GM market v2 · sponsor
+   risk · Tier-3 legacy projects · brass-and-walnut skin hooks
+   ============================================================ */
+
+/* ---- interpolated pricing (sliders, not buttons) ---- */
+function pInterp(arr,v){v=clamp(v,0,2);const i=Math.min(Math.floor(v),1),f=v-i;return arr[i]+(arr[i+1]-arr[i])*f;}
+// sliders move in real dollars: concessions step $0.05 (2 decimals), tickets & merch step $0.50
+function priceStep(cat){return cat==='conc'?0.05:0.5;}
+function priceArr(cat){return cat==='tickets'?TICKET_SECTIONS:cat==='conc'?CONCESSION_ITEMS:MERCH_ITEMS;}
+function fmtPrice(cat,d){return cat==='conc'?('$'+d.toFixed(2)):('$'+d.toFixed(2).replace(/\.00$/,''));}
+// invert the two-segment price curve: given a dollar value, find the 0–2 demand index it corresponds to
+function priceDtoV(arr,d){const a=arr[0],b=arr[1],c=arr[2];
+  if(d<=b)return b===a?0:clamp((d-a)/(b-a),0,1);
+  return c===b?2:clamp(1+(d-b)/(c-b),1,2);}
+// legacy/index setter (0–2 premium index) — kept for the programmatic API + tests; the UI uses the dollar-space setPriceD
+function setPriceV(cat,key,v){ownerPrices()[cat][key]=Math.round(clamp(v,0,2)*20)/20;saveGame();
+  const el=document.getElementById('opd_'+cat+'_'+key);const it=priceArr(cat).find(x=>x.key===key);
+  if(el&&it)el.textContent=fmtPrice(cat,pInterp(it.p,ownerPrices()[cat][key]));
+  ownerDemandPaint();}
+function setPriceD(cat,key,d){
+  const arr=priceArr(cat).find(x=>x.key===key).p,step=priceStep(cat);
+  d=clamp(Math.round(d/step)*step,arr[0],arr[2]);
+  ownerPrices()[cat][key]=priceDtoV(arr,d);saveGame();
+  const el=document.getElementById('opd_'+cat+'_'+key);if(el)el.textContent=fmtPrice(cat,d);
+  ownerDemandPaint();}
+function ownerDemandPaint(){
+  const el=document.getElementById('odemand');if(!el)return;
+  const tk=ownerTickets(),rev=ownerRevenue();
+  const pct=Math.min(100,Math.round(tk.att/(G.owner.capacity||40000)/0.81*100));
+  el.innerHTML=`<span class="odm-att">${pct}%</span><div class="odm-track"><i style="width:${pct}%"></i></div>
+    <span class="odm-rev">$${Number(rev.total).toFixed(1)}M projected revenue</span>`;
+}
+function ownerPricingHTML(){
+  const row=(cat,it)=>{
+    if(!ownerUnlocked(it.unlock))return '';
+    const v=priceIdx(cat,it.key),step=priceStep(cat);
+    const d=clamp(Math.round(pInterp(it.p,v)/step)*step,it.p[0],it.p[2]);
+    return `<div class="oprow"><span class="opn">${it.name}</span>
+      <input type="range" min="${it.p[0]}" max="${it.p[2]}" step="${step}" value="${d}" oninput="setPriceD('${cat}','${it.key}',+this.value)">
+      <b id="opd_${cat}_${it.key}">${fmtPrice(cat,d)}</b></div>`;};
+  return `<div class="opsticky"><div class="fmemo" style="border-left-color:var(--gold);margin:0"><div class="from">BOX OFFICE · LIVE DEMAND</div>
+      <div class="odemand" id="odemand"></div></div></div>
+    <div class="sectlbl">🎟️ Tickets</div>${TICKET_SECTIONS.map(s=>row('tickets',s)).join('')}
+    <div class="sectlbl" style="margin-top:8px">🍔 Concessions</div>${CONCESSION_ITEMS.map(it=>row('conc',it)).join('')}
+    <div class="sectlbl" style="margin-top:8px">🧢 Merchandise</div>${MERCH_ITEMS.map(it=>row('merch',it)).join('')}`;
+}
+
+/* ---- owner decisions (10, with visible consequences) ---- */
+function ownCash(d){G.owner.cashReserve=Math.round(((G.owner.cashReserve||0)+d)*10)/10;}
+function ownVal(d){G.owner.clubValue=Math.max(200,Math.round((G.owner.clubValue||0)+d));}
+function ownGmM(d){G.owner.gmMorale=clamp((G.owner.gmMorale||70)+d,5,100);}
+function ownerDecisionDeck(){
+  const o=G.owner,star=G.roster.filter(p=>p.loc==='mlb').sort((a,b)=>b.ovr-a.ovr)[0];
+  const E=[];const ev=(id,t,aL,aS,aF,bL,bS,bF)=>E.push({id,t,a:{lab:aL,sub:aS,fx:aF},b:{lab:bL,sub:bS,fx:bF}});
+  ev('council',`The <b>city council</b> offers a property-tax break — if you fund a youth-field renovation program across town.`,
+    'Fund the fields','$20M, the town remembers',()=>{ownCash(-20);fanChange(7,'Youth fields');ownVal(15);return {msg:'Ribbon cuttings all summer.',eff:[['Cash',-20],['Fan favor',7],['Franchise value',15]]};},
+    'Decline politely','not a charity',()=>{fanChange(-3,'Declined the city');return {msg:'Talk radio has a field day.',eff:[['Fan favor',-3]]};});
+  ev('beer',`A fan's tweet about your <b>$${Math.round(pInterp(CONCESSION_ITEMS.find(i=>i.key==='beer').p,priceIdx('conc','beer')))} beer</b> is going viral. National media picked it up.`,
+    'Free-beer Friday','one home date',()=>{ownCash(-3);fanChange(6,'Free-beer Friday');return {msg:'The line wraps the concourse. Everyone forgets the tweet.',eff:[['Cash',-3],['Fan favor',6]]};},
+    'Ignore the noise','news cycles end',()=>{fanChange(-2,'Beer discourse');return {msg:'It burns out in a week, mostly.',eff:[['Fan favor',-2]]};});
+  if(star)ev('starmeet',`<b>${esc(star.name)}</b> requests a meeting — with YOU, not the GM. He wants reassurance the club is serious about winning.`,
+    'Take the meeting','over the GM’s head',()=>{fmBumpHappy(star,9);ownGmM(-8);return {msg:`${star.name} leaves convinced. Your GM hears about it.`,eff:[[esc(star.name)+' morale',9],['GM trust',-8]]};},
+    'Route him to the GM','chain of command',()=>{ownGmM(6);fmBumpHappy(star,-4);return {msg:'The GM handles it. The star notices the deflection.',eff:[['GM trust',6],[esc(star.name)+' morale',-4]]};});
+  ev('tv',`A streaming service offers a <b>rights bump</b> — more money, but a third of games move behind a paywall.`,
+    'Take the deal','+$14M/yr',()=>{ownCash(14);o.mediaBump=(o.mediaBump||0)+7;fanChange(-5,'Paywall games');return {msg:'The check clears. The bars are angrier than the fans.',eff:[['Cash',14],['Fan favor',-5]]};},
+    'Stay broadcast','every game free',()=>{fanChange(4,'Kept games free');return {msg:'A goodwill play the town notices.',eff:[['Fan favor',4]]};});
+  ev('gmauto',`Your GM asks for <b>full autonomy</b> at this deadline — no vetoes, his calls only.`,
+    'Give him the wheel','trust your hire',()=>{ownGmM(12);o._noVetoYear=G.year;return {msg:'He walks out taller.',eff:[['GM trust',12],['No vetoes this deadline',null]]};},
+    'Keep the veto','your money, your call',()=>{ownGmM(-6);return {msg:'He nods. Slowly.',eff:[['GM trust',-6]]};});
+  ev('resale',`Scalper bots are gouging your fans on the resale market. Legal says you can fight it — loudly and expensively.`,
+    'Wage the bot war','$8M in lawyers',()=>{ownCash(-8);fanChange(6,'Fought the bots');return {msg:'Face-value Fridays make the news.',eff:[['Cash',-8],['Fan favor',6]]};},
+    'Let the market ride','resale is demand',()=>{fanChange(-4,'Scalper prices');ownCash(3);return {msg:'You quietly collect the platform fees.',eff:[['Cash',3],['Fan favor',-4]]};});
+  ev('celeb',`A-list celebrities want a <b>permanent front-row section</b> — great optics, but it displaces season-ticket lifers.`,
+    'Build celebrity row','the cameras follow',()=>{ownCash(6);ownVal(20);fanChange(-4,'Displaced lifers');return {msg:'Your park is suddenly in every montage.',eff:[['Cash',6],['Franchise value',20],['Fan favor',-4]]};},
+    'Lifers keep their seats','loyalty is the brand',()=>{fanChange(5,'Protected the lifers');return {msg:'The lifers hang a banner about it.',eff:[['Fan favor',5]]};});
+  ev('paycut',`The league memo is blunt: payrolls are up, revenues flat. Other owners want you to <b>hold the line</b> on spending.`,
+    'Hold the line','solidarity',()=>{ownGmM(-5);ownVal(10);return {msg:'The owners’ group nods approvingly.',eff:[['Franchise value',10],['GM trust',-5]]};},
+    'Spend anyway','rings beat memos',()=>{ownGmM(8);ownVal(-5);return {msg:'Your GM frames the memo in his office.',eff:[['GM trust',8],['Franchise value',-5]]};});
+  ev('museum2',`The family of a franchise legend offers his <b>memorabilia collection</b> — if you display it properly.`,
+    'Acquire the collection','$6M honor',()=>{ownCash(-6);fanChange(5,'The collection');ownVal(12);return {msg:'Grown adults cry at the display case.',eff:[['Cash',-6],['Fan favor',5],['Franchise value',12]]};},
+    'Pass','sentiment isn’t strategy',()=>{fanChange(-2,'Passed on the legend');return {msg:'The collection goes to a rival’s museum.',eff:[['Fan favor',-2]]};});
+  ev('parking',`Your parking contractor proposes <b>surge pricing</b> on big games. Pure profit; pure resentment.`,
+    'Approve the surge','+$5M/yr',()=>{ownCash(5);fanChange(-4,'Surge parking');return {msg:'The money is real. So are the memes.',eff:[['Cash',5],['Fan favor',-4]]};},
+    'Flat rates','parking is a promise',()=>{fanChange(3,'Flat parking');return {msg:'A small kindness fans actually notice.',eff:[['Fan favor',3]]};});
+  G._ownDecSeen=G._ownDecSeen||[];
+  let pool=E.filter(e=>G._ownDecSeen.indexOf(e.id)<0);
+  if(!pool.length){G._ownDecSeen=[];pool=E;}
+  const c=pick(pool);G._ownDecSeen.push(c.id);return c;
+}
+function showOwnerDecision(next){
+  let ev;try{ev=ownerDecisionDeck();}catch(e){next();return;}
+  const ov=fmTickShell();
+  window._fmD={ev,next,owner:true};
+  ov.innerHTML=`<div class="tk-club">${ico('star',12)} OWNER'S CALL · THE BUCK STOPS HERE</div>
+    <div class="decbox" style="border-color:var(--gold)">
+      <p>${ev.t}</p>
+      <div class="opts">
+        <button class="btn" onclick="fmDecide('a')">${ev.a.lab}<small>${ev.a.sub}</small></button>
+        <button class="btn" onclick="fmDecide('b')">${ev.b.lab}<small>${ev.b.sub}</small></button>
+      </div>
+      <div class="decout" id="fmdecout"></div>
+    </div>`;
+}
+
+/* ---- granular owner season ---- */
+function ownerSeasonGo(gran){
+  G._ownGran=gran;G._ownGranMin={weekly:3,monthly:2,skip:1}[gran];G.ownerStage='season';G._gmVetoed=null;_dlMove=null;_dlMode=false;G.seasonStage=0;
+  if(gran==='skip'){saveGame();doSeason();return;}
+  fmSeasonInit();
+  G._ownStops=gran==='weekly'?[7,14,21,28,35,42,49,56,63,70,77,84,91,98,105]:[27,54,81,108];
+  saveGame();ownerNextStop();
+}
+function ownerNextStop(){
+  const q=G._ownStops||[];
+  if(!q.length){saveGame();doSeason();return;}
+  const g=q.shift();saveGame();
+  const weekly=G._ownGran==='weekly';
+  const n=weekly?Math.round(g/7):Math.round(g/27);
+  fmSeasonTick(g,{name:weekly?('WEEK '+n):('MONTH '+n),sub:'',enterLab:'Owner moves',
+    body:()=>ownerStopBody(g),
+    enter:()=>{},skip:()=>ownerStopCont()});
+}
+function ownerStopBody(g){
+  const S=G._season||{w:0,l:0,g:0};
+  const rev=ownerRevenue();const wkRev=Math.round(rev.total/162*(G._ownGran==='weekly'?7:27)*10)/10;
+  const att=Math.round(ownerTickets().att/(G.owner.capacity||40000)/0.81*100);
+  const maybeDec=(G._ownGran==='weekly'?(Math.round(g/7)%3===1&&Math.random()<0.6):g===54);
+  return `<div class="sc-g">GAME ${S.g} OF 162 · ${S.w}–${S.l}</div>
+    <div class="sc-n" style="font-size:16px">${G._ownGran==='weekly'?'WEEK '+Math.round(g/7):'MONTH '+Math.round(g/27)} IN THE BOOKS</div>
+    <div class="sc-s" style="font-family:var(--mono);font-size:11px">💵 +$${wkRev}M this stretch · 🎟️ ${Math.min(100,att)}% attendance</div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+      <button class="btn primary" onclick="${maybeDec?'ownerStopDecide()':'ownerStopCont()'}">${maybeDec?'📞 The phone is ringing ▸':'▶ Keep the season moving'}</button>
+      <button class="btn" onclick="ownerStopPrices()">💵 Adjust prices</button>
+      ${maybeDec?'<button class="btn ghost sm" onclick="ownerStopCont()">Ignore it ▸</button>':''}
+    </div>`;
+}
+function ownerStopDecide(){showOwnerDecision(()=>{fmTickClose();fmTickShell();ownerStopCont();});}
+function ownerStopCont(){
+  // tier-3 construction progresses with play
+  const c=G.owner&&G.owner.construction;
+  if(c&&G._ownGran==='weekly'){c.weeks--;if(c.weeks<=0)ownerT3Complete();}
+  ownerNextStop();
+}
+function ownerStopPrices(){
+  const old=document.getElementById('opov');if(old)old.remove();
+  const d=document.createElement('div');d.id='opov';d.className='fmtick';d.style.zIndex=96;
+  d.innerHTML=`<div class="tk-club">💵 MID-SEASON PRICING</div>
+    <div class="panel" style="max-width:520px;width:94%;max-height:64vh;overflow:auto;text-align:left">${ownerPricingHTML()}</div>
+    <button class="btn primary" onclick="document.getElementById('opov').remove()">Done ▸</button>`;
+  document.body.appendChild(d);ownerDemandPaint();
+}
+
+/* ---- GM hidden traits + interviews + poaching ---- */
+const GM_TRAITS={
+  kid:{name:'Kid Whisperer',good:1,tell:'He kept steering the conversation to player development.',fx:'Two farm prospects develop faster every winter.'},
+  shark:{name:'Deal Shark',good:1,tell:'He talked about "winning every phone call."',fx:'Squeezes extra cash out of the org every year.'},
+  media:{name:'Media Darling',good:1,tell:'He name-dropped four beat writers. Warmly.',fx:'The press loves him — steady fan-favor bump.'},
+  hoarder:{name:'Pick Hoarder',good:1,tell:'He described draft picks as "lottery tickets that never expire."',fx:'Scrounges an extra late-round pick most drafts.'},
+  oldschool:{name:'Old School',good:0,tell:'He called biometrics "pillow science."',fx:'Veterans love him; the farm develops a touch slower.'},
+  slowstart:{name:'Slow Starter',good:0,tell:'He admitted his first year "always looks ugly."',fx:'Noticeably worse in year one, better after.'}};
+function gmTraitTick(){
+  const o=G.owner;if(!o||!o.gmTrait)return;
+  const t=o.gmTrait;
+  if(!t.revealed&&G.year>(t.hiredYear||1)){t.revealed=true;showBreaking(`Scouting report on your own GM`,`${o.gmName} is a ${GM_TRAITS[t.k].name}: ${GM_TRAITS[t.k].fx}`);}
+  if(t.k==='kid'){G.farm.slice().sort((a,b)=>(b.pot||0)-(a.pot||0)).slice(0,2).forEach(p=>{p.ovr=clamp(p.ovr+1,20,Math.max(p.ovr,p.realCeil||p.pot||p.ovr));});}
+  else if(t.k==='shark')ownCash(8);
+  else if(t.k==='media')fanChange(2,'The GM charms the press');
+  else if(t.k==='hoarder'&&Math.random()<0.7)(G.pendingComp=G.pendingComp||[]).push({id:uid(),round:4,slot:8,comp:true,future:false,fromMe:true});
+  else if(t.k==='oldschool')G.roster.filter(p=>p.loc==='mlb'&&p.age>=32).forEach(p=>fmBumpHappy(p,2));
+}
+function gmEffTier(){const o=G.owner;let t=o.gmTier||0;
+  if(o.gmTrait&&o.gmTrait.k==='slowstart')t=clamp(t+((o.gmTrait.hiredYear===G.year)?-1:1),0,3);
+  return t;}
+
+/* ---- sponsor risk profiles + naming rights ---- */
+function ownerSponsorTick(){   // yearly: collapses, performance bonuses
+  const o=G.owner;if(!o)return;
+  (o.sponsors||[]).slice().forEach(s=>{
+    if(s.profile==='volatile'&&Math.random()<0.15){
+      o.sponsors=o.sponsors.filter(x=>x!==s);
+      fanChange(-6,`${s.name} collapsed`);
+      if(s.type==='naming'&&o.parkName){showBreaking(`${s.name.toUpperCase()} HAS COLLAPSED`,`Their name comes off the stadium. Fans are livid. The lawyers are busy.`);o.parkName=null;}
+      else showBreaking(`${s.name.toUpperCase()} FILES FOR BANKRUPTCY`,`The ${s.slot.toLowerCase()} deal is dead money — remaining payments gone.`);
+    }
+    if(s.profile==='performance'){
+      const last=(G.history||[]).find(h=>h.year===G.year-1);
+      if(last&&last.champ){ownCash(25);showBreaking(`${s.name} pays the championship clause`,`+$25M for the ring.`);}
+      else if(last&&last.playoffs){ownCash(10);}
+    }
+  });
+}
+function ownerParkDisplay(){const o=G.owner;return o&&o.parkName?`${o.parkName.name} ${o.parkName.suffix}`:null;}
+function ownerChooseSuffix(brand){
+  const old=document.getElementById('sufov');if(old)old.remove();
+  const d=document.createElement('div');d.id='sufov';d.className='fmtick';d.style.zIndex=97;
+  d.innerHTML=`<div class="tk-club">🏟️ NAMING RIGHTS · ${esc(brand.toUpperCase())}</div>
+    <div class="decbox" style="border-color:var(--gold)"><p>How does it read on the marquee?</p>
+    <div class="opts">${['Park','Field','Stadium'].map(s=>`<button class="btn" onclick="ownerSetSuffix('${s}')">${esc(brand)} ${s}</button>`).join('')}</div></div>`;
+  document.body.appendChild(d);window._sufBrand=brand;
+}
+function ownerSetSuffix(s){
+  G.owner.parkName={name:window._sufBrand,suffix:s};window._sufBrand=null;
+  const d=document.getElementById('sufov');if(d)d.remove();
+  showBreaking(`Welcome to ${G.owner.parkName.name} ${s}`,'The signage crews work through the night.');
+  saveGame();try{ownerSuite();}catch(e){}
+}
+
+/* ---- Tier 3: legacy projects ---- */
+const TIER3_OPTS=[
+ {id:'youthAcad',name:'Youth Academy',cost:120,desc:'A city-wide academy pipeline. Your draft classes arrive more polished, permanently.'},
+ {id:'intlAcad',name:'International Academy',cost:150,desc:'A campus abroad. One international prospect joins your farm every winter.'},
+ {id:'bioLab',name:'Biomechanics Lab',cost:110,desc:'Motion capture, workload science. Injuries drop meaningfully, permanently.'},
+ {id:'museum',name:'Team Museum & HOF Wing',cost:60,desc:'Your history under glass — retired greats honored. Fans never stop coming.'},
+ {id:'jet',name:'Team Plane',cost:90,desc:'No more charters. Rest, chemistry, and a clubhouse that feels big-league rich.'},
+ {id:'springHQ',name:'Spring Training Complex',cost:130,desc:'A state-of-the-art February home. Development compounds every winter.'}];
+function ownerTier3Unlocked(){return ((G.owner.ownedAmenities||[]).length)>=4;}
+function ownerBuyT3(id){
+  const o=G.owner,t=TIER3_OPTS.find(x=>x.id===id);if(!t)return;
+  if((o.ownedT3||[]).includes(id)||o.construction)return;
+  if((o.cashReserve||0)<t.cost){toast('Not enough cash in reserve.');return;}
+  o.cashReserve-=t.cost;
+  o.construction={id,weeks:3,name:t.name};
+  showBreaking(`Groundbreaking: ${t.name}`,`$${t.cost}M committed. ${'Steel goes up over the next few weeks.'}`);
+  sfx('moneyBig');saveGame();ownerSuite();
+}
+function ownerT3Complete(){
+  const o=G.owner,c=o.construction;if(!c)return;
+  o.construction=null;(o.ownedT3=o.ownedT3||[]).push(c.id);
+  showBreaking(`Ribbon cut: ${c.name}`,'The skyline of your franchise just changed.');sfx('win');
+  if(c.id==='bioLab')o.healBonus=(o.healBonus||0)+1.6;
+  if(c.id==='museum'){ownVal(40);}
+  if(c.id==='jet')o.homeEdge=(o.homeEdge||0)+0.5;
+  saveGame();
+}
+function ownerT3Tick(){   // yearly passive effects + non-weekly construction completion
+  const o=G.owner;if(!o)return;
+  if(o.construction){o.construction.weeks-=3;if(o.construction.weeks<=0)ownerT3Complete();}
+  const has=id=>(o.ownedT3||[]).includes(id);
+  if(has('youthAcad'))o.draftPolish=2;
+  if(has('museum'))fanChange(3,'The museum wing');
+  if(has('jet'))G.roster.filter(p=>p.loc==='mlb').forEach(p=>fmBumpHappy(p,2));
+  if(has('springHQ'))G.farm.slice().sort(()=>Math.random()-0.5).slice(0,2).forEach(p=>{p.ovr=clamp(p.ovr+1,20,Math.max(p.ovr,p.realCeil||p.pot||p.ovr));});
+  if(has('intlAcad')){const p=draftee(12,2,false,pick(POSALL));p.loc='farm';p.src='intl';p.name=p.name;G.farm.push(p);
+    showBreaking(`International Academy delivers`,`${p.name} (${p.pos}, ceiling ${p.pot}) signs and reports to your farm.`);}
+}
+function ownerYearTick(){   // one call from startOwnerYear
+  try{gmTraitTick();}catch(e){}
+  try{ownerSponsorTick();}catch(e){}
+  try{ownerT3Tick();}catch(e){}
+}
+
+/* ---- sponsorship contracts: read the terms, sign your name ---- */
+function ownerContract(id){
+  const list=G.owner._sponsorOffers||[];
+  const off=list.find(s=>s.id===id)||list.find(s=>s.type===id);if(!off)return;
+  const old=document.getElementById('ctrov');if(old)old.remove();
+  const total=off.rev*off.term;
+  const clauses=[
+    `<div class="clause"><b>§1 — TERM & VALUE.</b> ${esc(off.brand)} shall pay the Club <b>$${off.rev}M per annum</b> for <b>${off.term} years</b> (total consideration: <b>$${total}M</b>).</div>`,
+    `<div class="clause"><b>§2 — INVENTORY.</b> ${esc(off.slot)} — ${off.desc}</div>`,
+    off.fanCost?`<div class="clause"><b>§3 — GOODWILL.</b> The Club acknowledges an expected supporter backlash of approximately <b>−${off.fanCost} fan favor</b> upon announcement.</div>`:'',
+    off.profile==='volatile'?`<div class="clause" style="border-left-color:#b0483a"><b>§4 — SOLVENCY (READ THIS).</b> Sponsor operates in a high-volatility sector. Independent auditors estimate a <b>15% annual probability of collapse</b>, voiding all remaining payments${off.type==='naming'?' and requiring removal of all signage at the Club\'s reputational expense':''}.</div>`:'',
+    off.profile==='performance'?`<div class="clause" style="border-left-color:#5a7a2a"><b>§4 — PERFORMANCE CLAUSES.</b> Bonus of <b>$10M</b> per postseason appearance and <b>$25M</b> per championship, paid the following winter.</div>`:'',
+    off.profile==='legacy'?`<div class="clause"><b>§4 — HERITAGE.</b> A stable house. Payments as reliable as the tides.</div>`:'',
+    off.profile==='stable'?`<div class="clause"><b>§4 — LOCAL PARTNER.</b> Steady money from a firm that isn\'t going anywhere.</div>`:'',
+    off.type==='naming'?`<div class="clause"><b>§5 — NOMENCLATURE.</b> Upon execution, ownership selects the venue styling: Park, Field, or Stadium.</div>`:'',
+  ].filter(Boolean).join('');
+  const d=document.createElement('div');d.id='ctrov';d.className='fmtick';d.style.zIndex=96;
+  d.innerHTML=`<div class="contract">
+      <h3>SPONSORSHIP AGREEMENT</h3>
+      <div class="csub">${esc(off.brand.toUpperCase())} × ${esc(G.teamName.toUpperCase())} · DRAWN THIS WINTER, YEAR ${G.year}</div>
+      ${clauses}
+      <div class="sigline">
+        <div><div class="csub" style="text-align:left;margin:0">FOR THE CLUB</div><div class="sig" id="ctrsig">&nbsp;</div></div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="btn ghost sm" onclick="document.getElementById('ctrov').remove()">Walk away</button>
+          <button class="btn primary sm" id="ctrbtn" onclick="ownerSign('${off.id}')">✒️ Sign</button>
+        </div>
+      </div></div>`;
+  document.body.appendChild(d);sfx('flip');
+}
+function ownerSign(id){
+  try{sfx('sign');}catch(e){}   // pen hits the paper the instant you press Sign
+  const btn=document.getElementById('ctrbtn');if(btn){btn.disabled=true;btn.textContent='…';}
+  // sign with the logged-in account name; fall back to leaderboard name, then a generic owner
+  const a=(typeof authState==='function')?authState():null;
+  const name=(a&&a.username)||(typeof PROFILE!=='undefined'&&PROFILE.lbName)||'The Owner';
+  const el=document.getElementById('ctrsig');let i=0;
+  const iv=setInterval(()=>{
+    if(!el||i>=name.length){clearInterval(iv);
+      setTimeout(()=>{const d=document.getElementById('ctrov');if(d)d.remove();hap(15);acceptSponsor(id);},550);
+      return;}
+    el.textContent=name.slice(0,++i);
+  },90);
+}
+/* ---- in-season PnL strip + granularity corner ---- */
+function fmOwnerPnL(){
+  if(!G.owner)return '';
+  const S=G._season||{g:0};const frac=Math.min(1,(S.g||0)/162);
+  const rev=ownerRevenue().total*frac, exp=ownerExpenses().total*frac;
+  return `<div class="fmstrip2">💵 REV <b>$${rev.toFixed(1)}M</b> · COSTS <b>$${exp.toFixed(1)}M</b> · BANK <b>${fmtB(G.owner.cashReserve||0)}</b></div>`;
+}
+function ownerCycleGran(){
+  const order=['weekly','monthly','skip'];
+  const cur=order.indexOf(G._ownGran);const next=order[(cur+1)%3];
+  G._ownGran=next;
+  const rank={weekly:3,monthly:2,skip:1};
+  G._ownGranMin=Math.min(G._ownGranMin||rank[next],rank[next]);
+  const g=(G._season&&G._season.g)||0;
+  if(next==='weekly')G._ownStops=[7,14,21,28,35,42,49,56,63,70,77,84,91,98,105].filter(x=>x>g);
+  else if(next==='monthly')G._ownStops=[27,54,81,108].filter(x=>x>g);
+  else G._ownStops=[];
+  saveGame();toast('Sim mode: '+next);
+  const b=document.getElementById('grancorner');if(b)b.textContent='⚙ '+next;
+}
+/* ---- delegation: draft + development ---- */
+function ownerDraftTier(){const o=G.owner||{};return clamp((o.scoutTier||0)+(gmEffTier()>=2?1:0)+((o.analyticsTier||0)>=2?1:0),0,4);}
+function ownerAutoDevelop(){
+  const o=G.owner||{};const n=(o.coachTier||0)+1;
+  const cands=wpCandidates().slice(0,n);const picks={};
+  cands.forEach(p=>picks[p.id]='reps');
+  G._winterFocus=picks;saveGame();
+  if(cands.length)showBreaking('The staff runs the winter program',`${cands.map(c=>esc(c.name)).join(', ')} assigned to development reps by GM ${esc(o.gmName||'')}.`);
 }
 /* boot */
 (localStorage.getItem(WELCOME_KEY)?screenTitle:screenWelcome)();
