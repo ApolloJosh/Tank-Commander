@@ -2166,7 +2166,7 @@ function screenTitle(){try{window._ownSetup=false;}catch(e){}
          </div>
        </aside>
      </div>
-     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.3.1</span></div>
+     <div class="tdash-foot"><span>Profile: GM Level ${plLevel()} · ${PROFILE.gamesPlayed||0} franchises played</span><span>Build 10.3.2</span></div>
    </div>
 
    <p class="disclaimer">⚠️ <b>Disclaimer:</b> ${FICTIONAL_NAMES?'All players, teams, names, ratings, salaries, and outcomes in this game are entirely fictional and computer-generated. Any resemblance to real persons is coincidental. Not affiliated with or endorsed by MLB, the MLBPA, or any club.':'Unofficial fan-made game, not affiliated with or endorsed by MLB, the MLBPA, or any club. Player names are used for identification only; all teams are fictional and every rating, salary, and outcome is a game-generated estimate, not real data.'}</p>`);
@@ -7012,7 +7012,11 @@ function countUp(id,to,prefix,dur){
    Degrades gracefully when the folder isn't deployed (player
    hides itself, SFX fall back to the v9.6 synth engine).
    ============================================================ */
-const AUDIO_BASE='audio/';
+// Anchor audio to the page's REAL location (absolute origin+directory) rather than a bare relative path.
+// Some hosts inject a <base href="https://www.…/"> or force a www canonical; a relative "audio/" would then
+// resolve against a www subdomain that may have no DNS record. Building an absolute URL from location.href
+// ignores any <base> tag and always hits the same host that actually served the page.
+const AUDIO_BASE=(function(){try{return location.href.split(/[?#]/)[0].replace(/[^/]*$/,'')+'audio/';}catch(e){return 'audio/';}})();
 const MUSIC=[
  ['music/Green_Onions.mp3','Green Onions'],
  ['music/Get_Lucky.mp3','Get Lucky'],
